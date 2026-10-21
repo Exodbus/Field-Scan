@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Données : trop lourdes pour Git, on garde seulement la structure
+data/raw/*
+data/processed/*
+!data/**/.gitkeep
+*.tif
+*.tiff
+*.jp2
+*.zip
+
+# Poids des modèles : publiés via GitHub Releases, pas dans le repo
+models/*
+!models/README.md
+
+# Sorties de run.py
+resultats/
+outputs/
+
+# Divers
+.DS_Store
+.env
