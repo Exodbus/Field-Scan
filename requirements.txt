@@ -1,0 +1,14 @@
+# deep Learning
+torch==2.14.1  
+
+# modèles et transformations d'images pour torch        
+torchvision==0.29.1    
+
+# calcul sur tableaux
+numpy==2.5.4         
+
+# lecture/écriture des images géoréférencées (GeoTIFF)
+rasterio==1.5.2      
+
+# données vectorielles (parcelles, points)  
+geopandas==1.2.0       
