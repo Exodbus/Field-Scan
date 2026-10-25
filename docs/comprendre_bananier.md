@@ -1,6 +1,6 @@
 # Comprendre le bananier
 
-Note de travail du 21 octobre 2026. Les crédits des images sont en bas de page.
+Note de travail du 21 octobre 2026.
 
 ## La plante
 
@@ -57,36 +57,3 @@ Ces descriptions sont écrites de mémoire : à vérifier dans les fiches du Cir
 - **Vigueur** : une parcelle mélange des pieds de tous âges et des trous. Il faut comparer chaque zone au reste de sa parcelle, pas à une valeur fixe de NDVI.
 - **Maladies** : modèle entraîné sur des feuilles au sol, mais drone limité aux stades avancés.
 - **Faux positifs** : les vieilles feuilles jaunissent naturellement et peuvent être confondues avec une maladie.
-
-### Questions à poser au tuteur
-
-- [ ] Que compte-t-on : les pieds mères seuls, les mères et les rejets séparément, ou un pied par souche ?
-- [ ] Les images de la zone de test seront-elles en RGB ou en multispectral ?
-- [ ] À quelle résolution est faite la référence de vigueur et de stress de l'orga ?
-- [ ] Le jeu de feuilles de test contiendra-t-il des maladies absentes des jeux publics ?
-
-## Glossaire
-
-| Français | Anglais |
-| --- | --- |
-| Pseudo-tronc | Pseudostem |
-| Bulbe | Corm |
-| Rejet | Sucker |
-| Œilletonnage | Desuckering |
-| Régime | Bunch |
-| Couronne, canopée | Crown, canopy |
-| Comptage des pieds | Plant counting |
-| Orthomosaïque | Orthomosaic |
-| Cercosporiose noire | Black Sigatoka, black leaf streak |
-| Fusariose, maladie de Panama | Fusarium wilt, Panama disease (TR4) |
-
-## Crédits des images
-
-À compléter avant tout rendu : la source et la licence de chaque image.
-
-| Image | Source |
-| --- | --- |
-| `cercosporiose-noire.png` | © Cirad (mention présente sur l'image) |
-| `pied-vu-du-ciel-fond-clair.png` | Pngtree (filigrane visible) |
-| `fusariose-tr4.png` | infographie sur la fusariose TR-4, source à compléter |
-| `anatomie-bananier.png`, `succession-generations.png`, `plantation-vue-du-ciel.png`, `pied-vu-du-ciel-fond-noir.png` | source à compléter |
