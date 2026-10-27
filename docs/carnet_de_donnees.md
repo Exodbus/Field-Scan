@@ -1,6 +1,6 @@
 # Carnet de données
 
-Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
+Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats, puis la détection d'anomalies de vigueur et de stress hydrique (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
 
 ## Règles du sujet
 
@@ -234,6 +234,43 @@ Aucune mesure de terrain ne permet de les valider : ce sont des constats à test
 - **Côte d'Ivoire, baisse générale de juin à janvier** : sur les 16 parcelles fiables, le NDVI baisse partout (−0,04 à −0,14, moyenne −0,10), ainsi que le NDMI (−0,09) et le NDRE (−0,08). Cette baisse touche toute la scène : effet de saison, d'atmosphère ou de géométrie d'acquisition, plutôt qu'un stress propre à certaines parcelles.
 - **Conséquences pour la chaîne** : travailler en anomalies relatives, après avoir retiré l'effet de la date ; exiger un écart minimal avant toute alerte, sinon l'Équateur produirait de fausses alertes.
 
+#### Anomalies de vigueur et de stress hydrique (`scripts/anomalies_parcelles.py`)
+
+- **Commande** : `python scripts/anomalies_parcelles.py --resultats out/<site>`, après `indices_parcelles.py`. Sorties dans `out/<site>/anomalies/`.
+- **Quatre analyses** :
+  1. *Zones faibles* : pixels nettement plus bas que la médiane de leur parcelle (NDVI et NDRE).
+  2. *Parcelles faibles* : médiane d'une parcelle nettement plus basse que celle des autres parcelles du site, à la même date.
+  3. *Stress hydrique* : NDMI plus bas que prévu pour le NDVI du pixel. La droite NDMI = a + b × NDVI est ajustée sur les pixels des parcelles fiables du site ; un résidu négatif suggère un manque d'eau plutôt qu'un feuillage moins dense.
+  4. *Évolution* : variation entre deux dates après avoir retiré la variation médiane de tout le site (saison, atmosphère).
+- **Règle d'alerte** : deux conditions à la fois, un z-score robuste (écart / 1,4826 × MAD) inférieur à −2 **et** un écart absolu supérieur à 0,05 (NDVI, NDRE) ou 0,03 (résidu NDMI). Les zones de moins de 5 pixels (0,05 ha) sont ignorées. Plancher de l'écart-type robuste : 0,01.
+- **Précautions** : seules les parcelles au statut `ok` sont évaluées. Les pixels à moins de 2 pixels (environ 20 m) d'un pixel masqué sont écartés, car la classification détecte mal les bords des nuages. Chaque ligne porte une **confiance** : `faible` si plus de 30 % des pixels de la parcelle sont masqués, `normale` sinon.
+- **Traçabilité** : chaque zone du fichier `alertes_zones.geojson` indique sa parcelle, sa date, sa scène source et la carte d'indice dont elle vient.
+- **Tous ces seuils sont des choix**, réglables en paramètres et enregistrés dans `parametres_anomalies.json`. Ils sont à justifier et à faire varier dans le rapport.
+- **Reproductibilité** : résultats identiques, chiffre pour chiffre, entre l'environnement de développement et l'ordinateur du projet.
+
+Relation NDMI-NDVI ajustée (corrélation entre pixels) : Équateur 0,89 (février) et 0,85 (août) ; Côte d'Ivoire 0,63 (juin) et 0,86 (janvier). En juin en Côte d'Ivoire, le modèle est moins solide, donc la détection de stress aussi.
+
+**Résultats, Équateur** :
+
+- Aucune parcelle en alerte (vigueur ou stress), aux deux dates.
+- Quelques petites zones : en février, NDVI sur P02 (0,11 ha), NDRE sur P02 et P06 (0,32 ha), stress sur P08 (0,05 ha) ; en août, NDRE sur P13 (0,05 ha).
+- Une dégradation entre février et août : NDMI de P06 (−0,052, contre −0,018 pour le site, soit −0,034 après correction, z = −3,4).
+- Lecture : le site homogène ne produit pas d'avalanche de fausses alertes, ce qui était l'objectif de la règle à deux conditions.
+
+**Résultats, Côte d'Ivoire** :
+
+| Date | Parcelles évaluées | Alertes parcelle | Zones en alerte |
+| --- | --- | --- | --- |
+| 13/06/2023 | 33 | P01 (NDVI, NDRE et stress) ; P06, P07, P08, P09, P33 (stress) | NDVI 10 zones (1,03 ha), NDRE 6 (0,83 ha), stress 14 (9,09 ha) |
+| 04/01/2024 | 16 | P13 (NDVI et NDRE), P33 (stress), toutes deux en confiance **faible** | stress 4 zones (1,00 ha) |
+
+- **P01** (juin) : NDVI médian 0,78, soit 0,09 sous la médiane du site (z = −8,8). Alerte cohérente avec le constat des premiers résultats. Cause inconnue : parcelle jeune, piste, ombre non détectée ou vrai problème.
+- **P06 à P09** (juin) : parcelles voisines, alertes de stress seulement (résidu NDMI de −0,05 à −0,08). Effet de bloc possible (irrigation, sol, âge des plants) ou artefact. Elles ne sont pas plus proches des nuages que les autres parcelles (distance médiane 271 m contre 208 m) : ce n'est pas un effet de bord de nuage.
+- **P13 et P33** (janvier) : ce sont les deux parcelles évaluées les plus voilées par les cirrus (47,5 % et 42,1 % de pixels masqués). La marge de 20 m autour des nuages ne fait pas disparaître leurs alertes. Impossible de dire si elles sont réelles ou dues au voile : d'où la confiance faible.
+- **Évolution juin → janvier** (16 parcelles comparables, baisse commune du site retirée) : NDMI de P13 (−0,128 après correction, z = −6,9) et de P33 (−0,050, z = −2,7) ; NDVI de P13 (−0,055, z = −5,0). Mêmes réserves sur P13 et P33.
+
+Sans données de terrain, ces alertes sont des **pistes à vérifier**, pas des diagnostics.
+
 ## Découpage prévu
 
 | Module | Entraînement | Validation | Test |
@@ -271,6 +308,7 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - Parcelles tracées à la main par une seule personne : tracé subjectif.
 - Côte d'Ivoire, janvier 2024 : voile de cirrus fins sur une grande partie des parcelles (effet mesuré faible sur les indices, voir la fiche 5).
 - Équateur : limites moins nettes à 10 m, NDVI saturé (0,87 à 0,89) et NDMI très corrélé au NDVI (0,96) : peu de contraste entre parcelles.
+- Anomalies : seuils choisis sans référence de terrain ; détection de stress moins solide quand la relation NDMI-NDVI est faible (Côte d'Ivoire, juin : 0,63) ; alertes sur parcelles partiellement voilées à confiance faible.
 
 ## À faire
 
@@ -301,8 +339,11 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - [x] Seuil de nuages paramétrable dans `indices_parcelles.py` (défaut 50 %).
 - [ ] Reprendre ce paramètre dans le `run.py` final.
 - [ ] **Priorité** : trouver des images de drone pour le comptage des pieds (jeu australien ou photos à assembler avec OpenDroneMap).
-- [ ] Carte de vigueur par anomalies relatives, avec un écart minimal avant alerte.
-- [ ] Inspecter visuellement P01 (Côte d'Ivoire).
+- [x] Anomalies de vigueur (NDVI, NDRE) et de stress hydrique (NDMI), avec évolution entre dates : script `anomalies_parcelles.py`, lancé sur les deux sites.
+- [ ] Inspecter visuellement P01, P06 à P09, P13 et P33 (Côte d'Ivoire) dans QGIS.
+- [ ] Ablation des seuils d'anomalie (z, écarts minimaux, marge autour des nuages, taille des zones).
+- [ ] Compléter `requirements.txt` (numpy, pandas, rasterio, geopandas, scipy).
+- [ ] Bulletin par parcelle (score, alertes, zones prioritaires) et commande unique `run.py`.
 - [ ] Vérifier que `data/` et `out/` sont exclus par `.gitignore`.
 - [ ] Ablation du seuil (30, 50, 70 %) et comparaison NDVI / NDRE pour le rapport.
 - [ ] Documenter chaque modèle pré-entraîné utilisé.
