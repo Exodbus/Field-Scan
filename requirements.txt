@@ -12,3 +12,12 @@ rasterio==1.5.2
 
 # données vectorielles (parcelles, points)  
 geopandas==1.2.0       
+
+# tableaux de résultats (CSV par parcelle)
+pandas==3.0.6
+
+# zones connexes et marges autour des nuages
+scipy==1.18.1
+
+# lecture des images de feuilles (scripts d'exploration)
+pillow==13.0.0
