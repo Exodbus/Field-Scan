@@ -27,3 +27,6 @@ outputs/
 # Divers
 .DS_Store
 .env
+
+data/
+out/
