@@ -426,8 +426,47 @@ Les boîtes « bananier » de ReforesTree ont été traitées comme des détecti
 | Baseline ExG et maxima locaux | 0,36 | 0,39 | **0,37** | +7 |
 | Template matching, canal ExG | 0,31 | 0,43 | 0,36 | +33 |
 | Template matching, luminosité | 0,08 | 0,41 | 0,14 | +328 |
+| DeepForest affiné | à mesurer | | | |
 
 **Conclusion sur les méthodes sans apprentissage** : toutes plafonnent vers F1 ≈ 0,36. Elles reconnaissent la verdure ou une forme moyenne, mais pas un bananier dans sa diversité, et ne séparent ni les espèces ni les plantes qui se touchent. C'est l'argument du passage à un détecteur appris, qui doit apprendre à la fois les variantes d'un bananier et ce qui le distingue d'un arbre ou d'un arbuste.
+
+#### Détecteur appris : DeepForest affiné (`notebooks/entrainer_deepforest.ipynb`, `scripts/preparer_deepforest.py`, `scripts/detecter_deepforest.py`)
+
+**Préparation des données** (`preparer_deepforest.py`) : orthomosaïques des sites d'entraînement (Flora Pluas, Nestor Macias, Leonor Aspiazu) et de suivi (Manuel Macias) rééchantillonnées à **10 cm/pixel** (résolution proche de celle du pré-entraînement de DeepForest ; un bananier y fait environ 30 pixels), découpées en tuiles de 400 × 400 pixels (40 m) avec 20 % de recouvrement. Une seule classe : les boîtes « bananier » de ReforesTree (après fusion des doublons) ; les autres arbres ne sont pas annotés et servent d'exemples négatifs. Vérifié sur un site synthétique : 100 % des boîtes exportées tombent sur un bananier. Résultat : entraînement 56 tuiles et 3 291 boîtes, suivi 19 tuiles et 451 boîtes ; Carlos Vera Arteaga et Carlos Vera Guevara jamais exportés.
+
+**Environnement d'entraînement** : Google Colab, GPU Tesla T4, **DeepForest 2.1.0**, PyTorch 2.11.0+cu130, Python 3.13.16. Avertissement de `pip` sur `diffusers` et `safetensors` (paquets préinstallés de Colab, non utilisés) : sans effet. Les bananiers sont renommés « Tree », la classe du modèle pré-entraîné `weecology/deepforest-tree`, pour garder sa tête de détection. Les zips créés sous Windows (`Compress-Archive`) utilisent « \ » dans les chemins : le carnet les décompresse en les remplaçant par « / ».
+
+**Mesure de suivi** : `deepforest.evaluate()` est dépréciée et échoue hors entraînement en version 2.1. On utilise notre propre mesure : appariement un-à-un des centres des boîtes à moins de 10 pixels (1 m), comme la règle du sujet, contre les boîtes ReforesTree des tuiles de Manuel Macias (incomplètes, et comptées plusieurs fois là où les tuiles se recouvrent : c'est un suivi, pas la mesure finale). Modèle pré-entraîné, **sans affinage** : précision 0,26, rappel 0,45, **F1 0,33**.
+
+**Trois essais d'entraînement**
+
+| Essai | Réglages | Résultat | Cause |
+| --- | --- | --- | --- |
+| 1 | taux 0,0005, lots de 4, 30 époques, tout le réseau, réduction automatique du taux quand la perte de validation stagne | scores effondrés (maximum 0,04 même sur une tuile d'entraînement) ; F1 0,24 au mieux, pire que sans affinage | taux réduit jusqu'à presque 0 pendant la phase difficile du début, sur une perte de validation forcément mauvaise (référence incomplète) |
+| 2 | taux 0,001, lots de 2, 40 époques, tout le réseau, sans réduction | pertes `nan` (divergence) ; F1 0,05 à l'époque 5, puis 0 | divergence ; suspects : la tuile sans bananier (boîte de largeur nulle) et des gradients non bornés |
+| **3 (retenu)** | tuiles sans bananier retirées, **squelette gelé** (4,8 M paramètres entraînés sur 32,1 M), taux 0,0005 **constant**, lots de 2, **écrêtage des gradients à 1,0**, 40 époques | pertes en baisse régulière (classification 0,77 → 0,39, boîtes 0,53 → 0,35) ; **F1 de suivi 0,627** à l'époque 40, seuil 0,4 (précision 0,60, rappel 0,65) | |
+
+Diagnostics intermédiaires, qui ont guidé l'essai 3 : `create_trainer()` ne réinitialise pas le modèle (empreinte des poids inchangée) ; les images fournies à l'entraînement sont bien en valeurs de 0 à 1 et les étiquettes et boîtes sont correctes ; un **test de sur-apprentissage** sur 2 tuiles (perte de classification 0,21, F1 0,70 sur ces tuiles) montre que la chaîne d'entraînement fonctionne. Essai 3 à 20 époques : F1 de suivi 0,56 (encore en hausse, d'où les 40 époques).
+
+**Modèle retenu** : époque 40, seuil **0,4**, tous deux choisis sur le suivi (validation), jamais sur le test. Fichiers : `modeles/bananiers_deepforest_v3_40.ckpt` (non versionné, plus de 100 Mo) et `modeles/entrainement_v3_40.json` (versions, réglages, pertes, suivi).
+
+**Inférence sur processeur** (`detecter_deepforest.py`, DeepForest 2.1.0 installé localement) : lecture à 10 cm/pixel, fenêtres glissantes de 400 pixels avec 25 % de recouvrement, fusion des doublons (suppression des non-maxima, seuil 0,3), seuil de score 0,4, centre des boîtes converti en points UTM 17S. Le fichier `.ckpt` mémorise la configuration de Colab (chemins `/content/...`) : le script crée un modèle vierge et n'y charge que les poids, en vérifiant qu'aucun ne manque (301 tenseurs). Mécanique validée hors ligne sur image synthétique avec un faux modèle (19 bananiers sur 19, à 10 cm de leur centre). **Embarquabilité : 25 à 26 secondes par hectare** sur processeur (4 fils), plus 4 s de chargement du modèle.
+
+**Résultats contre la référence ReforesTree, sites entiers** (appariement à 1 m, réglages figés)
+
+| Site | Rôle | Bananiers ReforesTree | Détections | Précision | Rappel | F1 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Flora Pluas | Entraînement | 872 | 586 | 0,77 | 0,52 | 0,62 |
+| Manuel Macias | Validation | 247 | 316 | 0,52 | 0,67 | 0,59 |
+| **Carlos Vera Guevara** | **Test, jamais vu** | 198 | 191 | 0,17 | 0,17 | **0,17** |
+| Carlos Vera Guevara, baseline ExG (réglages figés, 5 cm) | Test | 198 | 427 | 0,15 | 0,32 | 0,21 |
+
+- **Contrôle** : sur Manuel Macias et Flora Pluas, les scores locaux sont cohérents avec le suivi de Colab : le script d'inférence fonctionne.
+- **Chute réelle sur le site de test** : le rappel de 0,17 ne peut pas s'expliquer par les bananiers oubliés de ReforesTree (qui ne font baisser que la précision). Le modèle rate vraiment la plupart des bananiers annotés de Carlos Vera Guevara.
+- **Le nombre de détections est presque juste** (191 pour 198, erreur de −7) alors que seules 33 tombent sur un bananier : l'erreur de comptage seule serait trompeuse.
+- **Interprétation** : le modèle a appris les bananiers de sites où ils dominent (57 à 65 % des arbres à Flora Pluas et Nestor Macias) ; sur un site où ils ne sont que 14 %, mêlés à beaucoup d'arbustes, et dans une autre région, il ne les reconnaît plus. C'est la mise en garde du sujet : un modèle qui marche sur une parcelle et échoue sur la voisine n'a aucune valeur.
+- **Biais de comparaison** : contre la référence ReforesTree, DeepForest (entraîné sur des annotations du même style) est avantagé par rapport à la baseline.
+- **Règle** : Carlos Vera Guevara a été consulté **une fois**, pour ce modèle (`v3_40`). Les améliorations se décident sur les autres sites (validation croisée par site) ; tout modèle ultérieur évalué sur ce site sera signalé comme moins indépendant.
 
 
 
@@ -482,6 +521,7 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - Parcelles tracées à la main par une seule personne : tracé subjectif.
 - Côte d'Ivoire, janvier 2024 : voile de cirrus fins sur une grande partie des parcelles (effet mesuré faible sur les indices, voir la fiche 5).
 - Équateur : limites moins nettes à 10 m, NDVI saturé (0,87 à 0,89) et NDMI très corrélé au NDVI (0,96) : peu de contraste entre parcelles.
+- DeepForest affiné : F1 0,59 à 0,62 sur les sites d'entraînement et de validation, mais 0,17 sur le site de test (Carlos Vera Guevara, peu de bananiers parmi beaucoup d'arbustes) : généralisation insuffisante d'un site à l'autre.
 - ReforesTree : agroforesterie et non bananeraie industrielle (tous les arbres sont annotés, bananiers à filtrer avec `is_banana`) ; annotations issues d'un détecteur puis nettoyées, avec boîtes imbriquées et plantes oubliées visibles à l'œil ; 20 % de doublons dus au recouvrement des tuiles, fusionnés ; aucune distinction pieds mères et rejets ; images RGB seulement.
 - Anomalies : seuils choisis sans référence de terrain ; détection de stress moins solide quand la relation NDMI-NDVI est faible (Côte d'Ivoire, juin : 0,63) ; alertes sur parcelles partiellement voilées à confiance faible.
 
@@ -525,7 +565,13 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - [ ] Versionner la référence manuelle complète (par exemple dans `docs/references/`) pour que l'organisation puisse vérifier les mesures.
 - [x] Baseline classique (ExG, lissage, maxima locaux) : F1 0,37 sur la validation, réglages figés, analyse des échecs.
 - [x] Template matching (gabarits moyens, canaux ExG et luminosité) : F1 0,36 et 0,14, gabarits flous, diagnostic.
-- [ ] Détecteur appris (DeepForest affiné sur les bananiers des sites d'entraînement), évalué sur la validation, puis ablation de la résolution (1, 2, 5, 10 cm).
+- [x] DeepForest affiné (essai 3 retenu, 40 époques, seuil 0,4) : suivi F1 0,63 ; inférence sur processeur à 25 s/ha ; test sur Carlos Vera Guevara contre ReforesTree : F1 0,17 (baseline 0,21).
+- [ ] Mesurer DeepForest sur la référence manuelle MM1 et MM2 (validation).
+- [ ] Validation croisée par site (entraîner sur deux sites, tester sur un troisième) pour comprendre la chute de généralisation, sans toucher au test.
+- [ ] Pistes d'amélioration à juger sur cette validation croisée : plus de données du nord, augmentations de couleur, deux classes (bananier, autre arbre).
+- [ ] Livrer les poids du modèle (plus de 100 Mo : release GitHub, Git LFS ou lien Drive ; essayer aussi une version allégée).
+- [ ] Ablation de la résolution (2, 5, 10, 20 cm) pour la baseline et le détecteur.
+- [ ] Second passage d'annotation sur MM2 (régularité de la référence manuelle).
 - [ ] Chercher une bananeraie industrielle en images de drone ouvertes (OpenAerialMap) pour un test plus proche de la zone de l'organisation.
 - [x] Anomalies de vigueur (NDVI, NDRE) et de stress hydrique (NDMI), avec évolution entre dates : script `anomalies_parcelles.py`, lancé sur les deux sites.
 - [ ] Inspecter visuellement P01, P06 à P09, P13 et P33 (Côte d'Ivoire) dans QGIS.
