@@ -389,6 +389,47 @@ Les boîtes « bananier » de ReforesTree ont été traitées comme des détecti
 - **Une partie des fausses détections vient d'un décalage** : à 1,5 m, 5 des 15 deviennent correctes. Le centre d'une boîte n'est pas toujours au pied de la plante (couronnes de près de 3 m). Les 10 restantes sont de vraies erreurs (autres plantes, doublons). Le rayon officiel reste 1 m ; c'est aussi une alerte pour les détecteurs : bien placer le point au pied de la plante compte.
 - **Conséquences** : (1) ReforesTree ne peut pas servir de référence de test : même un détecteur parfait n'obtiendrait qu'un F1 d'environ 0,69 contre lui ; l'évaluation se fait sur la référence manuelle. (2) Un détecteur entraîné sur ReforesTree verra environ 40 % de bananiers non annotés traités comme du fond, ce qui peut limiter son rappel, surtout sur les rejets : à comparer avec la baseline classique, qui n'apprend rien de ces annotations.
 
+#### Baseline classique de comptage (`scripts/baseline_comptage.py`)
+
+- **Méthode** : lecture de l'orthomosaïque autour de chaque carré, rééchantillonnée (moyenne des pixels) ; indice de verdure ExG = 2g − r − b en couleurs normalisées ; lissage gaussien (qui ignore les pixels hors image) ; maxima locaux au-dessus d'un seuil et espacés d'une distance minimale. Chaque maximum est un pied détecté. Évaluation avec `evaluer_comptage.py` (appariement à 1 m).
+- **Réglages cherchés sur la validation seulement** (MM1 et MM2, 83 bananiers). Le script refuse toute recherche de réglages sur un carré de test.
+- **Validation du code** : sur une orthomosaïque synthétique (bananiers en étoile, arbustes ronds), les pieds bien détectés tombent à 1,7 cm de leur centre en médiane : la chaîne lecture, coordonnées et appariement est correcte.
+
+| Essai | Combinaisons | Meilleur F1 | Réglages | VP / FP / oublis |
+| --- | --- | --- | --- | --- |
+| Grille de départ (5 cm/pixel) | 100 | **0,37** | lissage 1 m, distance 1 m, seuil 0,02 | 32 / 58 / 51 |
+| Seuils plus hauts (0,1 à 0,3) | 80 | 0,355 | lissage 0,5 m, distance 1,5 m, seuil 0,1 | 54 / 167 / 29 |
+
+- **Les seuils plus hauts n'aident pas** : ils retirent autant de bananiers que d'erreurs. Bananiers et autre végétation ont une verdure comparable.
+- **Le décalage n'explique pas les erreurs** (hypothèse testée et rejetée) : en réévaluant les meilleures détections avec un rayon de 2 m, on ne gagne que 6 vrais positifs (F1 0,44). Les détections tombent surtout ailleurs, pas juste à côté des bananiers.
+- **Deux échecs distincts** (meilleurs réglages, rayon 2 m) : sur **MM1** (surtout de la forêt), 37 détections pour 7 bananiers, dont 32 fausses : les arbres sont comptés comme des bananiers. Sur **MM2** (bananiers serrés, 1,86 m médian entre voisins), 43 bananiers sur 76 manqués : le lissage fusionne les plantes voisines ; avec moins de lissage, chaque plante donne plusieurs pics (167 fausses détections).
+- **Conclusion** : ExG et maxima locaux plafonnent vers F1 ≈ 0,36 sur ces images, faute de savoir reconnaître un bananier et séparer des plantes qui se touchent. C'est une limite de méthode, pas de réglage ; continuer à ajuster sur 83 bananiers risquerait de sur-ajuster la validation. **Baseline figée** : 5 cm/pixel, lissage 1 m, distance 1 m, seuil 0,02, F1 0,37 sur la validation. Point de comparaison : ReforesTree obtient F1 0,69 contre la même référence.
+
+#### Template matching (`scripts/template_matching_comptage.py`)
+
+- **Méthode** : gabarits construits sur les sites d'**entraînement** seulement (Flora Pluas, Nestor Macias, Leonor Aspiazu) : découpe de l'image autour des bananiers de ReforesTree (400 au plus par site, graine 2026), normalisation de chaque découpe, moyenne par classe de taille de couronne (3 classes), puis moyenne des 8 rotations et symétries pour ne pas dépendre de l'orientation. Recherche par corrélation croisée normalisée (score de −1 à 1) dans les carrés de validation, meilleur score des trois gabarits, puis maxima locaux comme pour la baseline. Résolution 5 cm/pixel. Même refus de régler sur le test.
+- **Validation du code** : la corrélation normalisée coïncide avec un calcul direct (écart de 3 × 10⁻¹⁶) ; sur le carré synthétique, 19 bananiers sur 19 trouvés (F1 0,86, contre 0,80 pour la baseline).
+- **Gabarits obtenus** : 355, 348 et 364 bananiers moyennés, gabarits de 3,2, 4,0 et 4,9 m de côté.
+
+![Gabarits moyens de bananier (indice de verdure ExG), trois classes de taille](images/template_matching_gabarits_exg.png)
+
+*Gabarits moyens (canal ExG), du plus petit au plus grand. On ne voit qu'une tache claire et ronde, entourée d'un léger anneau sombre : les feuilles ont disparu dans la moyenne.*
+
+- **Résultats sur la validation** (MM1 et MM2) : canal ExG, F1 **0,36** (36 vrais positifs, 80 fausses détections, 47 oublis ; lissage 0,1 m, distance 2 m, seuil 0,5). Canal luminosité, F1 **0,14** (377 fausses détections : le sol nu, clair lui aussi, ressemble à une « tache claire »).
+- **Diagnostic** : la moyenne de centaines de bananiers d'orientations et de formes différentes efface les feuilles et ne garde qu'une tache claire. Le template matching devient un détecteur de taches vertes, comme la baseline, d'où le même score. S'y ajoutent des centres de boîtes parfois décalés de 1 à 1,5 m (moyenne encore plus floue) et un changement de région entre gabarits (sud) et validation (nord). L'article de 2021 cité par le sujet l'utilise sur des plantations régulières, où les plants se ressemblent bien plus qu'en agroforesterie.
+
+#### Comparaison des méthodes de comptage (validation : MM1 et MM2, 83 bananiers, appariement à 1 m)
+
+| Méthode | Précision | Rappel | F1 | Erreur de comptage |
+| --- | --- | --- | --- | --- |
+| Annotations ReforesTree (qualité de la référence, pas un modèle) | 0,77 | 0,61 | 0,69 | −17 |
+| Baseline ExG et maxima locaux | 0,36 | 0,39 | **0,37** | +7 |
+| Template matching, canal ExG | 0,31 | 0,43 | 0,36 | +33 |
+| Template matching, luminosité | 0,08 | 0,41 | 0,14 | +328 |
+
+**Conclusion sur les méthodes sans apprentissage** : toutes plafonnent vers F1 ≈ 0,36. Elles reconnaissent la verdure ou une forme moyenne, mais pas un bananier dans sa diversité, et ne séparent ni les espèces ni les plantes qui se touchent. C'est l'argument du passage à un détecteur appris, qui doit apprendre à la fois les variantes d'un bananier et ce qui le distingue d'un arbre ou d'un arbuste.
+
+
 
 #### Réserves
 
@@ -482,8 +523,9 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - [x] Complétude de ReforesTree mesurée sur Manuel Macias : rappel 0,61 et précision 0,77 à 1 m ; 0,68 et 0,85 à 1,5 m.
 - [ ] Annoter CG1, CG2 et CG3 (test) avant l'évaluation finale.
 - [ ] Versionner la référence manuelle complète (par exemple dans `docs/references/`) pour que l'organisation puisse vérifier les mesures.
-- [ ] Baseline classique de comptage (ExG, lissage, maxima locaux), mesurée en F1 à 1 m et en erreur de comptage par site.
-- [ ] Détecteur appris (par exemple DeepForest), puis ablation de la résolution (1, 2, 5, 10 cm).
+- [x] Baseline classique (ExG, lissage, maxima locaux) : F1 0,37 sur la validation, réglages figés, analyse des échecs.
+- [x] Template matching (gabarits moyens, canaux ExG et luminosité) : F1 0,36 et 0,14, gabarits flous, diagnostic.
+- [ ] Détecteur appris (DeepForest affiné sur les bananiers des sites d'entraînement), évalué sur la validation, puis ablation de la résolution (1, 2, 5, 10 cm).
 - [ ] Chercher une bananeraie industrielle en images de drone ouvertes (OpenAerialMap) pour un test plus proche de la zone de l'organisation.
 - [x] Anomalies de vigueur (NDVI, NDRE) et de stress hydrique (NDMI), avec évolution entre dates : script `anomalies_parcelles.py`, lancé sur les deux sites.
 - [ ] Inspecter visuellement P01, P06 à P09, P13 et P33 (Côte d'Ivoire) dans QGIS.
