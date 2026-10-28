@@ -1,6 +1,6 @@
 # Carnet de données
 
-Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats, puis la détection d'anomalies de vigueur et de stress hydrique (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
+Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats, puis la détection d'anomalies de vigueur et de stress hydrique, et le jeu de drone ReforesTree pour le comptage des pieds (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
 
 ## Règles du sujet
 
@@ -17,6 +17,7 @@ Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sen
 | BananaLSD | 937 images brutes (897 après exclusions) | Bangladesh | Maladies, test d'un autre pays | à vérifier |
 | Remote Sensing applications for Banana Crops | Images de drone multispectrales | Australie | Vigueur, comptage, suivi temporel | à vérifier |
 | Sentinel-2 L2A (Copernicus Browser) | 4 scènes de 10 bandes (2 dates par site), résolution environ 10 m | Équateur, Côte d'Ivoire | Vigueur, stress hydrique, suivi temporel | Copernicus, accès libre et ouvert (à vérifier) |
+| ReforesTree (Zenodo) | 6 orthomosaïques de drone RGB à environ 1 cm/pixel, 7 969 couronnes annotées dont 3 436 bananiers | Équateur | Comptage des pieds | CC BY 4.0 |
 
 ## Photos de feuilles (module maladies)
 
@@ -141,6 +142,7 @@ Constat : les images sont en haute résolution (3,7 à 16 mégapixels), très va
 - **Résolution, bandes, annotations, licence** : à vérifier.
 - **Lien avec le sujet** : le jeu n'est pas cité dans le sujet. Il a été trouvé par recherche web. Le sujet cite l'article « Détection de bananiers sur images drone multispectrales multi-dates » (*Remote Sensing* 2021, doi 10.3390/rs13112123), dont les auteurs (Aeberli, Johansen, Robson, Lamb, Phinn) et le thème sont les mêmes que ceux de ce jeu ; la fiche du jeu ne cite toutefois pas l'article, donc le lien exact est à confirmer.
 - **Accès** : la fiche (https://hdl.handle.net/1959.11/56246, doi 10.25952/jjjx-q835) annonce des fichiers .tiff, .txt et .zip, mais le tableau de fichiers était vide à la lecture : liste, tailles et licence à relever dans le navigateur. Contact indiqué sur la fiche : Aaron Aeberli.
+- **Accès, vérification du 28 octobre 2026** : le tableau de fichiers de la fiche de l'université est toujours vide, et la notice de Research Data Australia indique « Record deleted ». Aucun lien de téléchargement public trouvé : jeu **non utilisable** en l'état, sauf réponse de l'auteur.
 - **Repère de performance** : l'article de 2021 rapporte, pour la détection de pieds, un F-score de 0,85 à 0,93 selon les dates pour un réseau convolutif, 0,74 à 0,86 pour le template matching et 0,73 à 0,86 pour le filtre de maximum local. Leur définition du F-score peut différer de celle du sujet (appariement à 1 m).
 
 ### 5. Sentinel-2 L2A (Équateur et Côte d'Ivoire)
@@ -271,15 +273,62 @@ Relation NDMI-NDVI ajustée (corrélation entre pixels) : Équateur 0,89 (févri
 
 Sans données de terrain, ces alertes sont des **pistes à vérifier**, pas des diagnostics.
 
+### 6. ReforesTree (Équateur) : comptage des pieds
+
+#### Source
+
+- **Provenance** : Reiersen, Dao, Lütjens, Klemmer, Amara, Steinegger, Zhang et Zhu, « ReforesTree: A Dataset for Estimating Tropical Forest Carbon Stock with Deep Learning and Aerial Imagery », AAAI 2022 (arXiv 2201.11192). Images de drone fournies par WWF Équateur.
+- **Lien avec le sujet** : correspond à la ressource « Agroforestry inventory : détection par espèce, dont la banane, et ses limites » citée dans le sujet.
+- **Accès** : Zenodo, record 6813783, fichier unique `reforesTree.zip` (7,5 Go, 6,99 Gio). Code et tutoriel : https://github.com/gyrrei/ReforesTree. Le jeu est aussi intégré à TorchGeo.
+- **Licence** : Creative Commons Attribution 4.0 International (lue sur la page Zenodo) : réutilisation autorisée en citant les auteurs.
+- **Téléchargement** : 28 octobre 2026, somme MD5 vérifiée et conforme (`f6a4a1d8207aeaa5fbab7b21b683a302`). Rangé dans `data/drone/reforestree/` (non versionné). Inspection : `scripts/inspect_reforestree.py`, lecture directe dans le zip.
+
+#### Contenu
+
+- **6 orthomosaïques RGB** GeoTIFF (4 bandes uint8, la 4e étant probablement la transparence), en EPSG:4326 avec fichiers `.tfw` et `.kml`. Une 7e image, `Manuel Macias RGB_padded.tif`, n'a pas de géoréférencement : c'est une copie élargie pour le découpage en tuiles, à ne pas utiliser.
+- **100 tuiles PNG** de 4 000 × 4 000 pixels découpées dans les orthomosaïques, avec 200 pixels de recouvrement (le nom de chaque tuile donne sa position).
+- **Annotations nettoyées** (`annotations/cleaned/clean_annotations.csv`) : 7 969 boîtes, avec position dans la tuile et dans l'orthomosaïque, longitude et latitude, et colonne `is_banana`. Les annotations brutes par site (8 520 boîtes au total) sont aussi fournies.
+- **Relevés de terrain** : 4 663 arbres (`field_data.csv` : espèce, groupe, diamètre, parcelle, position GPS) et un shapefile `Final_Trees.shp` (4 699 points). `mapping/final_dataset.csv` apparie 4 663 boîtes aux arbres de terrain.
+- **Un modèle DeepForest** des auteurs (`model/deepforest/final_model_4000_epochs_35.h5`), au format d'une ancienne version de DeepForest : réutilisation à vérifier.
+
+#### Résolution réelle, mesurée sur les orthomosaïques
+
+La fiche TorchGeo annonce 2 cm/pixel, mais les orthomosaïques sont à **0,97 à 1,19 cm/pixel** (conversion des degrés en mètres à la latitude de chaque site). Chaque site couvre environ 150 à 180 m de côté.
+
+| Site | Résolution (cm/px) | Emprise (m) | Région | Boîtes | Bananiers | Part de bananiers |
+| --- | --- | --- | --- | --- | --- | --- |
+| Flora Pluas | 0,97 | 163 × 151 | Sud | 1 655 | 1 076 | 65 % |
+| Nestor Macias | 1,10 | 165 × 143 | Sud | 1 845 | 1 045 | 57 % |
+| Leonor Aspiazu | 1,06 | 181 × 146 | Nord | 983 | 382 | 39 % |
+| Manuel Macias | 1,13 | 156 × 123 | Nord | 728 | 349 | 48 % |
+| Carlos Vera Arteaga | 1,04 | 159 × 157 | Nord | 1 122 | 358 | 32 % |
+| Carlos Vera Guevara | 1,19 | 148 × 147 | Nord | 1 636 | 226 | 14 % |
+
+**Taille des couronnes** (côté moyen des boîtes, converti avec la résolution de chaque site) : bananiers, médiane 2,87 m (10e à 90e percentile : 2,10 à 3,82 m) ; autres arbres, médiane 2,64 m (1,90 à 4,47 m). À 1 cm/pixel, un bananier occupe environ 200 à 380 pixels de côté.
+
+**Géographie** : deux régions à environ 115 km l'une de l'autre. Au sud, Flora Pluas et Nestor Macias (6,6 km entre centres). Au nord, Leonor Aspiazu et Manuel Macias (2,9 km), puis Carlos Vera Arteaga et Carlos Vera Guevara, **voisins** (406 m entre centres, environ 200 m entre les bords des emprises), à 5 à 8 km des deux autres.
+
+#### Réserves
+
+- **Annotations issues d'un détecteur** : la colonne `score` (médiane 0,39) montre que les boîtes ont été produites par un modèle, puis nettoyées à la main. Des arbres peuvent manquer, ce qui pénaliserait à tort un bon détecteur (faux positifs sur des arbres réels non annotés). Affiner un DeepForest sur ces boîtes risque aussi d'apprendre les choix du modèle d'origine.
+- **Origine de `is_banana`** (appariement aux relevés de terrain ou étiquetage manuel) : à vérifier dans l'article.
+- **Agroforesterie, pas une bananeraie industrielle** : bananiers mêlés au cacao, aux agrumes et à d'autres arbres. Écart de domaine probable avec la zone de test de l'organisation (canopée continue, rangs réguliers).
+- **Pas de distinction pieds mères et rejets**, pourtant demandée par le sujet.
+- **Images RGB seulement** : la vigueur sur drone se limitera à ExG ou VARI.
+- **Atout** : la résolution d'environ 1 cm permet de dégrader les images (2, 5, 10 cm) pour simuler des vols plus hauts, ce qui répond à l'ablation « effet de la résolution et de l'altitude ».
+
 ## Découpage prévu
 
 | Module | Entraînement | Validation | Test |
 | --- | --- | --- | --- |
 | Maladies | Campagne tanzanienne 2021 (publiée en 2023) | Campagne tanzanienne 2022-2023 (autre saison, régions en partie communes) | BananaLSD (Bangladesh) |
-| Comptage, vigueur | Parcelles distinctes | Parcelles distinctes | Zone jamais vue |
+| Comptage des pieds (ReforesTree) | Flora Pluas, Nestor Macias, Leonor Aspiazu (2 503 bananiers) | Manuel Macias (349) | Carlos Vera Arteaga et Carlos Vera Guevara ensemble (584) ; proposition à valider |
+| Vigueur sur drone (ExG, VARI) | Mêmes sites que le comptage | Idem | Idem |
 | Stress hydrique, vigueur (Sentinel-2) | Réglage des seuils sur un pays (proposition, à valider) | À définir | L'autre pays, jamais par date |
 
 Principe : on sépare par source, par site ou par pays, jamais image par image.
+
+Pour ReforesTree, le test proposé est volontairement difficile (bananiers minoritaires, 14 à 32 %). Variante plus stricte, à comparer dans le rapport : entraînement sur la région sud, test sur la région nord (environ 115 km d'écart).
 
 ## Risques de fuite
 
@@ -291,6 +340,8 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - **Doublons dans BananaLSD** : 38 copies exactes (classe saine) et 1 image étiquetée dans deux classes. Elles sont à exclure avant toute mesure (liste dans `out/exclusions.csv`).
 - **Les images quasi identiques** (photos successives du même plant) : à rechercher par hachage d'image avant le découpage.
 - **Les images aériennes d'une même zone** : tout un site va dans le même ensemble.
+- **ReforesTree, tuiles qui se recouvrent** : les tuiles d'un même site partagent 200 pixels de bord. Jamais de découpage par tuile, toujours par site.
+- **ReforesTree, sites voisins** : Carlos Vera Arteaga et Carlos Vera Guevara sont à environ 200 m l'un de l'autre. Ils vont toujours dans le même ensemble. Manuel Macias (validation proposée) est à 2,9 km de Leonor Aspiazu (entraînement) : fermes distinctes, mais même secteur, à garder en tête.
 - **Sentinel-2, deux dates d'un même site** : ce sont les mêmes parcelles. Séparer par date reviendrait à tester sur ce qu'on a déjà vu. La séparation se fait par pays.
 - **Parcelles voisines** : leurs pixels sont corrélés. Au sein d'un même site, un découpage par parcelle donnerait un test trop optimiste.
 - **Rétrécissement d'un pixel** appliqué avant les statistiques, pour éviter les pixels mélangés entre parcelle et piste ou fleuve.
@@ -308,6 +359,7 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - Parcelles tracées à la main par une seule personne : tracé subjectif.
 - Côte d'Ivoire, janvier 2024 : voile de cirrus fins sur une grande partie des parcelles (effet mesuré faible sur les indices, voir la fiche 5).
 - Équateur : limites moins nettes à 10 m, NDVI saturé (0,87 à 0,89) et NDMI très corrélé au NDVI (0,96) : peu de contraste entre parcelles.
+- ReforesTree : agroforesterie et non bananeraie industrielle ; annotations issues d'un détecteur puis nettoyées (arbres manquants possibles) ; aucune distinction pieds mères et rejets ; images RGB seulement.
 - Anomalies : seuils choisis sans référence de terrain ; détection de stress moins solide quand la relation NDMI-NDVI est faible (Côte d'Ivoire, juin : 0,63) ; alertes sur parcelles partiellement voilées à confiance faible.
 
 ## À faire
@@ -325,7 +377,7 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - [ ] Compter les images des archives tanzaniennes et résoudre l'écart 16 092 / 17 068.
 - [ ] Séparer feuilles et tiges, chercher un identifiant de ferme ou de région (noms de fichiers, EXIF).
 - [ ] Comparer les deux jeux tanzaniens (fermes, doublons) avant tout découpage.
-- [ ] Repérer les annotations disponibles dans le jeu australien.
+- [x] Jeu australien vérifié : aucun fichier téléchargeable (notice « Record deleted »). Écrire à l'auteur si besoin.
 - [x] Choisir la zone et les dates Sentinel-2 : Équateur (10/02 et 29/08/2023) et Côte d'Ivoire (13/06/2023 et 04/01/2024), 10 bandes téléchargées.
 - [x] Tracer et contrôler les 33 parcelles de Côte d'Ivoire (EPSG:32630).
 - [x] Masque de nuages calculé pour la Côte d'Ivoire (juin 2023 et janvier 2024).
@@ -338,12 +390,17 @@ Principe : on sépare par source, par site ou par pays, jamais image par image.
 - [ ] Vérifier la licence Copernicus et la résolution native des bandes.
 - [x] Seuil de nuages paramétrable dans `indices_parcelles.py` (défaut 50 %).
 - [ ] Reprendre ce paramètre dans le `run.py` final.
-- [ ] **Priorité** : trouver des images de drone pour le comptage des pieds (jeu australien ou photos à assembler avec OpenDroneMap).
+- [x] Images de drone pour le comptage trouvées : ReforesTree, téléchargé, MD5 vérifié, inspecté.
+- [ ] Vérifier dans l'article l'origine de la colonne `is_banana` et la méthode de nettoyage des boîtes.
+- [ ] Convertir les boîtes en points GeoJSON (centre de chaque boîte, UTM 17S) avec le découpage par site, et les contrôler dans QGIS sur les orthomosaïques.
+- [ ] Baseline classique de comptage (ExG, lissage, maxima locaux), mesurée en F1 à 1 m et en erreur de comptage par site.
+- [ ] Détecteur appris (par exemple DeepForest), puis ablation de la résolution (1, 2, 5, 10 cm).
+- [ ] Chercher une bananeraie industrielle en images de drone ouvertes (OpenAerialMap) pour un test plus proche de la zone de l'organisation.
 - [x] Anomalies de vigueur (NDVI, NDRE) et de stress hydrique (NDMI), avec évolution entre dates : script `anomalies_parcelles.py`, lancé sur les deux sites.
 - [ ] Inspecter visuellement P01, P06 à P09, P13 et P33 (Côte d'Ivoire) dans QGIS.
 - [ ] Ablation des seuils d'anomalie (z, écarts minimaux, marge autour des nuages, taille des zones).
-- [ ] Compléter `requirements.txt` (numpy, pandas, rasterio, geopandas, scipy).
+- [x] `requirements.txt` complété (pandas, scipy, pillow ajoutés, versions fixées).
 - [ ] Bulletin par parcelle (score, alertes, zones prioritaires) et commande unique `run.py`.
-- [ ] Vérifier que `data/` et `out/` sont exclus par `.gitignore`.
+- [x] `data/` et `out/` exclus par `.gitignore`.
 - [ ] Ablation du seuil (30, 50, 70 %) et comparaison NDVI / NDRE pour le rapport.
 - [ ] Documenter chaque modèle pré-entraîné utilisé.
