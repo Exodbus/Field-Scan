@@ -308,6 +308,35 @@ La fiche TorchGeo annonce 2 cm/pixel, mais les orthomosaïques sont à **0,97 à
 
 **Géographie** : deux régions à environ 115 km l'une de l'autre. Au sud, Flora Pluas et Nestor Macias (6,6 km entre centres). Au nord, Leonor Aspiazu et Manuel Macias (2,9 km), puis Carlos Vera Arteaga et Carlos Vera Guevara, **voisins** (406 m entre centres, environ 200 m entre les bords des emprises), à 5 à 8 km des deux autres.
 
+#### Préparation pour le comptage (`scripts/prepare_reforestree.py`)
+
+- **Commande** : `python scripts/prepare_reforestree.py` (options `--decoupage site` ou `region`, `--doublon-m`). Lecture directe dans le zip ; sorties dans `data/drone/reforestree/prepare/` (non versionné).
+- **Un pied = le centre de sa boîte**, calculé à partir des coordonnées pixel de l'orthomosaïque et de son géoréférencement, puis converti en UTM 17S (EPSG:32717, en mètres).
+- **Sorties** : `points_pieds.geojson` (un point par arbre, avec site, découpage, `is_banana`, score, taille de couronne et boîte d'origine), `boites.geojson`, `sites.geojson` (emprise des six sites avec leur découpage), `resume_sites.csv`, `parametres.json`.
+- **Doublons dus au recouvrement des tuiles** : un même arbre peut être annoté dans deux tuiles voisines. Les centres à moins de 1 m issus de tuiles **différentes** sont fusionnés (on garde la boîte la plus grande, la moins coupée par le bord). Deux arbres proches d'une **même** tuile ne sont jamais fusionnés, pour ne pas confondre un pied mère et son rejet. Résultat : **7 969 boîtes → 6 340 arbres** (1 629 doublons, 20 %), dont **2 804 bananiers**. Carlos Vera Guevara en perd le plus (476 sur 1 636, 29 %). 21 groupes fusionnés avaient des étiquettes `is_banana` contradictoires.
+
+| Ensemble | Sites | Arbres | Bananiers | Surface |
+| --- | --- | --- | --- | --- |
+| Entraînement | Flora Pluas, Nestor Macias, Leonor Aspiazu | 3 625 | 2 048 | 7,5 ha |
+| Validation | Manuel Macias | 567 | 247 | 1,9 ha |
+| Test | Carlos Vera Arteaga, Carlos Vera Guevara | 2 148 | 509 | 4,7 ha |
+
+- **Densité de bananiers** : environ 355 par hectare au sud (Flora Pluas 353, Nestor Macias 360), 90 à 130 au nord. Une bananeraie industrielle en compte plusieurs fois plus : écart de domaine à documenter.
+- **Géoréférencement vérifié dans QGIS** (orthomosaïque de Flora Pluas, boîtes superposées) : les boîtes tombent sur les plantes, sans décalage visible, à l'échelle du site comme en vue rapprochée. Les points préparés sont donc cohérents avec l'image.
+- **Écart avec les colonnes `lon`/`lat` du fichier** : environ 17 à 22 m en médiane sur cinq sites (1,3 m sur Carlos Vera Arteaga). Hypothèse, non vérifiée dans le code des auteurs : leurs coordonnées sont dans un repère recalé sur les positions GPS du terrain (`tiles/ortho_data.csv` contient des limites `_init` et recalées, avec un facteur d'échelle d'environ 1,6). Ces colonnes ne sont **pas** utilisées : seul le géoréférencement de l'image compte pour le comptage.
+
+#### Qualité des annotations, examen visuel
+
+![Orthomosaïque de Flora Pluas en vue rapprochée, avec les boîtes ReforesTree en jaune](images/reforestree_flora_pluas_boites.png)
+
+*Flora Pluas, vue rapprochée dans QGIS : boîtes annotées en jaune sur l'orthomosaïque. Images de drone WWF Équateur, jeu ReforesTree (Reiersen et al., 2022), licence CC BY 4.0.*
+
+- **Tous les arbres sont annotés, pas seulement les bananiers** : on voit des boîtes sur de gros arbustes (à droite, et l'arbre vert clair à gauche). Ce n'est pas une erreur : c'est la colonne `is_banana` qui distingue les bananiers. Pour le comptage des pieds, il faut **filtrer sur `is_banana`**, et un détecteur doit apprendre à écarter les autres arbres. C'est aussi l'illustration du mélange d'espèces de l'agroforesterie, absent d'une bananeraie industrielle.
+- **Boîtes imbriquées ou très superposées sur une même plante** (par exemple en haut à gauche et au centre-haut de l'image). Elles sont dans la même tuile, donc non fusionnées. Certaines sont probablement des doublons, d'autres un pied mère et son rejet : à mesurer.
+- **Plantes apparemment sans boîte**, par exemple certains bananiers au centre et sur le bord gauche. Un bon détecteur serait alors compté faux sur des plantes réelles.
+- **Boîtes souvent plus petites que la plante** : elles encadrent le cœur plutôt que toutes les feuilles. Sans effet sur le comptage, qui n'utilise que le centre.
+- **Conséquence** : la référence est bruitée, et le F1 maximal atteignable est inférieur à 1, même pour un détecteur parfait. Il ne faut pas sur-interpréter de petits écarts entre méthodes.
+
 #### Réserves
 
 - **Annotations issues d'un détecteur** : la colonne `score` (médiane 0,39) montre que les boîtes ont été produites par un modèle, puis nettoyées à la main. Des arbres peuvent manquer, ce qui pénaliserait à tort un bon détecteur (faux positifs sur des arbres réels non annotés). Affiner un DeepForest sur ces boîtes risque aussi d'apprendre les choix du modèle d'origine.
@@ -322,7 +351,7 @@ La fiche TorchGeo annonce 2 cm/pixel, mais les orthomosaïques sont à **0,97 à
 | Module | Entraînement | Validation | Test |
 | --- | --- | --- | --- |
 | Maladies | Campagne tanzanienne 2021 (publiée en 2023) | Campagne tanzanienne 2022-2023 (autre saison, régions en partie communes) | BananaLSD (Bangladesh) |
-| Comptage des pieds (ReforesTree) | Flora Pluas, Nestor Macias, Leonor Aspiazu (2 503 bananiers) | Manuel Macias (349) | Carlos Vera Arteaga et Carlos Vera Guevara ensemble (584) ; proposition à valider |
+| Comptage des pieds (ReforesTree) | Flora Pluas, Nestor Macias, Leonor Aspiazu (2 048 bananiers après fusion des doublons) | Manuel Macias (247) | Carlos Vera Arteaga et Carlos Vera Guevara ensemble (509) ; proposition à valider |
 | Vigueur sur drone (ExG, VARI) | Mêmes sites que le comptage | Idem | Idem |
 | Stress hydrique, vigueur (Sentinel-2) | Réglage des seuils sur un pays (proposition, à valider) | À définir | L'autre pays, jamais par date |
 
@@ -359,7 +388,7 @@ Pour ReforesTree, le test proposé est volontairement difficile (bananiers minor
 - Parcelles tracées à la main par une seule personne : tracé subjectif.
 - Côte d'Ivoire, janvier 2024 : voile de cirrus fins sur une grande partie des parcelles (effet mesuré faible sur les indices, voir la fiche 5).
 - Équateur : limites moins nettes à 10 m, NDVI saturé (0,87 à 0,89) et NDMI très corrélé au NDVI (0,96) : peu de contraste entre parcelles.
-- ReforesTree : agroforesterie et non bananeraie industrielle ; annotations issues d'un détecteur puis nettoyées (arbres manquants possibles) ; aucune distinction pieds mères et rejets ; images RGB seulement.
+- ReforesTree : agroforesterie et non bananeraie industrielle (tous les arbres sont annotés, bananiers à filtrer avec `is_banana`) ; annotations issues d'un détecteur puis nettoyées, avec boîtes imbriquées et plantes oubliées visibles à l'œil ; 20 % de doublons dus au recouvrement des tuiles, fusionnés ; aucune distinction pieds mères et rejets ; images RGB seulement.
 - Anomalies : seuils choisis sans référence de terrain ; détection de stress moins solide quand la relation NDMI-NDVI est faible (Côte d'Ivoire, juin : 0,63) ; alertes sur parcelles partiellement voilées à confiance faible.
 
 ## À faire
@@ -392,7 +421,10 @@ Pour ReforesTree, le test proposé est volontairement difficile (bananiers minor
 - [ ] Reprendre ce paramètre dans le `run.py` final.
 - [x] Images de drone pour le comptage trouvées : ReforesTree, téléchargé, MD5 vérifié, inspecté.
 - [ ] Vérifier dans l'article l'origine de la colonne `is_banana` et la méthode de nettoyage des boîtes.
-- [ ] Convertir les boîtes en points GeoJSON (centre de chaque boîte, UTM 17S) avec le découpage par site, et les contrôler dans QGIS sur les orthomosaïques.
+- [x] Boîtes converties en points GeoJSON (centre de chaque boîte, UTM 17S), doublons de recouvrement fusionnés, découpage par site : `prepare_reforestree.py`.
+- [x] Géoréférencement contrôlé dans QGIS sur Flora Pluas : boîtes alignées sur les plantes.
+- [ ] Mesurer les boîtes imbriquées d'une même tuile (l'une contenue à plus de 70 % dans l'autre), par site.
+- [ ] Estimer les plantes oubliées en comptant à la main sur deux ou trois petites zones.
 - [ ] Baseline classique de comptage (ExG, lissage, maxima locaux), mesurée en F1 à 1 m et en erreur de comptage par site.
 - [ ] Détecteur appris (par exemple DeepForest), puis ablation de la résolution (1, 2, 5, 10 cm).
 - [ ] Chercher une bananeraie industrielle en images de drone ouvertes (OpenAerialMap) pour un test plus proche de la zone de l'organisation.
