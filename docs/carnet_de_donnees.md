@@ -1,6 +1,6 @@
 # Carnet de données
 
-Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats, puis la détection d'anomalies de vigueur et de stress hydrique, et le jeu de drone ReforesTree pour le comptage des pieds (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
+Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sentinel-2, les parcelles des deux sites, le masque de nuages, le script de calcul des indices et ses premiers résultats, puis la détection d'anomalies de vigueur et de stress hydrique, le jeu de drone ReforesTree pour le comptage des pieds, puis la préparation complète du jeu de feuilles (module maladies) (et, avant, les vérifications de BananaLSD). Tout ce qui est marqué **à vérifier** n'a pas encore été contrôlé sur la source. Ce carnet se complète au fil du projet.
 
 ## Règles du sujet
 
@@ -12,7 +12,7 @@ Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sen
 
 | Jeu | Contenu | Pays | Usage prévu | Licence |
 | --- | --- | --- | --- | --- |
-| Banana leaves and stem, Tanzanie (Lacuna) | 16 092 ou 17 068 images de feuilles et de tiges (à compter) | Tanzanie | Maladies | CC BY (à confirmer sur Dataverse) |
+| Banana leaves and stem, Tanzanie (Lacuna) | 16 092 images de feuilles et de tiges (comptées), dont 397 tiges exclues | Tanzanie | Maladies : entraînement | CC BY (à confirmer sur Dataverse) |
 | Banana Leaves Imagery Dataset (2022-2023) | 11 767 images de feuilles | Tanzanie | Maladies (validation) | CC BY 4.0 (Zenodo) |
 | BananaLSD | 937 images brutes (897 après exclusions) | Bangladesh | Maladies, test d'un autre pays | à vérifier |
 | Remote Sensing applications for Banana Crops | Images de drone multispectrales | Australie | Vigueur, comptage, suivi temporel | à vérifier |
@@ -27,7 +27,22 @@ Ces images sont prises au sol et de près, au smartphone, pas par drone. Cet éc
 
 - **Provenance** : Nelson Mandela African Institution of Science and Technology et Tanzania Agricultural Research Institute (TARI), financé par le Lacuna Fund ; maintenu par le Makerere AI Lab. Dépôt Harvard Dataverse, doi 10.7910/DVN/LQUWXW. Article de données (Mduma et Leo, 2023) et fiche technique `Bananas_TZ_data_sheet.pdf` (2022).
 - **Contenu** : trois classes : saine, cercosporiose noire (Black Sigatoka), fusariose « Race 1 ». Des photos de **feuilles et de tiges** (la fiche montre la fusariose en coupe de pseudo-tronc).
-- **Effectifs** : la fiche technique annonce 17 068 images (5 883 saines, 6 147 Black Sigatoka, 5 038 fusariose) ; l'article de 2023 et le sujet citent 16 092 (5 628 / 5 767 / 4 697). **Écart à résoudre en comptant les fichiers téléchargés.**
+- **Effectifs** : la fiche technique annonce 17 068 images (5 883 saines, 6 147 Black Sigatoka, 5 038 fusariose) ; l'article de 2023 et le sujet citent 16 092 (5 628 / 5 767 / 4 697). **Écart résolu le 29 octobre 2026 en comptant les fichiers téléchargés : 16 092**, exactement les chiffres de l'article (saines 2 860 + 2 768 ; cercosporiose 2 696 + 3 071 ; fusariose 2 500 + 2 197).
+- **Téléchargement et intégrité** (29 octobre 2026) : liste des fichiers obtenue par l'API Dataverse (la requête doit se présenter comme un navigateur, sinon le serveur répond 403), téléchargement par `curl` avec reprise, sommes MD5 vérifiées par `scripts/verifier_zips.py` :
+
+| Fichier | Identifiant Dataverse | Taille | MD5 |
+| --- | --- | --- | --- |
+| `BLACK SIGATOKA_1.zip` | 7071415 | 1 566 Mo | a801528927f604eb43ffdba4dbb38dfa |
+| `BLACK SIGATOKA_2.zip` | 6078711 | 1 812 Mo | b51c8e45255c440f3c4e3328d215cc25 |
+| `FUSARIUM WILT_1.zip` | 7071416 | 1 194 Mo | d34af36da8efb6796f72e3d61b9111ea |
+| `FUSARIUM WILT_2.zip` | 7077487 | 1 125 Mo | 050532bebf75ea3fce2388ca68ff2f85 |
+| `HEALTHY_1.zip` | 7077478 | 1 108 Mo | 1b1526a893ae29385bf14b312f8893bf |
+| `HEALTHY_2.zip` | 7077403 | 1 477 Mo | d7a130566e04511c94e1e7db0e02b2a2 |
+| `Bananas_TZ_data_sheet.pdf` | 6420462 | 1 Mo | f315bfa8ea899ed514fe2238628b4f6f |
+
+- **Piège de format** : `BLACK SIGATOKA_2.zip` contient 6 144 fichiers, dont 3 072 dans un dossier `__MACOSX` (fichiers cachés `._Image_N.jpg` ajoutés par macOS, avec l'extension `.jpg` mais illisibles). Il ne contient que 3 071 vraies images. Ces fichiers sont ignorés par tous les scripts.
+- **Numérotation** : continue d'un zip à l'autre au sein d'une classe (le second zip de cercosporiose commence vers `Image_5764`).
+- **Tiges** : 397 photos de pseudo-tronc (8,5 % de la fusariose : 353 dans le premier zip, 44 dans le second), exclues de l'entraînement (voir « Préparation du jeu de feuilles »).
 - **Fichiers** (7, environ 7,7 Go) : `BLACK SIGATOKA_1.zip` (1,5 Go), `BLACK SIGATOKA_2.zip` (1,7 Go), `FUSARIUM WILT_1.zip` (1,1 Go), `FUSARIUM WILT_2.zip` (1,0 Go), `HEALTHY_1.zip` (1,0 Go), `HEALTHY_2.zip` (1,4 Go), plus la fiche technique en PDF (856 Ko). Dates de publication des fichiers entre juillet 2022 et avril 2023.
 - **Acquisition** : smartphones Samsung avec l'application AdSurv (collecte participative), dans des jardins de fermiers, de février à juillet 2021, dans cinq régions : Arusha, Kilimanjaro, Kagera, Dar es Salaam, Mbeya.
 - **Résolution** : non indiquée dans la fiche ; mesurée sur `HEALTHY_1` : côté long de 1 024 pixels au maximum, 190 à 270 Ko par image (voir les vérifications ci-dessous).
@@ -35,7 +50,7 @@ Ces images sont prises au sol et de près, au smartphone, pas par drone. Cet éc
 - **Annotations** : une étiquette de classe par image ; les images sont aussi annotées pour la détection et la segmentation selon la fiche (à vérifier dans les archives).
 - **Découpage** : aucun fourni. **Pas d'identifiant de ferme ni de région par image**, selon la fiche : à chercher dans les noms de fichiers et les métadonnées EXIF.
 - **Doublons** : les auteurs disent avoir retiré les doublons identifiés, mais qu'un petit nombre peut subsister, et que le jeu contient des images « extrêmement similaires » sans être des doublons. À vérifier avec `find_duplicates.py` et `make_exclusions.py`.
-- **Usage prévu** : entraînement et validation du module maladies, après séparation des feuilles et des tiges.
+- **Usage** : entraînement du module maladies, après exclusion des tiges (15 695 images retenues).
 
 **Vérifications faites le 26 octobre 2026 sur `HEALTHY_1.zip` (campagne 2021)**
 
@@ -79,7 +94,7 @@ Constat : la partie datée de ce lot vient d'un seul téléphone, de deux jours 
 - **Annotations** : étiquettes de classe ; polygones LabelMe pour la segmentation (instances et sémantique), selon l'article.
 - **Licence** : CC BY 4.0, lue sur la page Zenodo du dépôt le 26 octobre 2026 (l'article est aussi en CC BY 4.0). Citation obligatoire : Mduma, N., & Elinisa, C. (2023). *Banana Imagery Dataset - Tanzania* [Dataset]. Zenodo. https://doi.org/10.5281/zenodo.7670326
 - **Description Zenodo** : jeu créé pour la classification d'images et la détection d'objets ; version unique (v1), créé et modifié les 25 février 2023.
-- **Usage prévu** : validation du module maladies (autre saison que l'entraînement).
+- **Usage** : validation du module maladies (autre saison que l'entraînement), avec **un zip par classe** seulement (`HEALTHY-1`, `BLACK SIGATOKA-1`, `FUSARIUM WILT-1`, environ 1 000 images chacun), au lieu des 34 Go du jeu complet. `BLACK SIGATOKA-1.zip` (3 741 Mo) et `FUSARIUM WILT-1.zip` (3 110 Mo) téléchargés le 29 octobre 2026, MD5 identiques à ceux de Zenodo.
 - **Réserves** : le dépôt Zenodo date du 23 février 2023, alors que le tableau 1 de l'article place le prétraitement (nettoyage, recadrage, renommage) de février à mars 2023 : le dépôt n'est peut-être pas la version finale (à vérifier sur les fichiers) ; mêmes pays, même équipe et mêmes classes que le jeu de 2021 ; les deux campagnes couvrent toutes deux les régions d'Arusha et de Mbeya, donc des fermes ont pu être photographiées dans les deux (à vérifier). La séparation 2021 / 2022-2023 est surtout une séparation dans le temps. Doublons possibles entre les deux jeux : à vérifier par empreinte visuelle.
 
 **Vérifications faites le 26 octobre 2026 sur `HEALTHY-1.zip` (campagne 2022-2023)**
@@ -107,7 +122,7 @@ Constat : les images sont en haute résolution (3,7 à 16 mégapixels), très va
 - **Acquisition** : trois smartphones, juin 2021, champs de l'université BSMRAU et alentours (Gazipur, Bangladesh).
 - **Annotations** : une étiquette par image, posée par un phytopathologiste. La classe « Sigatoka » regroupe la cercosporiose noire et la jaune.
 - **Licence** : à vérifier sur la page Mendeley. L'article est en CC BY 4.0, mais ce n'est pas forcément la licence du jeu.
-- **Usage prévu** : test uniquement, sur le dossier `OriginalSet` (autre pays par rapport aux jeux tanzaniens). Le dossier `AugmentedSet` n'est jamais utilisé.
+- **Usage** : test uniquement, sur le dossier `OriginalSet` (autre pays par rapport aux jeux tanzaniens). Le dossier `AugmentedSet` n'est jamais utilisé. Correspondance des classes : *healthy* → saine ; *sigatoka* → cercosporiose noire (la classe des auteurs regroupe cercosporiose noire et jaune) ; *cordana* et *pestalotiopsis* → **maladies inconnues**, absentes de l'entraînement, que le modèle doit rejeter.
 
 **Vérifications faites le 25 octobre 2026 sur `OriginalSet`**
 
@@ -131,6 +146,61 @@ Constat : les images sont en haute résolution (3,7 à 16 mégapixels), très va
 | Total | 937 | 897 |
 
 **Constats visuels** (planche de 16 images, échantillon à confirmer) : feuilles photographiées de près, au sol, avec des fonds variables ; certaines images de Sigatoka sont grisâtres, à regarder de plus près.
+
+### Préparation du jeu de feuilles
+
+#### Inventaire (`scripts/inventaire_feuilles.py`)
+
+Lecture de toutes les archives sans décompression : nombre d'images, tailles, et une planche de 24 images tirées au hasard par source (graine 2026, dans `out/feuilles/inventaire/planches/`). Constats sur les planches :
+
+| Source | Style de photo |
+| --- | --- |
+| Saines 2021 | gros plans du limbe, presque toujours avec la **nervure centrale** visible, sans fond |
+| Cercosporiose et fusariose 2021 | gros plans de lésions, rarement la nervure ; fusariose avec environ 10 % de **coupes de tige** |
+| Saines 2022-2023 | **feuilles entières sur fond de sol** |
+| Fusariose 2022-2023 | feuilles entières, souvent **à contre-jour sur fond de ciel** |
+| BananaLSD (`OriginalSet`) | gros plans de 224 pixels, assez proches du style de 2021 |
+
+**Risque de raccourci** : le modèle peut apprendre le style plutôt que la maladie (« nervure visible = saine » à l'entraînement, « ciel bleu = fusariose » en validation). Parades prévues : recadrages aléatoires à l'entraînement, validation sur images entières et sur recadrages centrés sur la feuille (un grand écart entre les deux signalerait un modèle qui regarde le fond), cartes d'attention (Grad-CAM).
+
+**Autres constats** : la fusariose sur feuille (jaunissement, bords desséchés, déchirures) ressemble à la cercosporiose avancée et à la sénescence ; certaines confusions seront normales. Image « saine » douteuse : `HEALTHY_162` (2022-2023), stries brunes.
+
+#### Exclusion des tiges (`scripts/reperer_tiges.py`)
+
+Le test ne contient que des feuilles ; une tige n'apprendrait au modèle qu'un indice qu'il ne reverra jamais. Méthode semi-automatique :
+
+1. Vecteur de chaque image de fusariose 2021 par EfficientNet-B0 pré-entraîné sur ImageNet (torchvision), sur processeur.
+2. Score = ressemblance (cosinus) maximale avec 6 tiges d'exemple, moins ressemblance maximale avec 42 feuilles d'exemple, toutes repérées sur les planches d'inventaire.
+3. Classement par score décroissant et affichage de 960 images sur 10 pages numérotées, examinées à l'œil.
+
+Résultats : les 6 tiges d'exemple aux rangs 1, 2, 3, 5, 7 et 10 ; la meilleure feuille d'exemple au rang 4 099 sur 4 697 ; 396 images à score positif. Examen visuel : tiges jusqu'au rang 397 inclus (le rang 397 montre l'extérieur du pseudo-tronc), feuilles ensuite ; aucune feuille avant cette limite et aucune tige après, sur les 960 premiers rangs. Règle appliquée : exclure ce qui montre l'intérieur ou l'extérieur du pseudo-tronc, garder tout limbe, même abîmé. **397 images exclues** (353 et 44), liste versionnée : `docs/exclusions/tiges_fusariose_2021.csv` (rang, score et motif de chaque image). Réserve : les rangs au-delà de 960 n'ont pas été examinés, mais aucune tige n'apparaissait déjà entre 481 et 960.
+
+#### Préparation (`scripts/preparer_feuilles.py`)
+
+- **Ensembles** : entraînement = Tanzanie 2021 ; validation = Tanzanie 2022-2023 (un zip par classe) ; test = BananaLSD `OriginalSet`.
+- **Uniformisation** : rotation EXIF appliquée, petit côté ramené à 256 pixels (jamais agrandi), JPEG qualité 92. Décodage JPEG accéléré pour les photos de 12 mégapixels. Deux passages (empreintes, puis écriture des seules images retenues) pour ne pas saturer la mémoire.
+- **Exclusions** (rien n'est supprimé ; tout est noté dans `data/feuilles/index.csv`, colonne `motif`) : tiges ; copies exactes dans une même classe (SHA-256) ; même fichier dans deux classes (toutes les copies) ; fuites exactes et visuelles entre ensembles (une image de validation ou de test retrouvée dans un ensemble antérieur).
+- **Contrôle croisé** : sur BananaLSD, le script retrouve 38 copies exactes et 2 images d'étiquette contradictoire, soit **897 images nettes, exactement le résultat de l'analyse précédente** (méthode indépendante).
+
+**Recherche des fuites visuelles : deux corrections, vérifiées à l'œil** (`scripts/verifier_fuites.py` affiche chaque paire côte à côte) :
+
+| Version | Méthode | Alertes | Vérification visuelle |
+| --- | --- | --- | --- |
+| 1 | empreinte dHash de 64 bits, au plus 4 bits d'écart | 110 (72 en validation, 38 dans le test, dont 30 Sigatoka) | **toutes fausses** : photos différentes, souvent de classes différentes ; une même image d'entraînement « proche » de plusieurs images de test |
+| 2 | empreinte (au plus 6 bits) pour proposer des candidats, puis comparaison des images réduites à 16 × 16 pixels en couleur (écart moyen au plus 10 sur 255) | 301 candidats, 1 confirmé | fausse : `BS_535` (validation, cercosporiose) et `HEALTHY_1/Image_1988` (entraînement, saine), deux feuilles vertes différentes, écart 9,9 |
+| **3 (retenue)** | idem, seuil de vignette **5** | 301 candidats, **0 confirmé** | le candidat le plus proche reste à un écart de 9,9 |
+
+Pourquoi l'empreinte seule échoue : elle note seulement si chaque zone est plus claire ou plus sombre que sa voisine, et les nervures parallèles d'une feuille de bananier donnent ce même motif à des photos différentes. Choix du seuil 5 : une vraie copie redimensionnée et recompressée donne un écart d'environ 0,5 à 1 (mesuré sur un jeu de test fabriqué) ; la fausse alerte la plus proche observée donnait 9,9.
+
+**Effectifs retenus** (exécution définitive du 29 octobre 2026, seuil de vignette 5, 20 030 images lues en 20 minutes ; **19 593 retenues**) :
+
+| Ensemble | Saine | Cercosporiose noire | Fusariose | Inconnue : Cordana | Inconnue : Pestalotiopsis | Total |
+| --- | --- | --- | --- | --- | --- | --- |
+| Entraînement (Tanzanie 2021) | 5 628 | 5 767 | 4 300 | | | 15 695 |
+| Validation (Tanzanie 2022-2023) | 1 000 | 1 000 | 1 001 | | | 3 001 |
+| Test (BananaLSD) | 90 | 473 | | 162 | 172 | 897 |
+
+**Conclusion** : aucune vraie fuite trouvée entre les campagnes 2021 et 2022-2023, ni avec BananaLSD ; aucune copie exacte dans le jeu d'entraînement (cohérent avec le nettoyage déclaré par les auteurs). Les ensembles sont indépendants, ce qui rend l'évaluation crédible.
 
 ## Images aériennes
 
@@ -483,7 +553,7 @@ Diagnostics intermédiaires, qui ont guidé l'essai 3 : `create_trainer()` ne r�
 
 | Module | Entraînement | Validation | Test |
 | --- | --- | --- | --- |
-| Maladies | Campagne tanzanienne 2021 (publiée en 2023) | Campagne tanzanienne 2022-2023 (autre saison, régions en partie communes) | BananaLSD (Bangladesh) |
+| Maladies | Campagne tanzanienne 2021, sans les tiges (15 695 images) | Campagne tanzanienne 2022-2023, un zip par classe (3 001 images) | BananaLSD `OriginalSet` (897 images, dont 334 de maladies inconnues à rejeter) |
 | Comptage des pieds (ReforesTree) | Flora Pluas, Nestor Macias, Leonor Aspiazu : annotations ReforesTree (2 048 bananiers après fusion des doublons) | Manuel Macias : réglages, mesure sur la référence manuelle MM1 et MM2 (83 bananiers) | Carlos Vera Guevara : mesure sur la référence manuelle CG1 à CG3 (à annoter). Carlos Vera Arteaga exclu |
 | Vigueur sur drone (ExG, VARI) | Mêmes sites que le comptage | Idem | Idem |
 | Stress hydrique, vigueur (Sentinel-2) | Réglage des seuils sur un pays (proposition, à valider) | À définir | L'autre pays, jamais par date |
@@ -499,8 +569,8 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - **Les images augmentées** (BananaLSD) ne doivent jamais passer en test.
 - **Entre les deux campagnes tanzaniennes** : les régions d'Arusha et de Mbeya figurent dans les deux. Des fermes ou des plants ont pu être photographiés deux fois, et le jeu de 2022-2023 est présenté comme une mise à jour de celui de 2021. Comparer les deux jeux par empreinte visuelle (pas seulement par fichier identique, car les tailles diffèrent) avant toute validation.
 - **Jeu tanzanien de 2021** : pas de découpage fourni, pas d'identifiant de ferme ni de région par image, doublons résiduels possibles et images « extrêmement similaires » reconnues par les auteurs. Un découpage au hasard entre entraînement et validation ferait fuiter des photos quasi identiques. À vérifier avant de découper.
-- **Doublons dans BananaLSD** : 38 copies exactes (classe saine) et 1 image étiquetée dans deux classes. Elles sont à exclure avant toute mesure (liste dans `out/exclusions.csv`).
-- **Les images quasi identiques** (photos successives du même plant) : à rechercher par hachage d'image avant le découpage.
+- **Doublons dans BananaLSD** : 38 copies exactes (classe saine) et 1 image étiquetée dans deux classes. Exclues par `preparer_feuilles.py`, qui les retrouve indépendamment (897 images nettes, comme l'analyse initiale).
+- **Les images quasi identiques** (photos successives du même plant) : recherchées entre ensembles par empreinte visuelle confirmée par comparaison des couleurs (voir « Préparation du jeu de feuilles ») ; aucune vraie fuite trouvée. Les quasi-doublons à l'intérieur d'un même ensemble ne sont pas retirés (sans effet sur l'indépendance des ensembles).
 - **Les images aériennes d'une même zone** : tout un site va dans le même ensemble.
 - **ReforesTree, tuiles qui se recouvrent** : les tuiles d'un même site partagent 200 pixels de bord. Jamais de découpage par tuile, toujours par site.
 - **ReforesTree, sites voisins** : Carlos Vera Arteaga et Carlos Vera Guevara sont à environ 200 m l'un de l'autre. Carlos Vera Guevara étant le test, Carlos Vera Arteaga n'est utilisé **nulle part**, ni en entraînement ni en validation. Manuel Macias (validation proposée) est à 2,9 km de Leonor Aspiazu (entraînement) : fermes distinctes, mais même secteur, à garder en tête.
@@ -512,7 +582,9 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 
 - Les photos de feuilles sont prises de près, avec un smartphone. Elles ne ressemblent pas à ce qu'un drone voit.
 - Les images viennent de peu de régions (Tanzanie, Bangladesh), avec des variétés et des pratiques propres à ces régions.
-- Le jeu tanzanien de 2021 mélange des photos de feuilles et de tiges : un modèle peut apprendre « coupe de tige = fusariose », alors que BananaLSD (test) ne contient que des feuilles. Il faut séparer les deux types avant d'entraîner.
+- Le jeu tanzanien de 2021 mélange des photos de feuilles et de tiges : 397 tiges exclues (8,5 % de la fusariose), voir « Préparation du jeu de feuilles ».
+- Le style de photo diffère selon la source et la classe (nervure visible sur les feuilles saines de 2021, ciel bleu derrière la fusariose de 2022-2023) : risque que le modèle apprenne le style plutôt que la maladie.
+- Les symptômes foliaires de la fusariose ressemblent à la cercosporiose avancée et à la sénescence ; la classe « Sigatoka » de BananaLSD mélange cercosporiose noire et jaune.
 - Le cadrage diffère entre les deux campagnes tanzaniennes : gros plans et bandes en 2021, feuilles entières avec fond en 2022-2023 (échantillons de feuilles saines). Entraîner sur l'une et valider sur l'autre mesure aussi cet écart de cadrage et de résolution. Pas encore comparé selon la classe (maladies) : un lien entre cadrage et classe serait un raccourci pour le modèle.
 - Les classes sont déséquilibrées. Dans BananaLSD, la classe saine ne compte que 90 images distinctes, contre 473 pour Sigatoka.
 - La fusariose des jeux tanzaniens est la Race 1, pas la souche TR4.
@@ -534,12 +606,19 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - [x] Licence du dépôt Zenodo du jeu 2022-2023 lue : CC BY 4.0.
 - [x] `HEALTHY-1.zip` (campagne 2022-2023) téléchargé, MD5 identique, 1 000 images analysées.
 - [ ] Lancer `inspect_numbers.py` sur `HEALTHY_1` (2021) pour voir si les numéros forment des blocs.
-- [ ] Chercher les doublons dans `HEALTHY_1` (2021) et `HEALTHY-1` (2022-2023), puis entre les deux campagnes (comparaison visuelle).
+- [x] Doublons cherchés dans chaque jeu et entre les campagnes : aucune copie exacte à l'entraînement, aucune fuite visuelle réelle entre ensembles.
 - [ ] Examiner à la main des images « saines » aux marques brunes (bruit d'étiquettes possible).
-- [ ] Télécharger au moins un zip de chaque classe malade (2021 et 2022-2023) pour comparer cadrage et tailles par classe.
-- [ ] Compter les images des archives tanzaniennes et résoudre l'écart 16 092 / 17 068.
-- [ ] Séparer feuilles et tiges, chercher un identifiant de ferme ou de région (noms de fichiers, EXIF).
-- [ ] Comparer les deux jeux tanzaniens (fermes, doublons) avant tout découpage.
+- [x] Jeu 2021 complet téléchargé (5 zips manquants) et jeu 2022-2023 limité à un zip par classe ; 7 sommes MD5 vérifiées (`verifier_zips.py`).
+- [x] Inventaire et planches de toutes les sources (`inventaire_feuilles.py`) ; cadrage et style comparés par classe.
+- [x] Écart 16 092 / 17 068 résolu : 16 092 images, comme l'article ; 3 072 fichiers `__MACOSX` ignorés.
+- [x] Tiges séparées : 397 exclues (`reperer_tiges.py`, liste dans `docs/exclusions/`).
+- [ ] Chercher un identifiant de ferme ou de région (noms de fichiers, EXIF), utile pour une analyse des erreurs.
+- [x] Jeu de feuilles préparé (`preparer_feuilles.py`) : uniformisation, exclusions, contrôle des fuites entre ensembles (aucune vraie fuite).
+- [x] Exécution définitive de la préparation (seuil de vignette 5) : 19 593 images retenues, validation à 3 001, 0 fuite confirmée.
+- [ ] Entraîner le classifieur de maladies (réseau léger pré-entraîné), avec augmentations et recadrages aléatoires.
+- [ ] Rejet de l'inconnu : seuil de confiance fixé sur la validation (par exemple 95 % des feuilles connues acceptées), sans jamais voir Cordana ni Pestalotiopsis.
+- [ ] Validation sur images entières et sur recadrages centrés ; cartes d'attention (Grad-CAM) pour détecter un modèle qui regarde le fond.
+- [ ] Évaluation unique sur BananaLSD : précision, rappel, fausses alertes sur feuilles saines, taux de rejet des maladies inconnues.
 - [x] Jeu australien vérifié : aucun fichier téléchargeable (notice « Record deleted »). Écrire à l'auteur si besoin.
 - [x] Choisir la zone et les dates Sentinel-2 : Équateur (10/02 et 29/08/2023) et Côte d'Ivoire (13/06/2023 et 04/01/2024), 10 bandes téléchargées.
 - [x] Tracer et contrôler les 33 parcelles de Côte d'Ivoire (EPSG:32630).
