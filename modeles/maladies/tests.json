@@ -1,0 +1,120 @@
+{
+  "methode_principale": "v2 + 4 vues, proba_max",
+  "remarque": "test_perou : premier test ; BananaLSD : indicatif (déjà consulté avec le modèle sans Pérou)",
+  "resultats": {
+    "test_perou | v2 + 4 vues, energie": {
+      "rejet_inconnues": 0.119,
+      "inconnues_declarees_saines": 0.024,
+      "rejet_cordana": 0.119,
+      "predictions_fusariose": 12
+    },
+    "test_perou | v2 + 4 vues, proba_max": {
+      "rejet_inconnues": 0.109,
+      "inconnues_declarees_saines": 0.026,
+      "rejet_cordana": 0.109,
+      "predictions_fusariose": 9
+    },
+    "test_perou | v2 + 4 vues, mahalanobis": {
+      "rejet_inconnues": 0.067,
+      "inconnues_declarees_saines": 0.05,
+      "rejet_cordana": 0.067,
+      "predictions_fusariose": 12
+    },
+    "test_perou | v2 + 4 vues, plus_proches_voisins": {
+      "rejet_inconnues": 0.111,
+      "inconnues_declarees_saines": 0.038,
+      "rejet_cordana": 0.111,
+      "predictions_fusariose": 15
+    },
+    "test_perou | v1 seul, energie": {
+      "rejet_inconnues": 0.077,
+      "inconnues_declarees_saines": 0.024,
+      "rejet_cordana": 0.077,
+      "predictions_fusariose": 10
+    },
+    "test_perou | v2 seul, energie": {
+      "rejet_inconnues": 0.119,
+      "inconnues_declarees_saines": 0.022,
+      "rejet_cordana": 0.119,
+      "predictions_fusariose": 15
+    },
+    "test | v2 + 4 vues, energie": {
+      "rejet_inconnues": 0.293,
+      "inconnues_declarees_saines": 0.003,
+      "rejet_cordana": 0.389,
+      "rejet_pestalotiopsis": 0.203,
+      "rejet_connues": 0.085,
+      "fausses_alertes_saines": 0.0,
+      "precision_saine": 0.964,
+      "rappel_saine": 0.889,
+      "precision_cercosporiose_noire": 0.654,
+      "rappel_cercosporiose_noire": 0.869,
+      "predictions_fusariose": 40
+    },
+    "test | v2 + 4 vues, proba_max": {
+      "rejet_inconnues": 0.228,
+      "inconnues_declarees_saines": 0.006,
+      "rejet_cordana": 0.309,
+      "rejet_pestalotiopsis": 0.151,
+      "rejet_connues": 0.096,
+      "fausses_alertes_saines": 0.0,
+      "precision_saine": 0.944,
+      "rappel_saine": 0.933,
+      "precision_cercosporiose_noire": 0.633,
+      "rappel_cercosporiose_noire": 0.865,
+      "predictions_fusariose": 32
+    },
+    "test | v2 + 4 vues, mahalanobis": {
+      "rejet_inconnues": 0.15,
+      "inconnues_declarees_saines": 0.027,
+      "rejet_cordana": 0.216,
+      "rejet_pestalotiopsis": 0.087,
+      "rejet_connues": 0.052,
+      "fausses_alertes_saines": 0.011,
+      "precision_saine": 0.887,
+      "rappel_saine": 0.956,
+      "precision_cercosporiose_noire": 0.628,
+      "rappel_cercosporiose_noire": 0.886,
+      "predictions_fusariose": 54
+    },
+    "test | v2 + 4 vues, plus_proches_voisins": {
+      "rejet_inconnues": 0.299,
+      "inconnues_declarees_saines": 0.009,
+      "rejet_cordana": 0.389,
+      "rejet_pestalotiopsis": 0.215,
+      "rejet_connues": 0.153,
+      "fausses_alertes_saines": 0.0,
+      "precision_saine": 0.932,
+      "rappel_saine": 0.911,
+      "precision_cercosporiose_noire": 0.641,
+      "rappel_cercosporiose_noire": 0.793,
+      "predictions_fusariose": 38
+    },
+    "test | v1 seul, energie": {
+      "rejet_inconnues": 0.192,
+      "inconnues_declarees_saines": 0.009,
+      "rejet_cordana": 0.284,
+      "rejet_pestalotiopsis": 0.105,
+      "rejet_connues": 0.055,
+      "fausses_alertes_saines": 0.0,
+      "precision_saine": 0.946,
+      "rappel_saine": 0.978,
+      "precision_cercosporiose_noire": 0.63,
+      "rappel_cercosporiose_noire": 0.888,
+      "predictions_fusariose": 42
+    },
+    "test | v2 seul, energie": {
+      "rejet_inconnues": 0.305,
+      "inconnues_declarees_saines": 0.012,
+      "rejet_cordana": 0.407,
+      "rejet_pestalotiopsis": 0.209,
+      "rejet_connues": 0.083,
+      "fausses_alertes_saines": 0.0,
+      "precision_saine": 0.929,
+      "rappel_saine": 0.867,
+      "precision_cercosporiose_noire": 0.666,
+      "rappel_cercosporiose_noire": 0.873,
+      "predictions_fusariose": 44
+    }
+  }
+}

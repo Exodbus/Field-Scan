@@ -1,0 +1,102 @@
+{
+  "historique": [
+    {
+      "epoque": 1,
+      "perte": 0.3963,
+      "f1_entieres": 0.9305,
+      "f1_recadrages": 0.9107,
+      "critere": 0.9206,
+      "duree_s": 134
+    },
+    {
+      "epoque": 2,
+      "perte": 0.341,
+      "f1_entieres": 0.9381,
+      "f1_recadrages": 0.9259,
+      "critere": 0.932,
+      "duree_s": 130
+    },
+    {
+      "epoque": 3,
+      "perte": 0.3357,
+      "f1_entieres": 0.9524,
+      "f1_recadrages": 0.9414,
+      "critere": 0.9469,
+      "duree_s": 132
+    },
+    {
+      "epoque": 4,
+      "perte": 0.3259,
+      "f1_entieres": 0.9449,
+      "f1_recadrages": 0.9312,
+      "critere": 0.9381,
+      "duree_s": 133
+    },
+    {
+      "epoque": 5,
+      "perte": 0.3234,
+      "f1_entieres": 0.9549,
+      "f1_recadrages": 0.9319,
+      "critere": 0.9434,
+      "duree_s": 128
+    },
+    {
+      "epoque": 6,
+      "perte": 0.3194,
+      "f1_entieres": 0.9417,
+      "f1_recadrages": 0.935,
+      "critere": 0.9384,
+      "duree_s": 129
+    },
+    {
+      "epoque": 7,
+      "perte": 0.3176,
+      "f1_entieres": 0.9585,
+      "f1_recadrages": 0.9357,
+      "critere": 0.9471,
+      "duree_s": 130
+    },
+    {
+      "epoque": 8,
+      "perte": 0.3131,
+      "f1_entieres": 0.9475,
+      "f1_recadrages": 0.9242,
+      "critere": 0.9359,
+      "duree_s": 129
+    },
+    {
+      "epoque": 9,
+      "perte": 0.3121,
+      "f1_entieres": 0.9427,
+      "f1_recadrages": 0.9213,
+      "critere": 0.932,
+      "duree_s": 129
+    },
+    {
+      "epoque": 10,
+      "perte": 0.3088,
+      "f1_entieres": 0.9498,
+      "f1_recadrages": 0.9242,
+      "critere": 0.937,
+      "duree_s": 129
+    },
+    {
+      "epoque": 11,
+      "perte": 0.3097,
+      "f1_entieres": 0.9503,
+      "f1_recadrages": 0.9251,
+      "critere": 0.9377,
+      "duree_s": 129
+    },
+    {
+      "epoque": 12,
+      "perte": 0.3084,
+      "f1_entieres": 0.9499,
+      "f1_recadrages": 0.9247,
+      "critere": 0.9373,
+      "duree_s": 130
+    }
+  ],
+  "epoque_retenue": 7,
+  "critere": "moyenne"
+}

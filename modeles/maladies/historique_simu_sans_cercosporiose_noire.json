@@ -1,0 +1,36 @@
+{
+  "historique": [
+    {
+      "epoque": 1,
+      "perte": 0.2639,
+      "duree_s": 69
+    },
+    {
+      "epoque": 2,
+      "perte": 0.2264,
+      "duree_s": 69
+    },
+    {
+      "epoque": 3,
+      "perte": 0.2196,
+      "duree_s": 69
+    },
+    {
+      "epoque": 4,
+      "perte": 0.2165,
+      "duree_s": 68
+    },
+    {
+      "epoque": 5,
+      "perte": 0.2143,
+      "duree_s": 69
+    },
+    {
+      "epoque": 6,
+      "perte": 0.2124,
+      "duree_s": 69
+    }
+  ],
+  "epoque_retenue": 6,
+  "critere": null
+}

@@ -1,0 +1,7 @@
+variante,plusieurs_vues,f1_entieres,f1_recadrages,critere,rappel_fusariose,fa_saines_entieres,fa_saines_recadrages
+v1,False,0.9554,0.9341,0.9447,0.905,0.003,0.016
+v1 + 4 vues,True,0.9557,0.9324,0.9441,0.902,0.003,0.015
+v2,False,0.9585,0.9357,0.9471,0.911,0.015,0.035
+v2 + 4 vues,True,0.9632,0.9417,0.9525,0.919,0.01,0.032
+v1+v2,False,0.9611,0.9422,0.9516,0.912,0.004,0.019
+v1+v2 + 4 vues,True,0.9622,0.9395,0.9508,0.914,0.003,0.02

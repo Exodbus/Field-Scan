@@ -1,0 +1,13 @@
+inconnue,methode,rejet_a_95,auroc,exactitude_connues
+cercosporiose_noire,energie,0.052,0.578,0.989
+cercosporiose_noire,proba_max,0.07,0.561,0.989
+cercosporiose_noire,mahalanobis,0.084,0.36,0.989
+cercosporiose_noire,plus_proches_voisins,0.135,0.395,0.989
+fusariose,energie,0.513,0.826,0.993
+fusariose,proba_max,0.597,0.864,0.993
+fusariose,mahalanobis,0.58,0.918,0.993
+fusariose,plus_proches_voisins,0.595,0.929,0.993
+saine,energie,0.181,0.776,0.94
+saine,proba_max,0.199,0.803,0.94
+saine,mahalanobis,0.163,0.786,0.94
+saine,plus_proches_voisins,0.098,0.665,0.94

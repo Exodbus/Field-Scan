@@ -2,20 +2,28 @@
 """Préparation du jeu de feuilles du module maladies.
 
 Découpage (carnet de données) :
-  - entraînement : Tanzanie, campagne 2021 (Harvard Dataverse) ;
+  - entraînement : Tanzanie, campagne 2021 (Harvard Dataverse), et Pérou (Mendeley Data, 2026),
+    feuilles saines et Sigatoka seulement ;
   - validation   : Tanzanie, campagne 2022-2023 (Zenodo), un zip par classe ;
-  - test         : BananaLSD (Bangladesh), dossier OriginalSet uniquement.
+  - test         : BananaLSD (Bangladesh), dossier OriginalSet uniquement ;
+  - test_perou   : Cordana du jeu péruvien, mise à part : jamais apprise ni utilisée pour un réglage
+    (Cordana est une maladie « inconnue » du test) ; sert seulement de test supplémentaire du rejet.
 
 Classes :
   - saine, cercosporiose_noire, fusariose (Tanzanie) ;
   - BananaLSD : healthy -> saine ; sigatoka -> cercosporiose_noire (la classe des auteurs
     regroupe cercosporiose noire et jaune) ; cordana et pestalotiopsis -> inconnue_cordana,
     inconnue_pestalotiopsis : maladies absentes de l'entraînement, que le modèle doit rejeter.
+  - Pérou : sanas -> saine ; sigatoka -> cercosporiose_noire (forme non précisée) ;
+    cordana -> inconnue_cordana (ensemble test_perou).
 
 Exclusions (rien n'est supprimé : tout est noté dans l'index, colonne `motif`) :
   - tige : photos de pseudo-tronc (docs/exclusions/tiges_fusariose_2021.csv) ;
   - copie_exacte : même fichier (SHA-256) déjà présent dans la même classe et le même ensemble ;
   - etiquette_contradictoire : même fichier dans deux classes différentes (toutes les copies) ;
+  - perou_copie_evaluation : image péruvienne d'entraînement identique, ou presque, à une image de
+    validation ou de test ; retirée de l'entraînement (source ajoutée après coup : les ensembles
+    d'évaluation restent inchangés) ;
   - fuite_exacte, fuite_visuelle : image de validation ou de test identique, ou presque identique, à une
     image d'un ensemble antérieur (entraînement pour la validation ; entraînement et validation pour le
     test). Fuite visuelle en deux temps : l'empreinte dHash (64 bits) propose des candidats (au plus
@@ -47,10 +55,12 @@ import pandas as pd
 from PIL import Image, ImageOps
 
 EXT_IMAGES = {".jpg", ".jpeg", ".png"}
-ORDRE_ENSEMBLES = ["entrainement", "validation", "test"]
+ORDRE_ENSEMBLES = ["entrainement", "validation", "test", "test_perou"]
 CLASSES_ZIP = {"HEALTHY": "saine", "BLACK SIGATOKA": "cercosporiose_noire", "FUSARIUM WILT": "fusariose"}
 CLASSES_BANANALSD = {"healthy": "saine", "sigatoka": "cercosporiose_noire",
                      "cordana": "inconnue_cordana", "pestalotiopsis": "inconnue_pestalotiopsis"}
+CLASSES_PEROU = {"sanas": ("entrainement", "saine"), "sigatoka": ("entrainement", "cercosporiose_noire"),
+                 "cordana": ("test_perou", "inconnue_cordana")}
 
 
 def est_image(nom):
@@ -81,6 +91,20 @@ def inventaire(args):
             if f.is_file() and est_image(str(f)):
                 entrees.append(dict(ensemble=ensemble, classe="saine", classe_origine="HEALTHY", source=source,
                                     cle=f"{p.name}::{f.relative_to(p).as_posix()}", conteneur="", membre=str(f)))
+    if not args.sans_perou:
+        z = Path(args.perou)
+        if not z.exists():
+            raise SystemExit(f"Jeu péruvien introuvable : {z} (ou option --sans-perou)")
+        with zipfile.ZipFile(z) as a:
+            for n in a.namelist():
+                if n.endswith("/") or not est_image(n):
+                    continue
+                dossier = PurePosixPath(n).parent.name.lower()
+                if dossier not in CLASSES_PEROU:
+                    raise SystemExit(f"Dossier de classe inattendu dans le jeu péruvien : {dossier}")
+                ensemble, classe = CLASSES_PEROU[dossier]
+                entrees.append(dict(ensemble=ensemble, classe=classe, classe_origine=dossier, source="perou_2026",
+                                    cle=f"{z.name}::{n}", conteneur=str(z), membre=n))
     racine = Path(args.bananalsd)
     for f in sorted(racine.rglob("*")):
         parties = [x.lower() for x in f.parts]
@@ -150,6 +174,8 @@ def main(argv=None):
     ap.add_argument("--sain-2021", default="data/raw/tanzania_2021/healthy_1")
     ap.add_argument("--sain-2022", default="data/raw/tanzania_2022/healthy_1")
     ap.add_argument("--bananalsd", default="data/raw/bananalsd")
+    ap.add_argument("--perou", default="data/raw/zips/perou_2026.zip")
+    ap.add_argument("--sans-perou", action="store_true", help="version sans le jeu péruvien (ablation)")
     ap.add_argument("--tiges", default="docs/exclusions/tiges_fusariose_2021.csv")
     ap.add_argument("--out", default="data/feuilles")
     ap.add_argument("--cote", type=int, default=256, help="petit côté des images préparées, en pixels (défaut 256)")
@@ -199,6 +225,18 @@ def main(argv=None):
     copies = ok & idx[ok].duplicated(["ensemble", "classe", "sha256"], keep="first").reindex(idx.index, fill_value=False)
     idx.loc[copies, "motif"] = "copie_exacte"
 
+    # Source ajoutée après coup (Pérou) : ses copies d'images d'évaluation sont retirées de l'entraînement,
+    # pour que la validation et le test restent identiques à la version sans Pérou (résultats comparables)
+    evaluation = idx[idx.ensemble.isin(["validation", "test", "test_perou"]) & (idx.motif == "")]
+    perou = (idx.source == "perou_2026") & (idx.ensemble == "entrainement") & (idx.motif == "")
+    idx.loc[perou & idx.sha256.isin(set(evaluation.sha256)), "motif"] = "perou_copie_evaluation"
+    perou = (idx.source == "perou_2026") & (idx.ensemble == "entrainement") & (idx.motif == "")
+    if perou.any():
+        pos_p, pos_e = np.flatnonzero(perou.to_numpy()), idx.index.get_indexer(evaluation.index)
+        _, _, copie = fuites_visuelles(idx.dhash.to_numpy()[pos_p], idx.dhash.to_numpy()[pos_e],
+                                       vign[pos_p], vign[pos_e], args.seuil_candidat, args.seuil_vignette)
+        idx.loc[perou[perou].index[copie], "motif"] = "perou_copie_evaluation"
+
     # Fuites entre ensembles : exactes (SHA-256), puis visuelles (dHash)
     for k, ens in enumerate(ORDRE_ENSEMBLES[1:], start=1):
         anterieurs = idx[(idx.ensemble.isin(ORDRE_ENSEMBLES[:k])) & (idx.motif == "")]
@@ -233,7 +271,8 @@ def main(argv=None):
     tab = idx[idx.retenue].groupby(["ensemble", "classe"]).size().unstack(fill_value=0)
     motifs = idx[~idx.retenue].groupby(["ensemble", "motif"]).size().unstack(fill_value=0)
     (out / "parametres.json").write_text(json.dumps(dict(
-        cote_px=args.cote, seuil_candidat_bits=args.seuil_candidat, seuil_vignette=args.seuil_vignette, liste_tiges=args.tiges, images_trouvees=len(idx),
+        cote_px=args.cote, seuil_candidat_bits=args.seuil_candidat, seuil_vignette=args.seuil_vignette,
+        perou=not args.sans_perou, liste_tiges=args.tiges, images_trouvees=len(idx),
         images_retenues=int(idx.retenue.sum()), illisibles=illisibles, duree_s=round(time.time() - debut)),
         indent=2, ensure_ascii=False), encoding="utf-8")
     print("\nImages retenues par ensemble et par classe :")

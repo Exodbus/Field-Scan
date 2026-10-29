@@ -32,3 +32,6 @@ data/
 out/
 
 modeles/*.ckpt
+
+modeles/maladies/meilleur_simu_*.pt
+modeles/maladies/__results___*.png
