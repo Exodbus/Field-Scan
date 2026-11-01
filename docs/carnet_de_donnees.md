@@ -8,6 +8,14 @@ Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sen
 - Pour chaque source : provenance, licence, résolution, date d'acquisition, découpage entraînement/validation/test, risques de fuite.
 - Découpage par parcelle, par site ou par pays, jamais aléatoire. Toute fuite entre entraînement et test disqualifie.
 
+## Décisions après l'échange avec le mentor (fin octobre 2026)
+
+- La zone de test de l'organisation sera **mélangée** (bananeraies et fermes) : on évalue la capacité à généraliser ; il est acceptable d'annoncer à l'avance sur quel type de données le système est fiable, si c'est un choix assumé.
+- **Priorité** : rendre robuste ce qui est faisable (module maladies), puis revenir au comptage ; mieux vaut deux briques excellentes que cinq moyennes ; architecture modulaire.
+- **Rejets** (comptage) : laissés de côté pour l'instant (souvent invisibles sous la canopée ; 2 trouvés sur 14 par DeepForest).
+- Pour le comptage, l'équilibre entre fausses détections et oublis compte davantage que le F1 seul (comptage par parcelle).
+- Chaque choix doit être réfléchi et défendable ; envois réguliers sur GitHub.
+
 ## Vue d'ensemble
 
 | Jeu | Contenu | Pays | Usage prévu | Licence |
@@ -15,6 +23,8 @@ Brouillon du 25 octobre 2026, mis à jour le 27 octobre 2026 avec les images Sen
 | Banana leaves and stem, Tanzanie (Lacuna) | 16 092 images de feuilles et de tiges (comptées), dont 397 tiges exclues | Tanzanie | Maladies : entraînement | CC BY (à confirmer sur Dataverse) |
 | Banana Leaves Imagery Dataset (2022-2023) | 11 767 images de feuilles | Tanzanie | Maladies (validation) | CC BY 4.0 (Zenodo) |
 | BananaLSD | 937 images brutes (897 après exclusions) | Bangladesh | Maladies, test d'un autre pays | à vérifier |
+| Banana Leaf Image Dataset (Sigatoka, Cordana, saines) | 1 773 images | Pérou | Maladies : entraînement (saines, Sigatoka) ; Cordana mise à part (test supplémentaire) | CC BY 4.0 (Mendeley Data) |
+| Banana Leaf Disease Images | 1 289 miniatures (150 × 113) | Éthiopie | Maladies : évaluation hors ligne seulement (généralisation, maladie inconnue) | CC BY 4.0 (Mendeley Data) |
 | Remote Sensing applications for Banana Crops | Images de drone multispectrales | Australie | Vigueur, comptage, suivi temporel | à vérifier |
 | Sentinel-2 L2A (Copernicus Browser) | 4 scènes de 10 bandes (2 dates par site), résolution environ 10 m | Équateur, Côte d'Ivoire | Vigueur, stress hydrique, suivi temporel | Copernicus, accès libre et ouvert (à vérifier) |
 | ReforesTree (Zenodo) | 6 orthomosaïques de drone RGB à environ 1 cm/pixel, 7 969 couronnes annotées dont 3 436 bananiers | Équateur | Comptage des pieds | CC BY 4.0 |
@@ -147,6 +157,28 @@ Constat : les images sont en haute résolution (3,7 à 16 mégapixels), très va
 
 **Constats visuels** (planche de 16 images, échantillon à confirmer) : feuilles photographiées de près, au sol, avec des fonds variables ; certaines images de Sigatoka sont grisâtres, à regarder de plus près.
 
+### 3 bis. Banana Leaf Image Dataset for Classification of Sigatoka, Cordana, and Healthy Leaves (Pérou)
+
+- **Source** : Mendeley Data, DOI 10.17632/hzttvh774g.1, publié le 14 septembre 2026 par l'Universidad Nacional de San Martín.
+- **Licence** : CC BY 4.0.
+- **Origine** : districts de Calzada et Habana, province de Moyobamba, région de San Martín (Amazonie péruvienne). Un autre continent que les jeux tanzaniens et que le test.
+- **Contenu vérifié** (`scripts/inspecter_archive.py`, 29 octobre 2026) : 1 773 images JPEG, dossiers `sanas` (544), `sigatoka` (724), `cordana` (505) ; aucun fichier parasite. Archive `perou_2026.zip`, 4 820,9 Mo, SHA-256 `018838cd3aec1d2a33be63f41a4a6b204dc7c4b7b1bee98adc8eb7d2c9a3496c`.
+- **Usage** : feuilles saines et Sigatoka en **entraînement** (diversité géographique) ; **Cordana mise à part** (ensemble `test_perou`) : Cordana est une maladie « inconnue » du test, elle n'est donc jamais apprise ni utilisée pour un réglage.
+- **Limite** : la forme de la Sigatoka (noire ou jaune) n'est pas précisée ; rangée avec la cercosporiose noire.
+
+### 3 ter. Banana Leaf Disease Images (Éthiopie) : examiné, écarté de l'entraînement
+
+- **Source** : Mendeley Data, DOI 10.17632/rjykr62kdh.1 ; licence CC BY 4.0 ; région d'Arba Minch, smartphone, étiquettes vérifiées par deux phytopathologistes (description des auteurs).
+- **Contenu vérifié** : un zip (6,8 Mo, SHA-256 `bc942ec0995e42c5e71225867f610713cf018b15aaf6f6fecdab1a9c66e4fe44`) contenant une archive RAR (extraite avec `tar`), dossier `resized` : 1 289 images, **toutes en 150 × 113 pixels** (miniatures) ; `healthy` 155, `segatoka` 320, `xamthomonas` 814 (flétrissement bactérien, maladie absente de tous les autres jeux).
+- **Décision** : pas d'entraînement ; évaluation hors ligne seulement (voir « Évaluation éthiopienne »).
+
+### Jeux examinés et écartés
+
+| Jeu | Raison |
+| --- | --- |
+| Plusieurs jeux du Bangladesh (Mendeley : `wzshm7ky49`, `wfzpdmc5vx`, `5nfjzntwd8`) | pays du test ; le second contient exactement les classes de BananaLSD (risque de copies) |
+| BLADE (Inde) | tableau de caractéristiques calculées, pas d'images |
+
 ### Préparation du jeu de feuilles
 
 #### Inventaire (`scripts/inventaire_feuilles.py`)
@@ -165,6 +197,9 @@ Lecture de toutes les archives sans décompression : nombre d'images, tailles, e
 
 **Autres constats** : la fusariose sur feuille (jaunissement, bords desséchés, déchirures) ressemble à la cercosporiose avancée et à la sénescence ; certaines confusions seront normales. Image « saine » douteuse : `HEALTHY_162` (2022-2023), stries brunes.
 
+![Planches d'inventaire (24 images tirées au hasard) : feuilles saines 2021 (gros plans, nervure visible), saines 2022-2023 (feuilles entières sur fond de sol), BananaLSD (gros plans de 224 pixels).](images/planches_styles_sources.jpg)
+*Planches d'inventaire (24 images tirées au hasard) : feuilles saines 2021 (gros plans, nervure visible), saines 2022-2023 (feuilles entières sur fond de sol), BananaLSD (gros plans de 224 pixels).*
+
 #### Exclusion des tiges (`scripts/reperer_tiges.py`)
 
 Le test ne contient que des feuilles ; une tige n'apprendrait au modèle qu'un indice qu'il ne reverra jamais. Méthode semi-automatique :
@@ -174,6 +209,12 @@ Le test ne contient que des feuilles ; une tige n'apprendrait au modèle qu'un i
 3. Classement par score décroissant et affichage de 960 images sur 10 pages numérotées, examinées à l'œil.
 
 Résultats : les 6 tiges d'exemple aux rangs 1, 2, 3, 5, 7 et 10 ; la meilleure feuille d'exemple au rang 4 099 sur 4 697 ; 396 images à score positif. Examen visuel : tiges jusqu'au rang 397 inclus (le rang 397 montre l'extérieur du pseudo-tronc), feuilles ensuite ; aucune feuille avant cette limite et aucune tige après, sur les 960 premiers rangs. Règle appliquée : exclure ce qui montre l'intérieur ou l'extérieur du pseudo-tronc, garder tout limbe, même abîmé. **397 images exclues** (353 et 44), liste versionnée : `docs/exclusions/tiges_fusariose_2021.csv` (rang, score et motif de chaque image). Réserve : les rangs au-delà de 960 n'ont pas été examinés, mais aucune tige n'apparaissait déjà entre 481 et 960.
+
+![Planche de la fusariose 2021 : plusieurs coupes de pseudo-tronc parmi les feuilles (images 1100, 3069, 1653, 1815).](images/planche_fusariose_2021_tiges.jpg)
+*Planche de la fusariose 2021 : plusieurs coupes de pseudo-tronc parmi les feuilles (images 1100, 3069, 1653, 1815).*
+
+![Page 5 du classement (rangs 385 à 480) : coupes et gaines de pseudo-tronc jusqu'au rang 397, feuilles ensuite.](images/tiges_frontiere_page05.jpg)
+*Page 5 du classement (rangs 385 à 480) : coupes et gaines de pseudo-tronc jusqu'au rang 397, feuilles ensuite.*
 
 #### Préparation (`scripts/preparer_feuilles.py`)
 
@@ -190,6 +231,12 @@ Résultats : les 6 tiges d'exemple aux rangs 1, 2, 3, 5, 7 et 10 ; la meilleure 
 | 2 | empreinte (au plus 6 bits) pour proposer des candidats, puis comparaison des images réduites à 16 × 16 pixels en couleur (écart moyen au plus 10 sur 255) | 301 candidats, 1 confirmé | fausse : `BS_535` (validation, cercosporiose) et `HEALTHY_1/Image_1988` (entraînement, saine), deux feuilles vertes différentes, écart 9,9 |
 | **3 (retenue)** | idem, seuil de vignette **5** | 301 candidats, **0 confirmé** | le candidat le plus proche reste à un écart de 9,9 |
 
+![Fausses fuites de la version 1 (empreinte seule) : à gauche une image de test, à droite l'image d'entraînement « la plus proche » ; ce sont des photos différentes.](images/fausses_fuites_dhash_exemples.jpg)
+*Fausses fuites de la version 1 (empreinte seule) : à gauche une image de test, à droite l'image d'entraînement « la plus proche » ; ce sont des photos différentes.*
+
+![La dernière fausse alerte (version 2) : BS_535 (validation, cercosporiose) et Image_1988 (entraînement, saine), écart de vignette 9,9.](images/fausse_fuite_bs535.jpg)
+*La dernière fausse alerte (version 2) : BS_535 (validation, cercosporiose) et Image_1988 (entraînement, saine), écart de vignette 9,9.*
+
 Pourquoi l'empreinte seule échoue : elle note seulement si chaque zone est plus claire ou plus sombre que sa voisine, et les nervures parallèles d'une feuille de bananier donnent ce même motif à des photos différentes. Choix du seuil 5 : une vraie copie redimensionnée et recompressée donne un écart d'environ 0,5 à 1 (mesuré sur un jeu de test fabriqué) ; la fausse alerte la plus proche observée donnait 9,9.
 
 **Effectifs retenus** (exécution définitive du 29 octobre 2026, seuil de vignette 5, 20 030 images lues en 20 minutes ; **19 593 retenues**) :
@@ -200,7 +247,143 @@ Pourquoi l'empreinte seule échoue : elle note seulement si chaque zone est plus
 | Validation (Tanzanie 2022-2023) | 1 000 | 1 000 | 1 001 | | | 3 001 |
 | Test (BananaLSD) | 90 | 473 | | 162 | 172 | 897 |
 
+**Ajout du Pérou** (option `--sans-perou` pour l'ancienne version ; exécution de 1 309 s, 21 803 images lues, **21 366 retenues**) : une image péruvienne identique ou presque à une image de validation ou de test serait retirée de l'**entraînement** (motif `perou_copie_evaluation`), pour que la validation et le test restent identiques ; **aucune** n'a été trouvée, ni de copie exacte dans le jeu péruvien ; 369 candidats de fuite visuelle, 0 confirmé.
+
+| Ensemble | Saine | Cercosporiose noire | Fusariose | Cordana | Pestalotiopsis | Total |
+| --- | --- | --- | --- | --- | --- | --- |
+| Entraînement (Tanzanie 2021 + Pérou) | 6 172 | 6 491 | 4 300 | | | 16 963 |
+| Validation (Tanzanie 2022-2023) | 1 000 | 1 000 | 1 001 | | | 3 001 |
+| Test (BananaLSD) | 90 | 473 | | 162 | 172 | 897 |
+| Test supplémentaire (Pérou) | | | | 505 | | 505 |
+
 **Conclusion** : aucune vraie fuite trouvée entre les campagnes 2021 et 2022-2023, ni avec BananaLSD ; aucune copie exacte dans le jeu d'entraînement (cohérent avec le nettoyage déclaré par les auteurs). Les ensembles sont indépendants, ce qui rend l'évaluation crédible.
+
+### Classifieur de maladies (`notebooks/entrainer_maladies.ipynb`, version Kaggle `notebooks/entrainer_maladies_kaggle.ipynb`)
+
+#### Choix fixés avant les résultats
+- **Réseau** : EfficientNet-B0 pré-entraîné sur ImageNet (torchvision, poids `EfficientNet_B0_Weights.DEFAULT`), trois classes (saine, cercosporiose noire, fusariose). Léger (16 Mo) pour l'inférence sur processeur.
+- **Recette** : 12 époques, lots de 64, AdamW (taux 0,0003, décroissance des poids 0,0001), programme cosinus, lissage des étiquettes 0,1, précision mixte, graine 2026.
+- **v1** : recadrage aléatoire de 30 à 100 % ; meilleure époque = F1 macro de validation sur images entières.
+- **v2** : recadrage de 15 à 100 % et masquage aléatoire (contre le raccourci de la nervure, voir plus bas) ; meilleure époque = moyenne des F1 macro sur images entières et sur recadrages centrés (60 % du centre).
+- **Variantes** : v1, v2, v1+v2 (moyenne des sorties), chacune avec ou sans 4 vues (identité, deux miroirs, rotation de 180°) ; règle : parmi celles qui n'augmentent pas les fausses alertes sur feuilles saines par rapport à v2 seul, la meilleure moyenne des F1 (entières et recadrages).
+- **Rejet de l'inconnu** : seuil réglé pour accepter 95 % des feuilles connues de la validation ; méthode choisie sans BananaLSD (voir plus bas).
+- **Tests** : section désactivée par défaut, lancée une seule fois, tout étant figé.
+
+#### Première version (sans le Pérou), Colab, GPU T4
+- v1 : époque 8, F1 0,9555 ; v2 : époque 3, critère 0,9429 (le gain est modeste et l'époque 3 un pic ; la règle fixée à l'avance est respectée).
+- **Raccourci de la nervure** : les cartes d'attention (Grad-CAM) placent la classe saine sur la nervure centrale ; sur les recadrages centrés, les fausses alertes sur feuilles saines passent de 1,2 % à 4,6 % (v1).
+- **Variante retenue : v1+v2, 4 vues** (F1 0,967 entières, 0,931 recadrages ; fausses alertes 1,1 % et 4,3 %) ; 2 × 16 Mo ; 142 ms par image sur le processeur de Colab. Rejet : énergie (choisie à l'avance), seuil 1,5629.
+- **Export ONNX** : un premier écart de 2,6 entre ONNX et PyTorch venait de la vérification (l'export restaure le mode entraînement de l'enveloppe) ; enveloppe mise en mode évaluation : écart 1,9 × 10⁻⁶, mêmes classes.
+- **Test BananaLSD, premier et seul test honnête de cette version** :
+
+| Mesure | v1+v2, 4 vues, énergie |
+| --- | --- |
+| Feuilles saines : rappel / fausses alertes | 0,889 / **0,0** |
+| Sigatoka : rappel / précision | 0,852 / 0,694 |
+| Rejet des inconnues (Cordana / Pestalotiopsis) | **0,302** (0,469 / 0,145) |
+| Inconnues déclarées saines | 7 sur 334 (2 %) |
+| Fusarioses annoncées (toutes fausses) | 75 |
+
+Ablations : v1 seul 24 % de rejet (96 fusarioses fausses), v2 seul 23 % (92) ; probabilité maximale 25 %, Mahalanobis 36 % (avec 2,2 % de fausses alertes).
+
+![Cartes d'attention de la première version (ligne 2 : v1, ligne 3 : v2) : lésions et bords desséchés ciblés, mais nervure centrale pour les feuilles saines.](images/gradcam_v1_v2_sans_perou.jpg)
+*Cartes d'attention de la première version (ligne 2 : v1, ligne 3 : v2) : lésions et bords desséchés ciblés, mais nervure centrale pour les feuilles saines.*
+
+#### Version retenue (avec le Pérou), Kaggle, GPU T4
+- **Environnement** : PyTorch 2.11.0+cu128, torchvision 0.26.0+cu128, Python 3.13.15 ; première époque lente (environ 21 min : première lecture des images sur le stockage de Kaggle), puis 110 à 130 s par époque.
+- v1 : époque 10, F1 0,9554 ; v2 : époque 7, critère 0,9471 (F1 0,9585 entières, 0,9357 recadrages).
+
+| Variante | F1 entières | F1 recadrages | Critère | Rappel fusariose | Fausses alertes saines (entières / recadrages) |
+| --- | --- | --- | --- | --- | --- |
+| v1 | 0,9554 | 0,9341 | 0,9447 | 0,905 | 0,003 / 0,016 |
+| v1 + 4 vues | 0,9557 | 0,9324 | 0,9441 | 0,902 | 0,003 / 0,015 |
+| v2 | 0,9585 | 0,9357 | 0,9471 | 0,911 | 0,015 / 0,035 |
+| **v2 + 4 vues (retenue)** | **0,9632** | **0,9417** | **0,9525** | 0,919 | 0,010 / 0,032 |
+| v1+v2 | 0,9611 | 0,9422 | 0,9516 | 0,912 | 0,004 / 0,019 |
+| v1+v2 + 4 vues | 0,9622 | 0,9395 | 0,9508 | 0,914 | 0,003 / 0,020 |
+
+Le Pérou améliore surtout la robustesse (recadrages : 0,931 → 0,942 ; fausses alertes sur recadrages : 4,3 % → 3,2 %) ; un seul modèle suffit (16 Mo, **35 à 38 ms par image** sur processeur avec 4 vues). Les variantes avec v1 font encore moins de fausses alertes (0,3 à 0,4 %), mais v2 + 4 vues l'emporte d'un cheveu sur le critère : règle respectée et documentée. Cartes d'attention : lésions et bords desséchés bien ciblés ; la classe saine reste en partie associée à la nervure.
+
+![Cartes d'attention de la version avec le Pérou : la lésion isolée (3e image) est de nouveau ciblée par v2 ; la nervure reste regardée pour les feuilles saines.](images/gradcam_v1_v2_avec_perou.jpg)
+*Cartes d'attention de la version avec le Pérou : la lésion isolée (3e image) est de nouveau ciblée par v2 ; la nervure reste regardée pour les feuilles saines.*
+
+**Validation de la version retenue (pourcentages par vraie classe)** :
+
+| Vraie classe | Cercosporiose | Fusariose | Saine |
+| --- | --- | --- | --- |
+| Cercosporiose (1 000) | **98,1 %** | 1,7 % | 0,2 % |
+| Fusariose (1 001) | 6,3 % | **91,9 %** | 1,8 % |
+| Saine (1 000) | 0,4 % | 0,6 % | **99,0 %** |
+
+#### Choix de la méthode de rejet : inconnues simulées
+Pour chaque classe, un modèle entraîné sur les deux autres (recette v2, 6 époques) ; la classe écartée, prise dans la validation, joue l'inconnue. Règle : meilleur taux de rejet moyen à 95 % de connues acceptées, AUROC en départage.
+
+| Méthode | Rejet (inconnue : cercosporiose / fusariose / saine / moyenne) | AUROC moyenne |
+| --- | --- | --- |
+| Énergie | 0,052 / 0,513 / 0,181 / 0,249 | 0,727 |
+| Mahalanobis | 0,084 / 0,580 / 0,163 / 0,276 | 0,688 |
+| Plus proches voisins (k = 10, banque de 6 000 images) | 0,135 / 0,595 / 0,098 / 0,276 | 0,663 |
+| **Probabilité maximale (retenue)** | 0,070 / 0,597 / 0,199 / **0,289** | **0,743** |
+
+- Une cercosporiose « inconnue » n'est presque jamais rejetée : une maladie à taches inconnue est rangée dans la maladie connue la plus proche.
+- Mahalanobis et les voisins font pire que le hasard pour ce cas (AUROC 0,36 et 0,40) : ces distances mesurent surtout le changement de style de photo entre campagnes, pas la nouveauté de la maladie.
+- Seuils (validation, 95 % acceptées) : probabilité maximale **0,7076**, énergie 1,5926 ; 98,1 % des feuilles acceptées sont bien classées.
+- ONNX : `maladies_v2.onnx`, 16 Mo, écart 1,7 × 10⁻⁶, mêmes classes ; paramètres du rejet dans `rejet.npz`.
+
+#### Reproductibilité
+Un second entraînement complet (la reprise n'avait pas trouvé la sortie précédente) a donné **exactement** les mêmes résultats : mêmes pertes à chaque époque, mêmes époques retenues, mêmes tableaux, même seuil (0,7076308727…). La chaîne est donc reproductible (règle de vérification du sujet).
+
+#### Tests de la version retenue (lancés une fois, tout étant figé)
+Variante v2 + 4 vues, rejet par probabilité maximale ; pourcentages par vraie classe.
+
+| Vraie classe | Cercosporiose | Fusariose | Je ne sais pas | Saine |
+| --- | --- | --- | --- | --- |
+| **Pérou** : Cordana, inconnue (505), premier test | 84,8 % | 1,8 % | **10,9 %** | 2,6 % |
+| BananaLSD : Sigatoka (473) | **86,5 %** | 2,7 % | 10,1 % | 0,6 % |
+| BananaLSD : saine (90) | 0 % | 0 % | 6,7 % | **93,3 %** |
+| BananaLSD : Cordana, inconnue (162) | 66,7 % | 1,9 % | **30,9 %** | 0,6 % |
+| BananaLSD : Pestalotiopsis, inconnue (172) | 75,0 % | 9,3 % | **15,1 %** | 0,6 % |
+
+BananaLSD avait déjà été consulté par la première version : ses résultats sont **indicatifs**. Comparaison avec la première version : feuilles saines 89 % → 93 % ; Sigatoka 85 % → 87 % ; fusarioses inventées 75 → 32 ; fausses alertes toujours 0 % ; mais **rejet des inconnues 30 % → 23 %**. Sur ce test, l'énergie aurait rejeté 29 % : le substitut (inconnues simulées) n'a pas désigné la meilleure méthode pour le vrai problème. Rien n'a été changé après coup. La Cordana péruvienne est peu rejetée (11 %) : les photos du Pérou sont devenues familières au modèle ; le rejet réagit surtout à la nouveauté du style, peu à celle de la maladie.
+
+**Lecture d'ensemble** : le système détecte très bien qu'une feuille est malade (0,6 % et 2,6 % des maladies inconnues déclarées saines, aucune feuille saine du Bangladesh déclarée malade), mais nomme mal les maladies jamais vues (rangées dans la cercosporiose).
+
+#### Évaluation éthiopienne (`scripts/evaluer_rejet_ethiopie.py`, processeur)
+Objectif : comparer les méthodes de rejet et une architecture en deux étapes avec une vraie maladie inconnue (flétrissement bactérien), sans utiliser les tests consultés. Réponses du modèle (v2, 4 vues, sans rejet ; `scripts/planche_dossier.py --tous`) :
+
+| Vraie classe | Saine | Cercosporiose | Fusariose |
+| --- | --- | --- | --- |
+| Saine (155) | **95,5 %** | 1,3 % | 3,2 % |
+| Sigatoka (320) | 35,6 % | **24,4 %** | 40,0 % |
+| Xanthomonas, inconnue (814) | 48,4 % | 3,7 % | 47,9 % |
+
+- **Évaluation inutilisable pour choisir une méthode** : les feuilles connues ne sont bien classées qu'à 47,6 %, et les AUROC sont au niveau du hasard (0,33 à 0,56). La règle désignait Mahalanobis ; rien n'a été changé. Une condition de validité aurait dû être fixée à l'avance (par exemple, plus de 80 % de feuilles connues bien classées).
+- **Architecture en deux étapes** (malade si P(cercosporiose) + P(fusariose) ≥ 0,5, puis maladie ou « malade, non identifiée ») : pas de différence mesurable ici, faute d'une évaluation valable.
+- **Cause de la chute** : pas la résolution (voir ci-dessous), mais la façon de photographier et d'étiqueter. Les planches montrent des feuilles entières prises de loin, des stades avancés (Sigatoka prise pour de la fusariose), des feuilles vertes étiquetées d'après la plante (déclarées saines), quelques images qui ne sont pas des feuilles (régime, litière). Le flétrissement bactérien imite la fusariose (deux flétrissements vasculaires) : aucune méthode de rejet ne peut le séparer à partir de la feuille seule.
+
+![Sigatoka éthiopienne et réponses du modèle (en rouge) : stades avancés pris pour de la fusariose, feuilles surtout vertes prises pour des feuilles saines.](images/ethiopie_sigatoka_predictions.jpg)
+*Sigatoka éthiopienne et réponses du modèle (en rouge) : stades avancés pris pour de la fusariose, feuilles surtout vertes prises pour des feuilles saines.*
+
+![Flétrissement bactérien (Xanthomonas) : feuilles jaunies et flétries prises pour de la fusariose avec une forte confiance ; feuilles vertes déclarées saines. Le tirage de cette planche n'est pas représentatif (5 « saine » sur 24, contre 48 % sur l'ensemble).](images/ethiopie_xanthomonas_predictions.jpg)
+*Flétrissement bactérien (Xanthomonas) : feuilles jaunies et flétries prises pour de la fusariose avec une forte confiance ; feuilles vertes déclarées saines. Le tirage de cette planche n'est pas représentatif (5 « saine » sur 24, contre 48 % sur l'ensemble).*
+
+#### Effet de la résolution (`scripts/ablation_resolution.py`)
+600 images de validation (200 par classe, graine 2026), réduites puis agrandies à 224 comme en production :
+
+| Petit côté | 256 px | 192 | 150 | **113** | 80 | 56 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Exactitude | 0,962 | 0,962 | 0,962 | **0,962** | 0,952 | 0,943 |
+| Fausses alertes saines | 0,010 | 0,015 | 0,020 | 0,015 | 0,030 | 0,065 |
+
+Le modèle est robuste jusqu'à environ 113 pixels de petit côté (la taille des miniatures éthiopiennes), et ne se dégrade que légèrement à 56 pixels.
+
+![Effet de la résolution sur la validation tanzanienne : performances stables jusqu'à 113 pixels de petit côté, alors que les miniatures éthiopiennes de même taille ne sont bien classées qu'à 47,6 %.](images/effet_resolution_validation.png)
+*Effet de la résolution sur la validation tanzanienne : performances stables jusqu'à 113 pixels de petit côté, alors que les miniatures éthiopiennes de même taille ne sont bien classées qu'à 47,6 %.*
+
+#### Bilan du module maladies
+- Forces : maladies connues reconnues d'un pays à l'autre (87 à 93 % au Bangladesh), aucune fausse alerte sur les feuilles saines du test, détection « malade ou saine » très fiable dans les conditions de prise de vue apprises, chaîne reproductible, légère (16 Mo, 35 ms par image).
+- Limites : rejet des maladies inconnues faible (11 à 31 %), surtout pour les maladies à taches qui ressemblent à la cercosporiose ; dépendance au protocole de prise de vue (gros plan de la zone malade) ; maladies qui en imitent une autre (flétrissement bactérien et fusariose) impossibles à distinguer sur la feuille.
+- Sortie proposée pour le bulletin : « feuille malade ; type probable : … (à confirmer si le symptôme est atypique) », et pour un flétrissement « fusariose ou autre flétrissement vasculaire, à confirmer par un examen du pseudo-tronc ».
 
 ## Images aériennes
 
@@ -228,6 +411,9 @@ Pourquoi l'empreinte seule échoue : elle note seulement si chaque zone est plus
 - **Résolution native des bandes** : B02, B03, B04, B08 à 10 m ; B05, B06, B07, B8A, B11, B12 à 20 m, rééchantillonnées à environ 10 m par l'export. À vérifier dans la documentation Sentinel-2.
 - **Limite** : à 10 m par pixel, on ne peut pas compter des pieds, seulement cartographier des zones.
 
+![Export depuis le Copernicus Browser : onglet Analytical, TIFF 32 bits, résolution HIGH, bandes brutes cochées.](images/sentinel2_export_copernicus.jpg)
+*Export depuis le Copernicus Browser : onglet Analytical, TIFF 32 bits, résolution HIGH, bandes brutes cochées.*
+
 #### Sites et dates
 
 | Site | Dates | Emprise (m) | CRS | Taille |
@@ -239,6 +425,12 @@ Pourquoi l'empreinte seule échoue : elle note seulement si chaque zone est plus
 - Saisons : février 2023 (Équateur) et juin 2023 (Côte d'Ivoire) correspondent probablement à la saison des pluies, août 2023 et janvier 2024 à la saison sèche. **À vérifier** avec des données climatiques.
 - Une première série de zips a été supprimée et remplacée : l'emprise a un peu changé (environ 350 m en Équateur, 550 m en Côte d'Ivoire). Seule la seconde série est utilisée.
 - **Culture non confirmée en Côte d'Ivoire** : rien ne prouve encore que les blocs sont des bananiers (palmier à huile ou hévéa possibles). À vérifier avant toute interprétation agronomique.
+
+![Équateur, 10 février 2023 (couleurs vraies) : bananeraies en blocs réguliers, sans nuage.](images/sentinel2_equateur_2023-02-10.jpg)
+*Équateur, 10 février 2023 (couleurs vraies) : bananeraies en blocs réguliers, sans nuage.*
+
+![Côte d'Ivoire, bords du Bandama (couleurs vraies) : blocs séparés par des pistes claires.](images/sentinel2_cotedivoire_couleurs_vraies.jpg)
+*Côte d'Ivoire, bords du Bandama (couleurs vraies) : blocs séparés par des pistes claires.*
 
 #### Parcelles
 
@@ -252,6 +444,12 @@ Contrôles sur la Côte d'Ivoire : géométries toutes valides, aucun chevauchem
 Contrôles sur l'Équateur : 13 polygones valides, aucun chevauchement, identifiants uniques, champ `site` rempli partout (complété après coup pour P12 et P13). Superficie totale 82,6 ha, de 3,5 à 8,4 ha par parcelle (médiane 6,5 ha). Après rétrécissement d'un pixel, la plus petite parcelle garde 231 pixels. Une grille de petits carrés tracée au sud-ouest du bloc a été **écartée** : chaque carré n'aurait contenu que quelques pixels, donc des moyennes peu fiables.
 
 Les fichiers de référence sont rangés dans `data/parcelles/` et ne doivent plus être modifiés.
+
+![Les 33 parcelles de Côte d'Ivoire tracées à la main dans QGIS, sur l'image Sentinel-2.](images/parcelles_cotedivoire_qgis.jpg)
+*Les 33 parcelles de Côte d'Ivoire tracées à la main dans QGIS, sur l'image Sentinel-2.*
+
+![Les mêmes parcelles seules (polygones exportés en GeoJSON, EPSG:32630).](images/parcelles_cotedivoire_polygones.jpg)
+*Les mêmes parcelles seules (polygones exportés en GeoJSON, EPSG:32630).*
 
 #### Masque de nuages
 
@@ -272,6 +470,15 @@ La carte SCL téléchargée est une image colorée, pas les codes bruts. Ses cou
 - Dans 11 parcelles partiellement voilées (15 à 85 % de pixels sous cirrus), l'écart entre pixels voilés et non voilés d'une même parcelle est quasi nul en médiane (NDVI 0,000 ; NDRE +0,002 ; NDMI +0,008). Exception : P14 (environ −0,09 sur les trois indices).
 
 Limites : 11 parcelles seulement, et l'écart peut aussi refléter des différences réelles de végétation entre les zones voilées et non voilées. Le seuil de 50 % reste un choix prudent ; l'ablation 30/50/70 % dira son effet sur les résultats.
+
+![Côte d'Ivoire, 13 juin 2023 : cumulus épars, mais parcelles presque toutes dégagées.](images/sentinel2_cotedivoire_2023-06-13_nuages.jpg)
+*Côte d'Ivoire, 13 juin 2023 : cumulus épars, mais parcelles presque toutes dégagées.*
+
+![Côte d'Ivoire, 4 janvier 2024 : voile de cirrus fins sur une grande partie de la scène.](images/sentinel2_cotedivoire_2024-01-04_cirrus.jpg)
+*Côte d'Ivoire, 4 janvier 2024 : voile de cirrus fins sur une grande partie de la scène.*
+
+![Contrôle du masque de nuages (couche SCL, en rose) sur les parcelles (jaune) : janvier 2024 à gauche, juin 2023 à droite.](images/controle_masque_nuages.jpg)
+*Contrôle du masque de nuages (couche SCL, en rose) sur les parcelles (jaune) : janvier 2024 à gauche, juin 2023 à droite.*
 
 #### Choix retenus pour le traitement des nuages
 
@@ -295,6 +502,9 @@ Limites : 11 parcelles seulement, et l'écart peut aussi refléter des différen
 - **Sorties** : `parcelles_indices.csv` (une ligne par parcelle et par date, avec la scène source), `parcelles_indices.geojson`, cartes GeoTIFF des indices et du masque dans `cartes/`.
 - **Vérification** : sur trois parcelles (P09 et P04 en Équateur, P23 en Côte d'Ivoire), le nombre de pixels et le NDVI moyen coïncident avec un calcul indépendant (test des centres de pixels avec shapely). Les mêmes résultats ont été obtenus sur l'ordinateur du projet.
 - **Statuts obtenus** : Équateur, 13 `ok` aux deux dates. Côte d'Ivoire, 33 `ok` en juin 2023 ; 16 `ok` et 17 `non_fiable` en janvier 2024.
+
+![Fausses couleurs (proche infrarouge en rouge) : la végétation dense, très réfléchissante dans le proche infrarouge, ressort en rouge ; l'eau en bleu sombre.](images/sentinel2_fausses_couleurs_ir.jpg)
+*Fausses couleurs (proche infrarouge en rouge) : la végétation dense, très réfléchissante dans le proche infrarouge, ressort en rouge ; l'eau en bleu sombre.*
 
 #### Premiers résultats (27 octobre 2026)
 
@@ -459,6 +669,9 @@ Les boîtes « bananier » de ReforesTree ont été traitées comme des détecti
 - **Une partie des fausses détections vient d'un décalage** : à 1,5 m, 5 des 15 deviennent correctes. Le centre d'une boîte n'est pas toujours au pied de la plante (couronnes de près de 3 m). Les 10 restantes sont de vraies erreurs (autres plantes, doublons). Le rayon officiel reste 1 m ; c'est aussi une alerte pour les détecteurs : bien placer le point au pied de la plante compte.
 - **Conséquences** : (1) ReforesTree ne peut pas servir de référence de test : même un détecteur parfait n'obtiendrait qu'un F1 d'environ 0,69 contre lui ; l'évaluation se fait sur la référence manuelle. (2) Un détecteur entraîné sur ReforesTree verra environ 40 % de bananiers non annotés traités comme du fond, ce qui peut limiter son rappel, surtout sur les rejets : à comparer avec la baseline classique, qui n'apprend rien de ces annotations.
 
+![Carré MM2 (Manuel Macias) : boîtes ReforesTree en bleu (tous les arbres, arbustes compris), bananiers de la référence manuelle en points roses.](images/mm2_reforestree_contre_reference_manuelle.jpg)
+*Carré MM2 (Manuel Macias) : boîtes ReforesTree en bleu (tous les arbres, arbustes compris), bananiers de la référence manuelle en points roses.*
+
 #### Baseline classique de comptage (`scripts/baseline_comptage.py`)
 
 - **Méthode** : lecture de l'orthomosaïque autour de chaque carré, rééchantillonnée (moyenne des pixels) ; indice de verdure ExG = 2g − r − b en couleurs normalisées ; lissage gaussien (qui ignore les pixels hors image) ; maxima locaux au-dessus d'un seuil et espacés d'une distance minimale. Chaque maximum est un pied détecté. Évaluation avec `evaluer_comptage.py` (appariement à 1 m).
@@ -496,13 +709,16 @@ Les boîtes « bananier » de ReforesTree ont été traitées comme des détecti
 | Baseline ExG et maxima locaux | 0,36 | 0,39 | **0,37** | +7 |
 | Template matching, canal ExG | 0,31 | 0,43 | 0,36 | +33 |
 | Template matching, luminosité | 0,08 | 0,41 | 0,14 | +328 |
-| DeepForest affiné | à mesurer | | | |
+| DeepForest affiné (seuil 0,4) | 0,49 | 0,45 | **0,47** | −8 |
 
 **Conclusion sur les méthodes sans apprentissage** : toutes plafonnent vers F1 ≈ 0,36. Elles reconnaissent la verdure ou une forme moyenne, mais pas un bananier dans sa diversité, et ne séparent ni les espèces ni les plantes qui se touchent. C'est l'argument du passage à un détecteur appris, qui doit apprendre à la fois les variantes d'un bananier et ce qui le distingue d'un arbre ou d'un arbuste.
 
 #### Détecteur appris : DeepForest affiné (`notebooks/entrainer_deepforest.ipynb`, `scripts/preparer_deepforest.py`, `scripts/detecter_deepforest.py`)
 
 **Préparation des données** (`preparer_deepforest.py`) : orthomosaïques des sites d'entraînement (Flora Pluas, Nestor Macias, Leonor Aspiazu) et de suivi (Manuel Macias) rééchantillonnées à **10 cm/pixel** (résolution proche de celle du pré-entraînement de DeepForest ; un bananier y fait environ 30 pixels), découpées en tuiles de 400 × 400 pixels (40 m) avec 20 % de recouvrement. Une seule classe : les boîtes « bananier » de ReforesTree (après fusion des doublons) ; les autres arbres ne sont pas annotés et servent d'exemples négatifs. Vérifié sur un site synthétique : 100 % des boîtes exportées tombent sur un bananier. Résultat : entraînement 56 tuiles et 3 291 boîtes, suivi 19 tuiles et 451 boîtes ; Carlos Vera Arteaga et Carlos Vera Guevara jamais exportés.
+
+![Une tuile d'entraînement de DeepForest (Flora Pluas, 10 cm/pixel, 400 × 400 pixels) avec ses boîtes de bananiers.](images/deepforest_tuile_flora_pluas_10cm.jpg)
+*Une tuile d'entraînement de DeepForest (Flora Pluas, 10 cm/pixel, 400 × 400 pixels) avec ses boîtes de bananiers.*
 
 **Environnement d'entraînement** : Google Colab, GPU Tesla T4, **DeepForest 2.1.0**, PyTorch 2.11.0+cu130, Python 3.13.16. Avertissement de `pip` sur `diffusers` et `safetensors` (paquets préinstallés de Colab, non utilisés) : sans effet. Les bananiers sont renommés « Tree », la classe du modèle pré-entraîné `weecology/deepforest-tree`, pour garder sa tête de détection. Les zips créés sous Windows (`Compress-Archive`) utilisent « \ » dans les chemins : le carnet les décompresse en les remplaçant par « / ».
 
@@ -553,7 +769,7 @@ Diagnostics intermédiaires, qui ont guidé l'essai 3 : `create_trainer()` ne r�
 
 | Module | Entraînement | Validation | Test |
 | --- | --- | --- | --- |
-| Maladies | Campagne tanzanienne 2021, sans les tiges (15 695 images) | Campagne tanzanienne 2022-2023, un zip par classe (3 001 images) | BananaLSD `OriginalSet` (897 images, dont 334 de maladies inconnues à rejeter) |
+| Maladies | Campagne tanzanienne 2021 sans les tiges, et Pérou (saines, Sigatoka) : 16 963 images | Campagne tanzanienne 2022-2023, un zip par classe (3 001 images) | BananaLSD `OriginalSet` (897 images, dont 334 de maladies inconnues à rejeter) ; Cordana du Pérou (505), jamais apprise |
 | Comptage des pieds (ReforesTree) | Flora Pluas, Nestor Macias, Leonor Aspiazu : annotations ReforesTree (2 048 bananiers après fusion des doublons) | Manuel Macias : réglages, mesure sur la référence manuelle MM1 et MM2 (83 bananiers) | Carlos Vera Guevara : mesure sur la référence manuelle CG1 à CG3 (à annoter). Carlos Vera Arteaga exclu |
 | Vigueur sur drone (ExG, VARI) | Mêmes sites que le comptage | Idem | Idem |
 | Stress hydrique, vigueur (Sentinel-2) | Réglage des seuils sur un pays (proposition, à valider) | À définir | L'autre pays, jamais par date |
@@ -583,6 +799,7 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - Les photos de feuilles sont prises de près, avec un smartphone. Elles ne ressemblent pas à ce qu'un drone voit.
 - Les images viennent de peu de régions (Tanzanie, Bangladesh), avec des variétés et des pratiques propres à ces régions.
 - Le jeu tanzanien de 2021 mélange des photos de feuilles et de tiges : 397 tiges exclues (8,5 % de la fusariose), voir « Préparation du jeu de feuilles ».
+- Rejet de l'inconnu faible (11 à 31 % selon le test) ; il réagit surtout à la nouveauté du style de photo. Résultats dépendants du protocole de prise de vue (échec sur les photos éthiopiennes prises de loin).
 - Le style de photo diffère selon la source et la classe (nervure visible sur les feuilles saines de 2021, ciel bleu derrière la fusariose de 2022-2023) : risque que le modèle apprenne le style plutôt que la maladie.
 - Les symptômes foliaires de la fusariose ressemblent à la cercosporiose avancée et à la sénescence ; la classe « Sigatoka » de BananaLSD mélange cercosporiose noire et jaune.
 - Le cadrage diffère entre les deux campagnes tanzaniennes : gros plans et bandes en 2021, feuilles entières avec fond en 2022-2023 (échantillons de feuilles saines). Entraîner sur l'une et valider sur l'autre mesure aussi cet écart de cadrage et de résolution. Pas encore comparé selon la classe (maladies) : un lien entre cadrage et classe serait un raccourci pour le modèle.
@@ -615,10 +832,12 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - [ ] Chercher un identifiant de ferme ou de région (noms de fichiers, EXIF), utile pour une analyse des erreurs.
 - [x] Jeu de feuilles préparé (`preparer_feuilles.py`) : uniformisation, exclusions, contrôle des fuites entre ensembles (aucune vraie fuite).
 - [x] Exécution définitive de la préparation (seuil de vignette 5) : 19 593 images retenues, validation à 3 001, 0 fuite confirmée.
-- [ ] Entraîner le classifieur de maladies (réseau léger pré-entraîné), avec augmentations et recadrages aléatoires.
-- [ ] Rejet de l'inconnu : seuil de confiance fixé sur la validation (par exemple 95 % des feuilles connues acceptées), sans jamais voir Cordana ni Pestalotiopsis.
-- [ ] Validation sur images entières et sur recadrages centrés ; cartes d'attention (Grad-CAM) pour détecter un modèle qui regarde le fond.
-- [ ] Évaluation unique sur BananaLSD : précision, rappel, fausses alertes sur feuilles saines, taux de rejet des maladies inconnues.
+- [x] Classifieur entraîné (v1, v2, variantes) ; version retenue avec le Pérou : v2 + 4 vues, reproductible.
+- [x] Rejet de l'inconnu : probabilité maximale (inconnues simulées), seuil 0,7076 (95 % de connues acceptées).
+- [x] Validation entières et recadrages, cartes d'attention : raccourci de la nervure observé, réduit par le Pérou.
+- [x] Tests : BananaLSD (première version, puis indicatif) et Cordana du Pérou ; évaluation éthiopienne ; effet de la résolution.
+- [ ] Script d'inférence sur processeur (ONNX) avec sortie en deux étapes, brique « maladies » de `run.py`.
+- [ ] Demander au mentor comment est compté le « rejet de l'inconnu » (une réponse « malade, non identifiée » compte-t-elle ?).
 - [x] Jeu australien vérifié : aucun fichier téléchargeable (notice « Record deleted »). Écrire à l'auteur si besoin.
 - [x] Choisir la zone et les dates Sentinel-2 : Équateur (10/02 et 29/08/2023) et Côte d'Ivoire (13/06/2023 et 04/01/2024), 10 bandes téléchargées.
 - [x] Tracer et contrôler les 33 parcelles de Côte d'Ivoire (EPSG:32630).
@@ -645,7 +864,7 @@ Pour ReforesTree, le test (Carlos Vera Guevara) est volontairement difficile : b
 - [x] Baseline classique (ExG, lissage, maxima locaux) : F1 0,37 sur la validation, réglages figés, analyse des échecs.
 - [x] Template matching (gabarits moyens, canaux ExG et luminosité) : F1 0,36 et 0,14, gabarits flous, diagnostic.
 - [x] DeepForest affiné (essai 3 retenu, 40 époques, seuil 0,4) : suivi F1 0,63 ; inférence sur processeur à 25 s/ha ; test sur Carlos Vera Guevara contre ReforesTree : F1 0,17 (baseline 0,21).
-- [ ] Mesurer DeepForest sur la référence manuelle MM1 et MM2 (validation).
+- [x] DeepForest sur la référence manuelle MM1 et MM2 : F1 0,47 (seuil 0,4 confirmé : 0,1 à 0,3 donnent 0,38 à 0,43 ; 0,5 donne 0,39) ; rejets trouvés 2 sur 14 (5 au mieux).
 - [ ] Validation croisée par site (entraîner sur deux sites, tester sur un troisième) pour comprendre la chute de généralisation, sans toucher au test.
 - [ ] Pistes d'amélioration à juger sur cette validation croisée : plus de données du nord, augmentations de couleur, deux classes (bananier, autre arbre).
 - [ ] Livrer les poids du modèle (plus de 100 Mo : release GitHub, Git LFS ou lien Drive ; essayer aussi une version allégée).
