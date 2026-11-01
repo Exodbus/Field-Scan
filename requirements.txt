@@ -1,23 +1,15 @@
-# deep Learning
-torch==2.14.1  
-
-# modèles et transformations d'images pour torch        
-torchvision==0.29.1    
-
-# calcul sur tableaux
-numpy==2.5.4         
-
-# lecture/écriture des images géoréférencées (GeoTIFF)
-rasterio==1.5.2      
-
-# données vectorielles (parcelles, points)  
-geopandas==1.2.0       
-
-# tableaux de résultats (CSV par parcelle)
-pandas==3.0.6
-
-# zones connexes et marges autour des nuages
-scipy==1.18.1
-
-# lecture des images de feuilles (scripts d'exploration)
-pillow==13.0.0
+# Versions exactes de l'environnement de développement (écrit par scripts/ecrire_requirements.py)
+numpy==2.5.4  # calcul
+pandas==3.0.6  # tableaux
+scipy==1.18.1  # zones, filtres
+rasterio==1.5.2  # lecture des images géoréférencées
+geopandas==1.2.0  # parcelles, GeoJSON
+shapely==2.2.0  # géométries
+pyproj==3.8.0  # systèmes de coordonnées
+Pillow==13.0.0  # photos
+PyYAML==6.0.3  # config.yaml
+matplotlib==3.11.2  # vignettes, cartes
+onnxruntime==1.31.1  # module maladies (processeur)
+torch==2.14.1  # module comptage
+torchvision==0.29.1  # module comptage
+deepforest==2.1.0  # module comptage

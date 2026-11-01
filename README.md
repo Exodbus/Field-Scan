@@ -1,30 +1,127 @@
-\# Field Scan
+# Field Scan
 
+Chaîne d'analyse d'une bananeraie à partir d'images aériennes et de photos de feuilles : une commande produit, **parcelle par parcelle**, un bulletin de santé (score, alertes, priorités) où **chaque constat renvoie à l'image qui le justifie**, avec les cartes et couches géospatiales correspondantes.
 
+| Module | Données | Méthode | Résultat mesuré (voir `docs/carnet_de_donnees.md`) |
+| --- | --- | --- | --- |
+| Vigueur | Sentinel-2 ; drone RGB | NDVI, NDRE (satellite) ; ExG lissé (drone) ; zones et parcelles faibles par z-score robuste | alertes identiques aux scripts d'analyse validés |
+| Stress hydrique | Sentinel-2 | résidu du NDMI par rapport à la droite NDMI ~ NDVI du site | idem |
+| Suivi temporel | Sentinel-2, deux dates ou plus | évolution corrigée de la variation commune au site | idem |
+| Maladies | photos de feuilles | EfficientNet-B0 (ONNX), 4 vues, décision en deux étapes avec rejet de l'inconnu | 87 à 93 % de bonnes réponses sur un autre pays, 0 fausse alerte sur feuilles saines ; rejet des maladies inconnues 11 à 31 % |
+| Comptage des pieds | orthomosaïque de drone | DeepForest affiné sur les bananiers | **indicatif** : F1 0,47 en validation, 0,17 sur un site jamais vu |
 
-Analyse d'une bananeraie à partir d'images aériennes (drone et satellite) : comptage des pieds, vigueur, stress hydrique et maladies, avec un bulletin de santé par parcelle.
+Temps sur processeur : environ **35 ms par photo de feuille** (4 vues) et **35 s par hectare** de drone pour le comptage.
 
+## Installation
 
+Testé avec Python 3.14 sous Windows 11 (inférence) ; entraînement sous Python 3.13 (Kaggle, GPU T4).
 
-\## Installation
-
-
-
-Testé avec Python 3.14 sous Windows.
-
-
-
-```
-
-git clone https://github.com/Exodbus/Field-Scan.git
-
+```bash
+git clone <adresse du dépôt> Field-Scan
 cd Field-Scan
-
 python -m venv .venv
-
-.venv\\Scripts\\Activate.ps1
-
+# Windows : .venv\Scripts\Activate.ps1   |   Linux, macOS : source .venv/bin/activate
 pip install -r requirements.txt
-
 ```
 
+`requirements.txt` donne les versions exactes de l'environnement de développement (régénéré par `python scripts/ecrire_requirements.py`).
+
+## Modèles
+
+| Fichier | Module | Où le trouver |
+| --- | --- | --- |
+| `modeles/maladies/maladies_v2.onnx` | maladies | dans le dépôt (16 Mo) |
+| `modeles/maladies/entrainement_maladies.json` | maladies | dans le dépôt : classes, vues, normalisation, seuil de rejet |
+| `modeles/maladies/rejet.npz` | maladies (analyses) | dans le dépôt |
+| `modeles/bananiers_deepforest_v3_40.ckpt` | comptage | trop gros pour le dépôt : à télécharger depuis la page **Releases** du dépôt, puis à placer dans `modeles/` |
+
+Sans le modèle de comptage, la chaîne fonctionne : le module comptage est simplement marqué « non évalué ».
+
+## Utilisation
+
+```bash
+python run.py --images DOSSIER --parcelles parcelles.geojson --out resultats/
+```
+
+Options : `--modules vigueur stress temporel comptage maladies` pour n'en lancer que certains (par défaut, tous ceux que les données permettent) ; `--config autre.yaml` pour d'autres réglages (par défaut, `config.yaml` à côté de `run.py`).
+
+Exemples avec les données du projet :
+
+```bash
+# Sentinel-2 (deux dates) : vigueur, stress hydrique, suivi temporel
+python run.py --images data/sentinel2 --parcelles data/parcelles/parcelles_cotedivoire.geojson --out resultats/cotedivoire
+# Drone : comptage et vigueur RGB
+python run.py --images "data/drone/reforestree/wwf_ecuador/RGB Orthomosaics" --parcelles data/drone/reforestree/prepare/sites.geojson --out resultats/drone
+# Photos de feuilles seules
+python run.py --images data/demo_feuilles --parcelles data/parcelles/parcelles_cotedivoire.geojson --out resultats/feuilles --modules maladies
+```
+
+### Données reconnues dans `--images`
+
+Le dossier est parcouru en entier ; chaque fichier est classé, et tout fichier écarté est listé avec sa raison dans `inventaire.json`.
+
+| Données | Forme attendue |
+| --- | --- |
+| Sentinel-2 L2A | export du Copernicus Browser (bandes `…_L2A_B04_(Raw).tiff`, dossiers ou `.zip`) **ou** produit officiel `.SAFE` (dossier ou `.zip`) ; bandes B04, B05, B08, B8A, B11 et SCL nécessaires ; plusieurs dates possibles ; scènes hors des parcelles écartées |
+| Orthomosaïque de drone | GeoTIFF RGB (3 bandes, ou 4 avec transparence), résolution meilleure que 50 cm, en mètres ou en degrés ; jamais chargée en entier |
+| Photos de feuilles | JPG ou PNG ; rattachées à leur parcelle si elles contiennent des coordonnées GPS (EXIF), sinon listées à part |
+
+### Parcelles
+
+GeoJSON de polygones, dans n'importe quel système de coordonnées. Identifiant lu dans le premier champ trouvé parmi `parcelle_id`, `id`, `name`, `nom`, `zone_id`, `site` ; sinon, parcelles numérotées. Géométries invalides réparées, doublons d'identifiant suffixés (signalés dans le journal).
+
+## Sorties
+
+```
+resultats/
+├── bulletin.html          bulletin lisible : carte (parcelles par niveau, zones et photos en alerte), tableau par priorité,
+│                          preuve de chaque alerte au clic (la carte demande Internet ; le reste fonctionne hors ligne)
+├── bulletin.csv           une ligne par parcelle : score, niveau, priorité, alertes, mesures de chaque module
+├── alertes.geojson        chaque alerte : géométrie (EPSG:4326), message, gravité, confiance, source, chemin de la preuve
+├── pieds.geojson          pieds détectés (drone)
+├── carte_bulletin.png     carte fixe des scores
+├── cartes/                GeoTIFF : NDVI, NDRE, NDMI, résidu NDMI, masque de nuages, évolutions, ExG drone
+├── preuves/               vignette de chaque alerte (extrait de la carte ou de l'orthomosaïque, photo de feuille)
+├── *_par_date.csv, evolution_par_paire.csv, comptage_parcelles.csv, maladies_photos.csv   détails par module
+├── inventaire.json        données reconnues et fichiers écartés
+└── journal.json           versions, réglages, durées (dont secondes par hectare), événements et erreurs
+```
+
+## Lire le bulletin
+
+- **Date des données** : chaque parcelle est décrite par la **dernière date où elle est exploitable** (pas trop nuageuse) ; le bulletin signale quand cette date est antérieure à la dernière image.
+- **Score de santé** (0 à 100) : 100 moins une pénalité par module en alerte (vigueur 25, stress 20, évolution 15, maladie 30, densité 10 ; un module compte une fois par parcelle), réduite à 60 % pour une gravité moyenne et divisée par deux si la confiance est faible. Vert ≥ 80, orange ≥ 60, rouge en dessous ; une alerte forte et fiable place la parcelle au moins en orange. Une parcelle qu'aucun module n'a pu évaluer est « non évaluée ».
+- **Priorité** : parcelles en alerte, par score croissant puis surface décroissante.
+- **Alerte** : toujours deux conditions, un écart inhabituel (z-score robuste) **et** un écart suffisant en valeur absolue.
+- **Maladies** : « saine », « cercosporiose noire », « fusariose ou autre flétrissement vasculaire (à confirmer par un examen du pseudo-tronc) », « malade, maladie non identifiée » ou « je ne sais pas ». Une feuille malade est signalée même quand la maladie n'est pas identifiée.
+
+Tous les seuils sont dans `config.yaml` (valeurs par défaut dans `fieldscan/config.py`).
+
+## Limites connues
+
+- **Comptage indicatif** : le détecteur généralise mal d'un site à l'autre (F1 0,17 sur un site jamais vu) ; ses alertes de densité sont en confiance faible.
+- **Maladies inconnues** : bien signalées comme malades, mais rarement reconnues comme inconnues (11 à 31 % de rejet) ; les maladies à taches sont souvent rangées dans la cercosporiose.
+- **Prise de vue** : le classifieur est fiable sur des gros plans de la zone malade ; il échoue sur des feuilles entières photographiées de loin (essai éthiopien).
+- **Stress hydrique** : la bande B11 (20 m) est plus floue que le NDVI (10 m) ; aux bords nets d'une zone peu vigoureuse, de petites zones de stress peuvent apparaître.
+- **Nuages** : une parcelle couverte à plus de 50 % est non exploitable à cette date.
+
+## Reproduire l'entraînement
+
+- Données de feuilles : `scripts/verifier_zips.py`, `scripts/reperer_tiges.py`, `scripts/preparer_feuilles.py` (exclusion des tiges, doublons, fuites).
+- Classifieur : `notebooks/entrainer_maladies_kaggle.ipynb` (ou la version Colab) ; deux exécutions complètes ont donné des résultats identiques.
+- Comptage : `scripts/prepare_reforestree.py`, `scripts/preparer_deepforest.py`, `notebooks/entrainer_deepforest.ipynb`.
+
+## Structure
+
+```
+run.py, config.yaml        commande et réglages
+fieldscan/                 paquet : entrees, parcelles, sentinel2, drone, anomalies, bulletin, journal, modules/
+scripts/                   préparation des données, évaluations, analyses
+notebooks/                 entraînements (Colab, Kaggle)
+docs/                      carnet de données (sources, licences, découpages, résultats, limites) et images
+modeles/                   poids des modèles
+```
+
+## Données et licences
+
+Toutes les sources sont publiques et documentées dans `docs/carnet_de_donnees.md` (provenance, licence, résolution, dates, découpage entraînement / validation / test, risques de fuite, biais et limites).
