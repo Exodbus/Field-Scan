@@ -108,7 +108,13 @@ def main(argv=None):
     if "split" in zones and (zones.split == "test").any() and len(args.seuil) > 1:
         raise SystemExit("Refus : un seul seuil, figé sur la validation, pour les carrés de test.")
     ref = gpd.read_file(args.reference).to_crs(CRS_METRIQUE)
-    ref["type"] = ref["type"].astype(str).str.strip().str.lower()
+    # Type vide (QGIS : NULL) = « mere » par défaut ; les accents sont retirés (« mère » -> « mere ») ; signalé.
+    brut = ref["type"].astype(str).str.strip().str.lower().str.replace("è", "e", regex=False)
+    vides = ref["type"].isna() | brut.isin(["", "none", "nan", "null"])
+    if vides.any():
+        print(f"Attention : {int(vides.sum())} point(s) de référence sans type, comptés comme « mere »"
+              f" (zones : {sorted(ref.loc[vides, 'zone_id'].dropna().astype(str).unique())})")
+    ref["type"] = brut.where(~vides, "mere")
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     torch.set_grad_enabled(False)
