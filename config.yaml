@@ -1,0 +1,13 @@
+# Réglages de Field Scan. Toute valeur absente garde sa valeur par défaut (fieldscan/config.py).
+entrees:
+  drone_resolution_max_m: 0.5
+nuages:
+  seuil_masque_pct: 50.0
+maladies:
+  modele: modeles/maladies/maladies_v2.onnx
+  seuil_rejet: 0.7076      # probabilité maximale, 95 % des feuilles connues de la validation acceptées
+comptage:
+  modele: modeles/bananiers_deepforest_dense_v2.ckpt   # second réentraînement (squelette dégelé), allégé
+  seuil_score: 0.5         # choisi sur la validation (agroforesterie + plantation dense)
+  coefficient_bas: 1.43    # agroforesterie : référence manuelle MM1-MM2 (83 réels / 58 détectés)
+  coefficient_haut: 2.19   # plantation dense : validation de Count banana plants

@@ -14,7 +14,7 @@ Temps sur processeur : environ **35 ms par photo de feuille** (4 vues) et **35 s
 
 ## Installation
 
-Testé avec Python 3.14 sous Windows 11 (inférence) ; entraînement sous Python 3.13 (Kaggle, GPU T4).
+Python 3.11 ou plus récent requis. Testé avec Python 3.14 sous Windows 11 (inférence) ; entraînement sous Python 3.13 (Kaggle, GPU T4).
 
 ```bash
 git clone <adresse du dépôt> Field-Scan
@@ -33,7 +33,7 @@ pip install -r requirements.txt
 | `modeles/maladies/maladies_v2.onnx` | maladies | dans le dépôt (16 Mo) |
 | `modeles/maladies/entrainement_maladies.json` | maladies | dans le dépôt : classes, vues, normalisation, seuil de rejet |
 | `modeles/maladies/rejet.npz` | maladies (analyses) | dans le dépôt |
-| `modeles/bananiers_deepforest_v3_40.ckpt` | comptage | trop gros pour le dépôt : à télécharger depuis la page **Releases** du dépôt, puis à placer dans `modeles/` |
+| `modeles/bananiers_deepforest_dense_v2.ckpt` | comptage | trop gros pour le dépôt : à télécharger depuis la page **Releases** du dépôt (version allégée, poids seuls), puis à placer dans `modeles/` |
 
 Sans le modèle de comptage, la chaîne fonctionne : le module comptage est simplement marqué « non évalué ».
 
@@ -93,6 +93,7 @@ resultats/
 - **Score de santé** (0 à 100) : 100 moins une pénalité par module en alerte (vigueur 25, stress 20, évolution 15, maladie 30, densité 10 ; un module compte une fois par parcelle), réduite à 60 % pour une gravité moyenne et divisée par deux si la confiance est faible. Vert ≥ 80, orange ≥ 60, rouge en dessous ; une alerte forte et fiable place la parcelle au moins en orange. Une parcelle qu'aucun module n'a pu évaluer est « non évaluée ».
 - **Priorité** : parcelles en alerte, par score croissant puis surface décroissante.
 - **Alerte** : toujours deux conditions, un écart inhabituel (z-score robuste) **et** un écart suffisant en valeur absolue.
+- **Comptage** : le bulletin donne les pieds **détectés** et une **fourchette** de pieds estimés (détectés x 1,43 à x 2,19). Le détecteur sous-compte, d'autant plus que les couronnes se touchent : x 1,43 en agroforesterie (référence manuelle MM1-MM2), x 2,19 en plantation dense (validation de Count banana plants). Les jeunes plantations aux feuilles fines sont très sous-comptées, au-delà de la fourchette (F1 0,12 sur un site de ce type). Modèle `bananiers_deepforest_dense_v2`, seuil 0,5 : F1 0,68 sur la référence manuelle, 0,56 en plantation dense.
 - **Maladies** : « saine », « cercosporiose noire », « fusariose ou autre flétrissement vasculaire (à confirmer par un examen du pseudo-tronc) », « malade, maladie non identifiée » ou « je ne sais pas ». Une feuille malade est signalée même quand la maladie n'est pas identifiée.
 
 Tous les seuils sont dans `config.yaml` (valeurs par défaut dans `fieldscan/config.py`).
