@@ -38,6 +38,13 @@ CRS_METRIQUE = "EPSG:32717"
 TYPES_CERTAINS = {"mere", "rejet"}
 
 
+def definir_types_certains(meres_seules=False):
+    """Mères seules : les rejets sont traités comme les points incertains (ni à trouver, ni faux s'ils sont détectés)."""
+    global TYPES_CERTAINS
+    TYPES_CERTAINS = {"mere"} if meres_seules else {"mere", "rejet"}
+    return TYPES_CERTAINS
+
+
 def apparier(det_xy, ref_xy, rayon):
     """Appariement un-à-un à distance totale minimale, limité à `rayon`. Retourne [(i_det, j_ref, distance)]."""
     if len(det_xy) == 0 or len(ref_xy) == 0:
@@ -97,11 +104,14 @@ def main(argv=None):
     ap.add_argument("--zones", default="data/drone/reforestree/prepare/zones_annotation.geojson")
     ap.add_argument("--out", required=True, help="dossier de sortie")
     ap.add_argument("--rayon", type=float, default=1.0, help="distance maximale d'appariement en mètres (défaut 1)")
+    ap.add_argument("--meres-seules", action="store_true",
+                    help="évaluer les pieds mères seuls : les rejets sont traités comme des points incertains")
     ap.add_argument("--filtre-banane", action="store_true",
                     help="ne garder que les détections dont is_banana est vrai (annotations ReforesTree)")
     ap.add_argument("--zones-evaluees", nargs="*",
                     help="ne garder que ces zones (défaut : les zones qui contiennent au moins un point de référence)")
     args = ap.parse_args(argv)
+    definir_types_certains(args.meres_seules)
 
     det = gpd.read_file(args.detections).to_crs(CRS_METRIQUE)
     ref = gpd.read_file(args.reference).to_crs(CRS_METRIQUE)

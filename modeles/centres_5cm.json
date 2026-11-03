@@ -1,0 +1,56 @@
+{
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "python": "3.13.16",
+    "gpu": "Tesla T4"
+  },
+  "reglages": {
+    "reseau": "resnet18 ImageNet + décodeur FPN, sortie au quart",
+    "resolution_cm": 5,
+    "decoupe_px": 448,
+    "stride": 4,
+    "epoques": 30,
+    "lot": 16,
+    "lr_squelette": 0.0003,
+    "lr_decodeur": 0.001,
+    "decroissance_poids": 0.0001,
+    "programme": "OneCycle, 5 % de montée",
+    "ecretage": 5.0,
+    "augmentations": "échelle 0,8-1,25, luminosité/contraste/saturation 0,8-1,2, miroir, quarts de tour",
+    "k_pics": 7,
+    "rayon_px": 20,
+    "repetitions_reforestree": 19,
+    "duree_max_h": 4.0,
+    "graine": 2026
+  },
+  "retenu": {
+    "epoque": 5,
+    "seuil": 0.25,
+    "f1_mm": 0.8,
+    "f1_dense": 0.8733,
+    "moyenne": 0.8367
+  },
+  "seuil": 0.25,
+  "test_dense": {
+    "vp": 774,
+    "fp": 171,
+    "fn": 66,
+    "f1": 0.8672
+  },
+  "normalisation": {
+    "moyenne": [
+      0.48500001430511475,
+      0.4560000002384186,
+      0.4059999883174896
+    ],
+    "ecart_type": [
+      0.2290000021457672,
+      0.2240000069141388,
+      0.22499999403953552
+    ]
+  },
+  "entree": "RGB 0-255 / 255, normalisé, NCHW",
+  "sortie": "logits au quart de la résolution ; sigmoïde puis maxima locaux (fenêtre k_pics) au-dessus du seuil",
+  "regle": "couple (époque, seuil) maximisant la moyenne des F1 MM1-MM2 (mères seules, rejets ignorés) et validation dense (Count banana plants, valid) ; test dense regardé une fois"
+}

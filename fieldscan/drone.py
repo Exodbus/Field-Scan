@@ -4,6 +4,8 @@ Une orthomosaïque n'est jamais chargée en entier : on lit la fenêtre de chaqu
 dans un système métrique (UTM des parcelles) et rééchantillonnée à la résolution voulue (moyenne des
 pixels). Les orthomosaïques en degrés (EPSG:4326, comme ReforesTree) sont donc traitées comme les autres.
 """
+from pathlib import Path
+
 import numpy as np
 import rasterio
 from rasterio.enums import Resampling
@@ -122,3 +124,66 @@ def lisser(a, taille_px):
         lisse = np.where(poids > 0, somme / poids, np.nan).astype("float32")
     loin_des_bords = ndimage.uniform_filter(valide.astype("float64"), 2 * taille_px + 1, mode="constant") >= 0.999
     return lisse, valide & loin_des_bords
+
+
+class DetecteurCentres:
+    """Détecteur de centres de couronnes (carte de chaleur, modèle ONNX, processeur).
+
+    Le modèle (ResNet-18 + décodeur, carnet entrainer_centres_kaggle.ipynb) reçoit une image RGB normalisée et
+    renvoie des logits au quart de la résolution. L'image est parcourue par grandes fenêtres qui se recouvrent ;
+    la carte de probabilité garde le maximum dans les recouvrements ; un pied = un maximum local (fenêtre de
+    k_pics cellules) au-dessus du seuil. Pas de boîtes ni de suppression des doublons.
+    Les réglages (normalisation, k_pics, seuil, résolution) sont lus dans le .json du même nom, s'il existe.
+    """
+
+    def __init__(self, chemin, fenetre=1024, marge=128):
+        import json
+        import onnxruntime as ort
+        chemin = Path(chemin)
+        self.sess = ort.InferenceSession(str(chemin), providers=["CPUExecutionProvider"])
+        self.entree = self.sess.get_inputs()[0].name
+        p = {}
+        if chemin.with_suffix(".json").exists():
+            p = json.loads(chemin.with_suffix(".json").read_text(encoding="utf-8"))
+        norm = p.get("normalisation", {})
+        self.moy = np.array(norm.get("moyenne", [0.485, 0.456, 0.406]), "float32")[:, None, None]
+        self.ect = np.array(norm.get("ecart_type", [0.229, 0.224, 0.225]), "float32")[:, None, None]
+        reg = p.get("reglages", {})
+        self.stride = int(reg.get("stride", 4))
+        self.k_pics = int(reg.get("k_pics", 7))
+        self.seuil = float(p.get("seuil", 0.3))
+        self.resolution_cm = float(reg.get("resolution_cm", 5))
+        self.fenetre = int(fenetre) // 32 * 32
+        self.marge = int(marge) // self.stride * self.stride
+
+    def carte(self, rgb, valide):
+        """Probabilité d'un centre de couronne, au quart de la résolution (H/4, L/4)."""
+        st, F = self.stride, self.fenetre
+        noir = (0.0 - self.moy) / self.ect                                    # hors image : noir, comme à l'entraînement
+        x = np.where(valide[None], (np.asarray(rgb, "float32") / 255.0 - self.moy) / self.ect, noir).astype("float32")
+        h, l = valide.shape
+        H, L = (h + st - 1) // st, (l + st - 1) // st
+        proba = np.zeros((H, L), "float32")
+        pas = F - 2 * self.marge
+        for y0 in range(0, max(h - 2 * self.marge, 1), pas):
+            for x0 in range(0, max(l - 2 * self.marge, 1), pas):
+                bloc = np.zeros((1, 3, F, F), "float32")
+                bloc[:] = noir[None]
+                morceau = x[:, y0:y0 + F, x0:x0 + F]
+                bloc[0, :, :morceau.shape[1], :morceau.shape[2]] = morceau
+                sortie = self.sess.run(None, {self.entree: bloc})[0][0, 0]
+                p = 1.0 / (1.0 + np.exp(-sortie))
+                ph, pl = (morceau.shape[1] + st - 1) // st, (morceau.shape[2] + st - 1) // st
+                a, b = y0 // st, x0 // st
+                proba[a:a + ph, b:b + pl] = np.maximum(proba[a:a + ph, b:b + pl], p[:ph, :pl])
+        return proba
+
+    def predire(self, rgb, valide, seuil_min=0.05):
+        """Centres (x, y) en pixels de l'image et scores, au-dessus de seuil_min ; hors image exclus."""
+        from scipy.ndimage import maximum_filter
+        proba = self.carte(rgb, valide)
+        pic = (proba == maximum_filter(proba, size=self.k_pics, mode="constant")) & (proba >= seuil_min)
+        j, i = np.nonzero(pic)
+        xy = np.c_[(i + 0.5) * self.stride, (j + 0.5) * self.stride]
+        dedans = valide[np.clip(xy[:, 1].astype(int), 0, valide.shape[0] - 1), np.clip(xy[:, 0].astype(int), 0, valide.shape[1] - 1)]
+        return xy[dedans], proba[j, i][dedans]

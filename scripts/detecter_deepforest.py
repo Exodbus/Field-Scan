@@ -33,6 +33,7 @@ from torchvision.ops import nms
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from baseline_comptage import chemin_ortho, lire_fenetre  # noqa: E402
 from evaluer_comptage import CRS_METRIQUE, evaluer_zone, scores  # noqa: E402
+from evaluer_comptage import definir_types_certains  # noqa: E402
 from preparer_deepforest import positions  # noqa: E402
 
 
@@ -94,16 +95,22 @@ def main(argv=None):
     ap.add_argument("--zones", default="data/drone/reforestree/prepare/zones_annotation.geojson")
     ap.add_argument("--zones-evaluees", nargs="+", default=["MM1", "MM2"])
     ap.add_argument("--out", required=True)
-    ap.add_argument("--resolution", type=float, default=10.0, help="cm par pixel (défaut 10, celle de l'entraînement)")
+    ap.add_argument("--resolution", type=float, default=None,
+                    help="cm par pixel (défaut : 10 pour DeepForest, celle du .json pour un détecteur de centres .onnx)")
     ap.add_argument("--taille", type=int, default=400, help="taille des fenêtres en pixels (défaut 400)")
     ap.add_argument("--recouvrement", type=float, default=0.25)
     ap.add_argument("--nms", type=float, default=0.3, help="seuil de recouvrement pour fusionner les doublons")
     ap.add_argument("--seuil", type=float, nargs="+", default=[0.4], help="seuil de score (défaut 0,4, choisi sur la validation)")
+    ap.add_argument("--meres-seules", action="store_true", help="pieds mères seuls : rejets traités comme incertains")
     ap.add_argument("--rayon", type=float, default=1.0)
     ap.add_argument("--marge", type=float, default=3.0)
     args = ap.parse_args(argv)
+    definir_types_certains(args.meres_seules)
 
     zones = gpd.read_file(args.zones).to_crs(CRS_METRIQUE)
+    manquantes = sorted(set(args.zones_evaluees) - set(zones.zone_id))
+    if manquantes:
+        raise SystemExit(f"Zone(s) absente(s) de {args.zones} : {manquantes}. Ajoute-les d'abord au fichier des zones.")
     zones = zones[zones.zone_id.isin(args.zones_evaluees)]
     if "split" in zones and (zones.split == "test").any() and len(args.seuil) > 1:
         raise SystemExit("Refus : un seul seuil, figé sur la validation, pour les carrés de test.")
@@ -120,7 +127,16 @@ def main(argv=None):
     torch.set_grad_enabled(False)
 
     t_charge = time.time()
-    m = charger_modele(args.modele)
+    centres = str(args.modele).lower().endswith(".onnx")          # détecteur de centres (carte de chaleur, ONNX)
+    if centres:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from fieldscan.drone import DetecteurCentres
+        m = DetecteurCentres(args.modele)
+        args.resolution = args.resolution or m.resolution_cm
+        print(f"Détecteur de centres chargé : lecture à {args.resolution:g} cm/pixel, pics sur {m.k_pics} cellules")
+    else:
+        m = charger_modele(args.modele)
+        args.resolution = args.resolution or 10.0
     t_charge = time.time() - t_charge
 
     res_m = args.resolution / 100
@@ -128,9 +144,13 @@ def main(argv=None):
     for _, z in zones.iterrows():
         rgb, valide, t, crs = lire_fenetre(chemin_ortho(z.site, args.orthos, args.zip), z.geometry, args.marge, res_m)
         debut = time.time()
-        b, s = predire_fenetre(m, rgb, valide, args.taille, args.recouvrement, args.nms)
+        if centres:
+            b, s = m.predire(rgb, valide)                       # centres (x, y) en pixels, déjà au centre des cellules
+            cx, cy = b[:, 0], b[:, 1]
+        else:
+            b, s = predire_fenetre(m, rgb, valide, args.taille, args.recouvrement, args.nms)
+            cx, cy = (b[:, 0] + b[:, 2]) / 2 + 0.5, (b[:, 1] + b[:, 3]) / 2 + 0.5
         temps[z.zone_id] = (time.time() - debut, valide.sum() * res_m ** 2 / 1e4)
-        cx, cy = (b[:, 0] + b[:, 2]) / 2 + 0.5, (b[:, 1] + b[:, 3]) / 2 + 0.5
         xs, ys = t * (cx, cy)
         X, Y = warp_transform(crs, CRS_METRIQUE, np.atleast_1d(xs).tolist(), np.atleast_1d(ys).tolist()) if len(b) else ([], [])
         brutes[z.zone_id] = (np.c_[X, Y] if len(b) else np.empty((0, 2)), s, z)

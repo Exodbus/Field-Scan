@@ -173,10 +173,10 @@ def _html(ctx, tab, alertes, statuts, chemin):
     if "comptage" in ctx.resultats:
         rc = ctx.resultats["comptage"].resume
         note_comptage = (f"<p><b>Pieds</b> : {rc.get('pieds', 0)} pieds détectés sur l'orthomosaïque, soit environ "
-                         f"{rc.get('pieds_estimes_bas', 0)} à {rc.get('pieds_estimes_haut', 0)} pieds estimés. Le détecteur "
-                         f"sous-compte : environ x{rc.get('coefficient_bas')} en agroforesterie, x{rc.get('coefficient_haut')} "
-                         "en plantation dense ; les jeunes plantations aux feuilles fines sont très sous-comptées, au-delà de "
-                         "cette fourchette. Les points détectés sont dans pieds.geojson.</p>")
+                         f"{rc.get('pieds_estimes_bas', 0)} à {rc.get('pieds_estimes_haut', 0)} pieds estimés (détectés x "
+                         f"{rc.get('coefficient_bas')} à x{rc.get('coefficient_haut')}, rapports réel / détecté mesurés en "
+                         "validation en plantation dense et en agroforesterie). Les jeunes plantations aux feuilles fines "
+                         "sont sous-comptées au-delà de cette fourchette. Les points détectés sont dans pieds.geojson.</p>")
     photos_html = ""
     if "maladies" in ctx.resultats:
         ph = ctx.resultats["maladies"].resume.get("photos", [])

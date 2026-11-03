@@ -1,9 +1,11 @@
 """Module comptage des pieds (orthomosaïque de drone, DeepForest affiné, processeur).
 
-Pieds estimés : une fourchette, pieds détectés x [coefficient_bas, coefficient_haut]. Le détecteur sous-compte,
-et d'autant plus que les couronnes se touchent : 1,43 en agroforesterie (référence manuelle MM1-MM2), 2,19 en
-plantation dense (validation de Count banana plants). Sans connaître le milieu de chaque parcelle, on affiche
-les deux bornes. Les jeunes plantations (feuilles fines) sont très sous-comptées, au-delà de la fourchette.
+Deux détecteurs possibles, selon l'extension du modèle : détecteur de centres (.onnx, retenu : carte de chaleur
+des centres de couronnes, ResNet-18, 5 cm par pixel, 45 Mo, 1 à 3 s par hectare) ou DeepForest (.ckpt, boîtes).
+Pieds estimés : une fourchette, pieds détectés x [coefficient_bas, coefficient_haut], les rapports réel / détecté
+mesurés en validation (détecteur de centres : 0,93 en plantation dense, 1,21 en agroforesterie). Sans connaître
+le milieu de chaque parcelle, on affiche les deux bornes. Les jeunes plantations (feuilles fines) sont
+sous-comptées au-delà de la fourchette (rapport de 2,4 sur le site de test Carlos Vera Guevara).
 Les alertes de densité comparent les parcelles entre elles : le coefficient s'y annule.
 
 Pour chaque parcelle survolée : lecture de sa fenêtre à la résolution d'entraînement (10 cm), fenêtres
@@ -11,8 +13,8 @@ glissantes de 400 pixels, fusion des doublons, seuil de score (0,5, choisi sur l
 boîtes -> pieds géolocalisés. Densité = pieds / surface réellement couverte par l'image (une parcelle à
 moitié survolée n'est pas déclarée à moitié vide). Alerte « densité faible » : nettement moins dense que les
 autres parcelles du site (z-score robuste ET écart relatif minimal), en confiance faible : le comptage est
-indicatif (modèle dense_v2, seuil 0,5 : F1 0,68 sur la référence manuelle MM1-MM2, 0,56 en plantation dense,
-0,12 sur un site de jeune plantation jamais vu ; voir le carnet de données).
+indicatif (détecteur de centres, seuil 0,25 : F1 0,79 sur la référence manuelle MM1-MM2 en mères seules,
+0,88 en plantation dense, 0,43 sur un site de jeune plantation jamais vu ; voir le carnet de données).
 """
 import time
 from pathlib import Path
@@ -52,11 +54,15 @@ def executer(ctx):
     chemin_modele = Path(reg["modele"])
     if not chemin_modele.exists():
         raise RuntimeError(f"modèle de comptage introuvable : {chemin_modele}")
+    centres = chemin_modele.suffix.lower() == ".onnx"          # détecteur de centres (carte de chaleur) ou DeepForest
     try:
-        det = drone.Detecteur(chemin_modele)
+        det = drone.DetecteurCentres(chemin_modele) if centres else drone.Detecteur(chemin_modele)
     except ModuleNotFoundError as e:
-        raise RuntimeError(f"bibliothèque manquante pour le comptage ({e.name}) : pip install deepforest")
-    res = reg["resolution_cm"] / 100
+        raise RuntimeError(f"bibliothèque manquante pour le comptage ({e.name}) : pip install "
+                           f"{'onnxruntime' if centres else 'deepforest'}")
+    # détecteur de centres : résolution et seuil de son .json (choisis sur la validation), sauf réglage explicite
+    res = (reg.get("resolution_centres_cm") or det.resolution_cm if centres else reg["resolution_cm"]) / 100
+    seuil = float(reg.get("seuil_centres") or det.seuil) if centres else reg["seuil_score"]
     utm = ctx.parcelles.estimate_utm_crs()
     parc_m = ctx.parcelles.to_crs(utm)
     (ctx.sortie / "preuves").mkdir(exist_ok=True)
@@ -72,12 +78,18 @@ def executer(ctx):
             if couverture < 0.05 or (pid in meilleurs and meilleurs[pid]["couverture"] >= couverture):
                 continue
             debut = time.time()
-            boites, scores = det.predire(rgb, valide, reg.get("taille_fenetre", 400), reg.get("recouvrement", 0.25), reg.get("nms", 0.3))
+            if centres:
+                xy, scores = det.predire(rgb, valide)
+            else:
+                boites, scores = det.predire(rgb, valide, reg.get("taille_fenetre", 400), reg.get("recouvrement", 0.25), reg.get("nms", 0.3))
             duree = time.time() - debut
             surface_lue = valide.sum() * res * res / 1e4
             t_total, ha_total = t_total + duree, ha_total + surface_lue
-            garde = scores >= reg["seuil_score"]
-            cx, cy = (boites[garde, 0] + boites[garde, 2]) / 2 + 0.5, (boites[garde, 1] + boites[garde, 3]) / 2 + 0.5
+            garde = scores >= seuil
+            if centres:
+                cx, cy = xy[garde, 0], xy[garde, 1]
+            else:
+                cx, cy = (boites[garde, 0] + boites[garde, 2]) / 2 + 0.5, (boites[garde, 1] + boites[garde, 3]) / 2 + 0.5
             pts = [Point(t.c + x * res, t.f - y * res) for x, y in zip(cx, cy)]
             dedans = [(p, s) for p, s in zip(pts, scores[garde]) if geom.contains(p)]
             surface_couverte = couverture * geom.area / 1e4
