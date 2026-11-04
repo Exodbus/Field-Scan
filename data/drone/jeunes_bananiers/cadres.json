@@ -1,0 +1,23 @@
+{
+  "note": "Repère local, pas une vraie géoréférence : x = colonne + decalage_x, y = -ligne (pixels). EPSG:3857 sert seulement à ce que QGIS ouvre tout sans question.",
+  "images": [
+    {
+      "image": "dji_0544",
+      "decalage_x": 6000,
+      "largeur": 5472,
+      "hauteur": 3648
+    },
+    {
+      "image": "dji_0546",
+      "decalage_x": 12000,
+      "largeur": 5472,
+      "hauteur": 3648
+    },
+    {
+      "image": "dji_0548",
+      "decalage_x": 18000,
+      "largeur": 5472,
+      "hauteur": 3648
+    }
+  ]
+}
