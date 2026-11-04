@@ -32,8 +32,12 @@ import sys
 import zipfile
 from pathlib import Path, PurePosixPath
 
+import io
+
 import geopandas as gpd
+import numpy as np
 import pandas as pd
+from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from verifier_sources_communes import origine, photo  # noqa: E402
@@ -57,7 +61,9 @@ PARTIES = {
     "dji_recouvrement": "exclu",                  # dji_0545, 0547, 0549 : recouvrent les photos annotées
     "dji_cacao": "exclu",                         # dji_0537 à 0543 : cacaoyères avec bananiers non annotés en bord
     "dji_fly": "exclu",                           # boîtes larges et mal centrées sur les pieds
-    "cacau_1": "train", "cacau_2": "val", "cacao": "test",   # cacaoyères (exemples sans bananier)
+    # cacaoyères : des bananiers y sont visibles mais jamais annotés (contrôle visuel des tuiles préparées) ;
+    # ni exemples négatifs (le modèle apprendrait qu'un bananier est du fond) ni mesure de fausses détections
+    "cacau_1": "exclu", "cacau_2": "exclu", "cacao": "exclu",
     "video_oblique": "exclu", "whatsapp_oblique": "exclu",   # vues obliques
     # Multiple tree : palmiers à huile (trois zones d'une grande image) et cocotiers (vignettes numérotées)
     "palmier_52000_20000": "train", "palmier_44000_16000": "val", "palmier_44000_4000": "test",
@@ -133,7 +139,18 @@ def main(argv=None):
     # 1. Bananiers : plants_bana_originaux, une ligne par image d'origine (les copies augmentées sont retirées)
     pb = lire_coco(RACINE / "plants_bana_originaux.zip")
     avant = len(pb)
-    pb = pb.drop_duplicates("origine")
+    # parmi les copies d'une même image d'origine, préférer une copie en couleur (Roboflow a passé quelques
+    # copies d'entraînement en niveaux de gris)
+    zpb = zipfile.ZipFile(RACINE / "plants_bana_originaux.zip")
+    def en_gris(nom):
+        a = np.asarray(Image.open(io.BytesIO(zpb.read(nom))).convert("RGB").resize((64, 64))).astype(float)
+        return bool(np.abs(a[..., 0] - a[..., 1]).mean() + np.abs(a[..., 1] - a[..., 2]).mean() < 2)
+    multi = pb.origine.duplicated(keep=False)
+    pb["gris"] = False
+    pb.loc[multi, "gris"] = pb.loc[multi, "image"].map(en_gris)
+    pb = pb.sort_values(["origine", "gris", "image"]).drop_duplicates("origine")
+    rapport.append(f"copies en niveaux de gris évitées ; images gardées encore en gris : {int(pb.gris.sum())}")
+    pb = pb.drop(columns="gris")
     rapport.append(f"plants_bana_originaux : {avant} images, {len(pb)} images d'origine gardées (copies retirées)")
     # segmento : tuiles d'une même orthomosaïque nommées par leur position (segmento_x_y) ; photo() retirerait la
     # position, on garde donc l'origine comme « photo » et le découpage se fait par position (groupe ouest / est)
