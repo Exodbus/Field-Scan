@@ -8,9 +8,9 @@ Chaîne d'analyse d'une bananeraie à partir d'images aériennes et de photos de
 | Stress hydrique | Sentinel-2 | résidu du NDMI par rapport à la droite NDMI ~ NDVI du site | idem |
 | Suivi temporel | Sentinel-2, deux dates ou plus | évolution corrigée de la variation commune au site | idem |
 | Maladies | photos de feuilles | EfficientNet-B0 (ONNX), 4 vues, décision en deux étapes avec rejet de l'inconnu | 87 à 93 % de bonnes réponses sur un autre pays, 0 fausse alerte sur feuilles saines ; rejet des maladies inconnues 11 à 31 % |
-| Comptage des pieds | orthomosaïque de drone | DeepForest affiné sur les bananiers | **indicatif** : F1 0,47 en validation, 0,17 sur un site jamais vu |
+| Comptage des pieds | orthomosaïque de drone | détecteur de centres de couronnes (carte de chaleur, ResNet-18, 5 cm, ONNX), palmiers et cocotiers appris comme exemples négatifs | F1 0,79 en validation (MM1-MM2, pieds mères) ; 14 fausses détections sur 873 images de palmiers ; **faible sur jeunes plants et bananiers cachés** (F1 0,19 sur le site de test) |
 
-Temps sur processeur : environ **35 ms par photo de feuille** (4 vues) et **35 s par hectare** de drone pour le comptage.
+Temps sur processeur : environ **35 ms par photo de feuille** (4 vues) et **2 à 4 s par hectare** de drone pour le comptage.
 
 ## Installation
 
@@ -33,7 +33,8 @@ pip install -r requirements.txt
 | `modeles/maladies/maladies_v2.onnx` | maladies | dans le dépôt (16 Mo) |
 | `modeles/maladies/entrainement_maladies.json` | maladies | dans le dépôt : classes, vues, normalisation, seuil de rejet |
 | `modeles/maladies/rejet.npz` | maladies (analyses) | dans le dépôt |
-| `modeles/centres_5cm.onnx` et `modeles/centres_5cm.json` | comptage (retenu) | dans le dépôt (45 Mo) : détecteur de centres, seuil, résolution et normalisation |
+| `modeles/centres_5cm_v2.onnx` et `modeles/centres_5cm_v2.json` | comptage (retenu) | dans le dépôt (45 Mo) : détecteur de centres v2, seuil, résolution, normalisation et règle de choix ; les deux fichiers doivent porter le même nom |
+| `modeles/centres_5cm.onnx` et `modeles/centres_5cm.json` | comptage (détecteur v1, comparaison) | dans le dépôt (45 Mo) |
 | `modeles/bananiers_deepforest_dense_v2.ckpt` | comptage (ancien détecteur, comparaison) | trop gros pour le dépôt : page **Releases** du dépôt |
 
 Sans le modèle de comptage, la chaîne fonctionne : le module comptage est simplement marqué « non évalué ».
@@ -94,14 +95,16 @@ resultats/
 - **Score de santé** (0 à 100) : 100 moins une pénalité par module en alerte (vigueur 25, stress 20, évolution 15, maladie 30, densité 10 ; un module compte une fois par parcelle), réduite à 60 % pour une gravité moyenne et divisée par deux si la confiance est faible. Vert ≥ 80, orange ≥ 60, rouge en dessous ; une alerte forte et fiable place la parcelle au moins en orange. Une parcelle qu'aucun module n'a pu évaluer est « non évaluée ».
 - **Priorité** : parcelles en alerte, par score croissant puis surface décroissante.
 - **Alerte** : toujours deux conditions, un écart inhabituel (z-score robuste) **et** un écart suffisant en valeur absolue.
-- **Comptage** : détecteur de **centres de couronnes** (carte de chaleur, ResNet-18, 5 cm par pixel, ONNX, 1 à 3 s par hectare sur processeur). Le bulletin donne les pieds **détectés** et une **fourchette** estimée (détectés x 0,93 à x 1,21, rapports réel / détecté mesurés en validation en plantation dense et en agroforesterie). F1 (appariement à 1 m, pieds mères) : 0,79 sur la référence manuelle MM1-MM2, 0,88 en plantation dense, 0,43 sur le site de test Carlos Vera Guevara (jeunes plants, sous-comptés d'un facteur 2,4).
+- **Comptage** : détecteur de **centres de couronnes** (carte de chaleur, ResNet-18, 5 cm par pixel, ONNX, 2 à 4 s par hectare sur processeur). Le bulletin donne les pieds **détectés** et une **fourchette** estimée (détectés x 0,80 à x 1,33, rapports réel / détecté mesurés en validation en plantation dense et en agroforesterie ; la borne basse est indicative, voir les limites). F1 (appariement à 1 m, pieds mères) : 0,79 sur la référence manuelle MM1-MM2 (validation), 0,20 sur le site de test Carlos Vera Guevara (jeunes plants et bananiers cachés sous d'autres arbres : rappel 0,11). Les jeunes plantations sortent de la fourchette.
 - **Maladies** : « saine », « cercosporiose noire », « fusariose ou autre flétrissement vasculaire (à confirmer par un examen du pseudo-tronc) », « malade, maladie non identifiée » ou « je ne sais pas ». Une feuille malade est signalée même quand la maladie n'est pas identifiée.
 
 Tous les seuils sont dans `config.yaml` (valeurs par défaut dans `fieldscan/config.py`).
 
 ## Limites connues
 
-- **Comptage indicatif** : le détecteur généralise mal d'un site à l'autre (F1 0,17 sur un site jamais vu) ; ses alertes de densité sont en confiance faible.
+- **Comptage indicatif** : fiable sur des bananiers adultes bien visibles (plantation, agroforesterie) ; il oublie la plupart des jeunes plants et des bananiers cachés sous d'autres arbres (rappel 0,11 sur le site de test). C'est le prix de l'apprentissage des palmiers comme exemples négatifs (fausses détections sur palmiers : 6 876 → 14 sur 873 images). Ses alertes de densité sont en confiance faible.
+- **Rejets** : le comptage ne distingue pas pieds mères et rejets ; les rejets au pied des bananiers ne sont pas comptés (choix de périmètre).
+- **Borne basse de la fourchette** : mesurée sur Count banana plants, dont les images sont d'autres découpes des photos d'entraînement (Plants-bana) ; elle est optimiste et seulement indicative.
 - **Maladies inconnues** : bien signalées comme malades, mais rarement reconnues comme inconnues (11 à 31 % de rejet) ; les maladies à taches sont souvent rangées dans la cercosporiose.
 - **Prise de vue** : le classifieur est fiable sur des gros plans de la zone malade ; il échoue sur des feuilles entières photographiées de loin (essai éthiopien).
 - **Stress hydrique** : la bande B11 (20 m) est plus floue que le NDVI (10 m) ; aux bords nets d'une zone peu vigoureuse, de petites zones de stress peuvent apparaître.
@@ -111,7 +114,7 @@ Tous les seuils sont dans `config.yaml` (valeurs par défaut dans `fieldscan/con
 
 - Données de feuilles : `scripts/verifier_zips.py`, `scripts/reperer_tiges.py`, `scripts/preparer_feuilles.py` (exclusion des tiges, doublons, fuites).
 - Classifieur : `notebooks/entrainer_maladies_kaggle.ipynb` (ou la version Colab) ; deux exécutions complètes ont donné des résultats identiques.
-- Comptage : `scripts/prepare_reforestree.py`, `scripts/preparer_deepforest.py`, `notebooks/entrainer_deepforest.ipynb`.
+- Comptage : `scripts/prepare_reforestree.py`, `scripts/preparer_roboflow_deepforest.py` (`--boite-cible 60 --format jpg`), `scripts/preparer_multiple_tree.py`, `scripts/preparer_validation_points.py`, puis `notebooks/entrainer_centres_v2_kaggle.ipynb` (règle de choix de l'époque et du seuil écrite dans `modeles/centres_5cm_v2.json`). Vérification des fuites : `scripts/verifier_sources_communes.py`.
 
 ## Structure
 

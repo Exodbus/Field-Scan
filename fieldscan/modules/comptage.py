@@ -1,20 +1,21 @@
-"""Module comptage des pieds (orthomosaïque de drone, DeepForest affiné, processeur).
+"""Module comptage des pieds (orthomosaïque de drone, processeur).
 
 Deux détecteurs possibles, selon l'extension du modèle : détecteur de centres (.onnx, retenu : carte de chaleur
-des centres de couronnes, ResNet-18, 5 cm par pixel, 45 Mo, 1 à 3 s par hectare) ou DeepForest (.ckpt, boîtes).
+des centres de couronnes, ResNet-18, 5 cm par pixel, 45 Mo, 2 à 4 s par hectare) ou DeepForest (.ckpt, boîtes,
+gardé pour comparaison). Le détecteur de centres lit son seuil et sa résolution dans le .json du même nom
+(choisis sur la validation) ; seuil_score et resolution_cm de la configuration ne servent qu'à DeepForest.
+Les réglages réellement appliqués sont écrits dans journal.json (« comptage_effectif »).
+
 Pieds estimés : une fourchette, pieds détectés x [coefficient_bas, coefficient_haut], les rapports réel / détecté
-mesurés en validation (détecteur de centres : 0,93 en plantation dense, 1,21 en agroforesterie). Sans connaître
-le milieu de chaque parcelle, on affiche les deux bornes. Les jeunes plantations (feuilles fines) sont
-sous-comptées au-delà de la fourchette (rapport de 2,4 sur le site de test Carlos Vera Guevara).
+mesurés en validation (détecteur de centres v2 : 0,80 en plantation dense, indicatif, 1,33 en agroforesterie).
+Sans connaître le milieu de chaque parcelle, on affiche les deux bornes. Les jeunes plantations et les bananiers
+cachés sous d'autres arbres sont sous-comptés bien au-delà de la fourchette (voir le carnet de données).
 Les alertes de densité comparent les parcelles entre elles : le coefficient s'y annule.
 
-Pour chaque parcelle survolée : lecture de sa fenêtre à la résolution d'entraînement (10 cm), fenêtres
-glissantes de 400 pixels, fusion des doublons, seuil de score (0,5, choisi sur la validation), centres des
-boîtes -> pieds géolocalisés. Densité = pieds / surface réellement couverte par l'image (une parcelle à
-moitié survolée n'est pas déclarée à moitié vide). Alerte « densité faible » : nettement moins dense que les
-autres parcelles du site (z-score robuste ET écart relatif minimal), en confiance faible : le comptage est
-indicatif (détecteur de centres, seuil 0,25 : F1 0,79 sur la référence manuelle MM1-MM2 en mères seules,
-0,88 en plantation dense, 0,43 sur un site de jeune plantation jamais vu ; voir le carnet de données).
+Pour chaque parcelle survolée : lecture de sa fenêtre à la résolution du détecteur, détection, pieds
+géolocalisés. Densité = pieds / surface réellement couverte par l'image (une parcelle à moitié survolée n'est
+pas déclarée à moitié vide). Alerte « densité faible » : nettement moins dense que les autres parcelles du site
+(z-score robuste ET écart relatif minimal), en confiance faible : le comptage est indicatif.
 """
 import time
 from pathlib import Path
@@ -27,6 +28,7 @@ from shapely.geometry import Point
 
 from fieldscan import anomalies as an
 from fieldscan import drone
+from fieldscan.journal import empreinte
 from fieldscan.modules import Resultat
 from fieldscan.modules._commun import geometrie_parcelle
 
@@ -63,6 +65,18 @@ def executer(ctx):
     # détecteur de centres : résolution et seuil de son .json (choisis sur la validation), sauf réglage explicite
     res = (reg.get("resolution_centres_cm") or det.resolution_cm if centres else reg["resolution_cm"]) / 100
     seuil = float(reg.get("seuil_centres") or det.seuil) if centres else reg["seuil_score"]
+    # réglages réellement appliqués (le bloc « reglages » du journal garde aussi ceux de l'autre détecteur, inutilisés)
+    effectif = dict(detecteur="centres (ONNX)" if centres else "DeepForest (boîtes)", modele=chemin_modele.as_posix(),
+                    empreinte_modele=empreinte(chemin_modele), seuil=seuil, resolution_cm=round(res * 100, 2))
+    if centres:
+        json_modele = chemin_modele.with_suffix(".json")
+        effectif.update(source_reglages=json_modele.as_posix() if json_modele.exists() else "valeurs par défaut du code",
+                        k_pics=det.k_pics, fenetre_px=det.fenetre, marge_px=det.marge,
+                        ignores=["seuil_score", "resolution_cm", "taille_fenetre", "recouvrement", "nms"])
+    else:
+        effectif.update(source_reglages="config", taille_fenetre=reg.get("taille_fenetre", 400),
+                        recouvrement=reg.get("recouvrement", 0.25), nms=reg.get("nms", 0.3))
+    ctx.journal.infos["comptage_effectif"] = effectif
     utm = ctx.parcelles.estimate_utm_crs()
     parc_m = ctx.parcelles.to_crs(utm)
     (ctx.sortie / "preuves").mkdir(exist_ok=True)

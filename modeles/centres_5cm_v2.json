@@ -1,0 +1,168 @@
+{
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "python": "3.13.16",
+    "gpu": "Tesla T4"
+  },
+  "reglages": {
+    "reseau": "resnet18 ImageNet + décodeur FPN, sortie au quart",
+    "resolution_cm": 5,
+    "decoupe_px": 448,
+    "stride": 4,
+    "epoques": 30,
+    "lot": 16,
+    "lr_squelette": 0.0003,
+    "lr_decodeur": 0.001,
+    "decroissance_poids": 0.0001,
+    "programme": "OneCycle, 5 % de montée",
+    "ecretage": 5.0,
+    "augmentations": "échelle 0,8-1,25, luminosité/contraste/saturation 0,8-1,2, miroir, quarts de tour",
+    "k_pics": 7,
+    "rayon_px": 20,
+    "repetitions_reforestree": 31,
+    "duree_max_h": 4.0,
+    "graine": 2026,
+    "donnees_ajoutees": "Multiple tree detection (train) : bananiers + palmiers et cocotiers comme exemples négatifs"
+  },
+  "retenu": {
+    "epoque": 4,
+    "seuil": 0.25,
+    "f1_mm": 0.8062,
+    "f1_dense": 0.8397,
+    "f1_mt": 0.7278,
+    "fp_mt": 287,
+    "moyenne": 0.7912
+  },
+  "modele_actuel": null,
+  "seuil": 0.25,
+  "tests": {
+    "dense": {
+      "0.1": {
+        "vp": 827,
+        "fp": 677,
+        "fn": 13,
+        "f1": 0.7056
+      },
+      "0.15": {
+        "vp": 826,
+        "fp": 538,
+        "fn": 14,
+        "f1": 0.7495
+      },
+      "0.2": {
+        "vp": 825,
+        "fp": 412,
+        "fn": 15,
+        "f1": 0.7944
+      },
+      "0.25": {
+        "vp": 818,
+        "fp": 302,
+        "fn": 22,
+        "f1": 0.8347
+      },
+      "0.3": {
+        "vp": 797,
+        "fp": 232,
+        "fn": 43,
+        "f1": 0.8529
+      },
+      "0.35": {
+        "vp": 767,
+        "fp": 162,
+        "fn": 73,
+        "f1": 0.8672
+      },
+      "0.4": {
+        "vp": 728,
+        "fp": 109,
+        "fn": 112,
+        "f1": 0.8682
+      },
+      "0.5": {
+        "vp": 598,
+        "fp": 49,
+        "fn": 242,
+        "f1": 0.8043
+      },
+      "0.6": {
+        "vp": 448,
+        "fp": 16,
+        "fn": 392,
+        "f1": 0.6871
+      }
+    },
+    "mt": {
+      "0.1": {
+        "vp": 1215,
+        "fp": 983,
+        "fn": 249,
+        "f1": 0.6636
+      },
+      "0.15": {
+        "vp": 1165,
+        "fp": 551,
+        "fn": 299,
+        "f1": 0.7327
+      },
+      "0.2": {
+        "vp": 1074,
+        "fp": 324,
+        "fn": 390,
+        "f1": 0.7505
+      },
+      "0.25": {
+        "vp": 992,
+        "fp": 190,
+        "fn": 472,
+        "f1": 0.7498
+      },
+      "0.3": {
+        "vp": 910,
+        "fp": 101,
+        "fn": 554,
+        "f1": 0.7354
+      },
+      "0.35": {
+        "vp": 831,
+        "fp": 67,
+        "fn": 633,
+        "f1": 0.7036
+      },
+      "0.4": {
+        "vp": 739,
+        "fp": 44,
+        "fn": 725,
+        "f1": 0.6578
+      },
+      "0.5": {
+        "vp": 560,
+        "fp": 18,
+        "fn": 904,
+        "f1": 0.5485
+      },
+      "0.6": {
+        "vp": 387,
+        "fp": 6,
+        "fn": 1077,
+        "f1": 0.4168
+      }
+    }
+  },
+  "normalisation": {
+    "moyenne": [
+      0.48500001430511475,
+      0.4560000002384186,
+      0.4059999883174896
+    ],
+    "ecart_type": [
+      0.2290000021457672,
+      0.2240000069141388,
+      0.22499999403953552
+    ]
+  },
+  "entree": "RGB 0-255 / 255, normalisé, NCHW",
+  "sortie": "logits au quart de la résolution ; sigmoïde puis maxima locaux (fenêtre k_pics) au-dessus du seuil",
+  "regle": "couple (époque, seuil) maximisant la moyenne des F1 MM1-MM2 (mères seules), Count valid et Multiple tree valid ; adoption si meilleure moyenne que le modèle actuel et F1 MM ≥ 0,744 ; tests regardés une fois"
+}

@@ -7,7 +7,8 @@ maladies:
   modele: modeles/maladies/maladies_v2.onnx
   seuil_rejet: 0.7076      # probabilité maximale, 95 % des feuilles connues de la validation acceptées
 comptage:
-  modele: modeles/centres_5cm.onnx   # détecteur de centres (ResNet-18, 5 cm, ONNX) ; seuil (0,25) et résolution lus dans centres_5cm.json
-  coefficient_bas: 0.93    # plantation dense : validation de Count banana plants (1614 réels / 1730 détectés)
-  coefficient_haut: 1.21   # agroforesterie : référence manuelle MM1-MM2, mères seules (69 réels / 57 détectés)
-  # Ancien détecteur (comparaison) : modele: modeles/bananiers_deepforest_dense_v2.ckpt, seuil_score: 0.5, resolution_cm: 8
+  modele: modeles/centres_5cm_v2.onnx   # détecteur de centres v2 (ResNet-18, 5 cm, ONNX, palmiers en exemples négatifs) ; seuil (0,25) et résolution lus dans centres_5cm_v2.json
+  coefficient_bas: 0.80    # plantation dense : validation de Count banana plants (1614 réels / 2010 détectés), indicatif (images liées à l'entraînement)
+  coefficient_haut: 1.33   # agroforesterie : référence manuelle MM1-MM2, mères seules (69 réels / 52 détectés)
+  # Détecteur de centres v1 (comparaison) : modele: modeles/centres_5cm.onnx, coefficients 0.93 et 1.21
+  # Ancien détecteur à boîtes (comparaison) : modele: modeles/bananiers_deepforest_dense_v2.ckpt, seuil_score: 0.5, resolution_cm: 8

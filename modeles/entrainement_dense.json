@@ -1,0 +1,503 @@
+{
+  "versions": {
+    "deepforest": "2.1.0",
+    "torch": "2.11.0+cu128",
+    "python": "3.13.15",
+    "gpu": "Tesla T4"
+  },
+  "reglages": {
+    "depart": "bananiers_deepforest_v3_40.ckpt",
+    "epochs": 12,
+    "lr": 0.0005,
+    "batch_size": 2,
+    "ecretage_gradients": 1.0,
+    "squelette_gele": true,
+    "tuiles_vides_retirees": true,
+    "repetitions_reforestree": 34,
+    "part_minimale_reforestree": 0.25,
+    "points_controle_toutes_les": 2,
+    "remarque": "entraînement fait dans la version précédente ; ce carnet ne fait que le choix et le test"
+  },
+  "resolution_cm": 10,
+  "taille_tuile_px": 400,
+  "pertes_par_epoque": "non disponibles (journal de l’exécution d’entraînement interrompu)",
+  "choix": [
+    {
+      "epoque": 0,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.408,
+      "f1_dense": 0.333,
+      "moyenne": 0.3705,
+      "rapport_dense": 0.474
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.415,
+      "f1_dense": 0.487,
+      "moyenne": 0.451,
+      "rapport_dense": 1.06
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.417,
+      "f1_dense": 0.507,
+      "moyenne": 0.462,
+      "rapport_dense": 1.6
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.44,
+      "f1_dense": 0.473,
+      "moyenne": 0.4565,
+      "rapport_dense": 2.06
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.498,
+      "f1_dense": 0.388,
+      "moyenne": 0.443,
+      "rapport_dense": 2.891
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.564,
+      "f1_dense": 0.317,
+      "moyenne": 0.4405,
+      "rapport_dense": 3.896
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.627,
+      "f1_dense": 0.219,
+      "moyenne": 0.423,
+      "rapport_dense": 6.087
+    },
+    {
+      "epoque": 0,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.589,
+      "f1_dense": 0.076,
+      "moyenne": 0.3325,
+      "rapport_dense": 20.679
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.469,
+      "f1_dense": 0.565,
+      "moyenne": 0.517,
+      "rapport_dense": 1.142
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.481,
+      "f1_dense": 0.583,
+      "moyenne": 0.532,
+      "rapport_dense": 1.337
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.523,
+      "f1_dense": 0.576,
+      "moyenne": 0.5495,
+      "rapport_dense": 1.597
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.589,
+      "f1_dense": 0.555,
+      "moyenne": 0.572,
+      "rapport_dense": 1.909
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.667,
+      "f1_dense": 0.505,
+      "moyenne": 0.586,
+      "rapport_dense": 2.318
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.72,
+      "f1_dense": 0.447,
+      "moyenne": 0.5835,
+      "rapport_dense": 2.855
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.733,
+      "f1_dense": 0.361,
+      "moyenne": 0.547,
+      "rapport_dense": 3.896
+    },
+    {
+      "epoque": 2,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.635,
+      "f1_dense": 0.206,
+      "moyenne": 0.4205,
+      "rapport_dense": 7.868
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.494,
+      "f1_dense": 0.57,
+      "moyenne": 0.532,
+      "rapport_dense": 1.172
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.513,
+      "f1_dense": 0.591,
+      "moyenne": 0.552,
+      "rapport_dense": 1.359
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.568,
+      "f1_dense": 0.585,
+      "moyenne": 0.5765,
+      "rapport_dense": 1.58
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.631,
+      "f1_dense": 0.562,
+      "moyenne": 0.5965,
+      "rapport_dense": 1.85
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.696,
+      "f1_dense": 0.523,
+      "moyenne": 0.6095,
+      "rapport_dense": 2.204
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.729,
+      "f1_dense": 0.468,
+      "moyenne": 0.5985,
+      "rapport_dense": 2.666
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.733,
+      "f1_dense": 0.4,
+      "moyenne": 0.5665,
+      "rapport_dense": 3.374
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.604,
+      "f1_dense": 0.228,
+      "moyenne": 0.416,
+      "rapport_dense": 6.777
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.483,
+      "f1_dense": 0.577,
+      "moyenne": 0.53,
+      "rapport_dense": 1.132
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.496,
+      "f1_dense": 0.602,
+      "moyenne": 0.549,
+      "rapport_dense": 1.283
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.539,
+      "f1_dense": 0.607,
+      "moyenne": 0.573,
+      "rapport_dense": 1.474
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.598,
+      "f1_dense": 0.592,
+      "moyenne": 0.595,
+      "rapport_dense": 1.68
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.662,
+      "f1_dense": 0.562,
+      "moyenne": 0.612,
+      "rapport_dense": 1.936
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.72,
+      "f1_dense": 0.517,
+      "moyenne": 0.6185,
+      "rapport_dense": 2.291
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.737,
+      "f1_dense": 0.472,
+      "moyenne": 0.6045,
+      "rapport_dense": 2.688
+    },
+    {
+      "epoque": 6,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.677,
+      "f1_dense": 0.311,
+      "moyenne": 0.494,
+      "rapport_dense": 4.73
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.49,
+      "f1_dense": 0.578,
+      "moyenne": 0.534,
+      "rapport_dense": 1.212
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.498,
+      "f1_dense": 0.597,
+      "moyenne": 0.5475,
+      "rapport_dense": 1.369
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.535,
+      "f1_dense": 0.597,
+      "moyenne": 0.566,
+      "rapport_dense": 1.547
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.587,
+      "f1_dense": 0.576,
+      "moyenne": 0.5815,
+      "rapport_dense": 1.751
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.645,
+      "f1_dense": 0.549,
+      "moyenne": 0.597,
+      "rapport_dense": 1.974
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.712,
+      "f1_dense": 0.517,
+      "moyenne": 0.6145,
+      "rapport_dense": 2.294
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.732,
+      "f1_dense": 0.46,
+      "moyenne": 0.596,
+      "rapport_dense": 2.771
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.708,
+      "f1_dense": 0.329,
+      "moyenne": 0.5185,
+      "rapport_dense": 4.431
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.503,
+      "f1_dense": 0.576,
+      "moyenne": 0.5395,
+      "rapport_dense": 1.172
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.514,
+      "f1_dense": 0.597,
+      "moyenne": 0.5555,
+      "rapport_dense": 1.287
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.544,
+      "f1_dense": 0.605,
+      "moyenne": 0.5745,
+      "rapport_dense": 1.434
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.596,
+      "f1_dense": 0.596,
+      "moyenne": 0.596,
+      "rapport_dense": 1.615
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.654,
+      "f1_dense": 0.574,
+      "moyenne": 0.614,
+      "rapport_dense": 1.804
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.725,
+      "f1_dense": 0.55,
+      "moyenne": 0.6375,
+      "rapport_dense": 2.029
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.748,
+      "f1_dense": 0.508,
+      "moyenne": 0.628,
+      "rapport_dense": 2.358
+    },
+    {
+      "epoque": 10,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.738,
+      "f1_dense": 0.397,
+      "moyenne": 0.5675,
+      "rapport_dense": 3.491
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.1,
+      "f1_agroforesterie": 0.503,
+      "f1_dense": 0.578,
+      "moyenne": 0.5405,
+      "rapport_dense": 1.197
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.15,
+      "f1_agroforesterie": 0.519,
+      "f1_dense": 0.597,
+      "moyenne": 0.558,
+      "rapport_dense": 1.325
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.2,
+      "f1_agroforesterie": 0.558,
+      "f1_dense": 0.604,
+      "moyenne": 0.581,
+      "rapport_dense": 1.48
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.25,
+      "f1_agroforesterie": 0.618,
+      "f1_dense": 0.591,
+      "moyenne": 0.6045,
+      "rapport_dense": 1.656
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.3,
+      "f1_agroforesterie": 0.679,
+      "f1_dense": 0.57,
+      "moyenne": 0.6245,
+      "rapport_dense": 1.846
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.35,
+      "f1_agroforesterie": 0.738,
+      "f1_dense": 0.539,
+      "moyenne": 0.6385,
+      "rapport_dense": 2.103
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.4,
+      "f1_agroforesterie": 0.751,
+      "f1_dense": 0.492,
+      "moyenne": 0.6215,
+      "rapport_dense": 2.489
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.5,
+      "f1_agroforesterie": 0.719,
+      "f1_dense": 0.389,
+      "moyenne": 0.554,
+      "rapport_dense": 3.584
+    }
+  ],
+  "epoque_retenue": 12,
+  "seuil_retenu": 0.35,
+  "f1_validation_agroforesterie": 0.738,
+  "f1_validation_dense": 0.539,
+  "test_dense_modele_retenu": [
+    {
+      "seuil": 0.35,
+      "reference": 840,
+      "detections": 356,
+      "vp": 306,
+      "precision": 0.86,
+      "rappel": 0.364,
+      "f1": 0.512,
+      "rapport_reel_sur_detecte": 2.36
+    }
+  ],
+  "test_dense_modele_depart_seuil_0_4": [
+    {
+      "seuil": 0.4,
+      "reference": 840,
+      "detections": 102,
+      "vp": 86,
+      "precision": 0.843,
+      "rappel": 0.102,
+      "f1": 0.183,
+      "rapport_reel_sur_detecte": 8.235
+    }
+  ],
+  "regle": "couple (époque, seuil) maximisant la moyenne des F1 de validation agroforesterie (Manuel Macias) et dense (Count banana plants, valid) ; test regardé une fois, même région que Plants-bana (optimiste)"
+}

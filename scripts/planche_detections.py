@@ -28,6 +28,7 @@ def main(argv=None):
     ap.add_argument("--zones-evaluees", nargs="+", required=True)
     ap.add_argument("--seuil", type=float, default=None, help="ne garder que les détections de score au moins égal (si colonne score)")
     ap.add_argument("--out", default="out/comptage/controle_visuel")
+    ap.add_argument("--grand", action="store_true", help="image grande et nette (environ 2 000 pixels par carré), pour juger à l'œil")
     args = ap.parse_args(argv)
     import matplotlib
     matplotlib.use("Agg")
@@ -47,11 +48,12 @@ def main(argv=None):
         with rasterio.open(Path(args.orthos) / f"{site} RGB.tif") as src:
             b = transform_bounds(z.crs, src.crs, *z.buffer(0).total_bounds) if z.crs != src.crs else tuple(z.total_bounds)
             fen = from_bounds(*b, src.transform)
-            f = max(1, int(max(fen.width, fen.height) / 1100))
+            f = max(1, int(max(fen.width, fen.height) / (2200 if args.grand else 1100)))
             img = np.moveaxis(src.read([1, 2, 3], window=fen, out_shape=(3, int(fen.height / f), int(fen.width / f)), boundless=True), 0, -1)
             crs = src.crs
         surface_ha = float(z.to_crs(z.estimate_utm_crs()).area.iloc[0]) / 1e4
-        fig, axes = plt.subplots(1, len(sources), figsize=(7.5 * len(sources), 7.8), dpi=100, squeeze=False)
+        cote, dpi = (10.0, 220) if args.grand else (7.5, 100)
+        fig, axes = plt.subplots(1, len(sources), figsize=(cote * len(sources), cote + 0.3), dpi=dpi, squeeze=False)
         lignes = []
         for ax, (nom, det) in zip(axes[0], sources):
             d = det[det.zone_id == zid] if "zone_id" in det else det
@@ -61,7 +63,8 @@ def main(argv=None):
             d = d[d.within(z.to_crs(crs).geometry.iloc[0])]
             ax.imshow(img, extent=(b[0], b[2], b[1], b[3]))
             if len(d):
-                ax.scatter(d.geometry.x, d.geometry.y, s=28, c="#00e5ff", edgecolors="black", linewidths=0.6)
+                ax.scatter(d.geometry.x, d.geometry.y, s=(18 if args.grand else 28), c="#ff2bd6" if args.grand else "#00e5ff",
+                           edgecolors="white" if args.grand else "black", linewidths=0.8)
             ax.set_axis_off()
             ax.set_title(f"{nom} : {len(d)} pieds ({len(d) / surface_ha:.0f} par ha)", fontsize=11)
             lignes.append(f"{nom} {len(d)}")

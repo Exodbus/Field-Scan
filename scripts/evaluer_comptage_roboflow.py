@@ -63,6 +63,7 @@ def main(argv=None):
     ap.add_argument("--seuils", type=float, nargs="+", default=[0.2, 0.3, 0.4, 0.5])
     ap.add_argument("--cadre", type=int, default=None, help="cadre en pixels (défaut : 400 ou 512)")
     ap.add_argument("--out", default="out/comptage/roboflow")
+    ap.add_argument("--garder", default=None, help="fichier listant les images à évaluer (ex. propres.txt de verifier_fuites_roboflow.py)")
     args = ap.parse_args(argv)
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -73,7 +74,18 @@ def main(argv=None):
     args.cadre = args.cadre or (512 if centres else 400)
 
     z, images = charger(args.zip, args.parties)
-    tailles = np.concatenate([(im["boites"][:, 2] + im["boites"][:, 3]) / 2 for im in images if len(im["boites"])])
+    if args.garder:
+        a_garder = set(Path(args.garder).read_text(encoding="utf-8").split())
+        avant = len(images)
+        images = [im for im in images if im["chemin"] in a_garder]
+        print(f"{len(images)} images gardées sur {avant} (liste {args.garder})")
+    avec = [im for im in images if len(im["boites"])]
+    if not avec:
+        # Partie évaluée sans aucun bananier (ex. palmiers seuls) : échelle prise sur le jeu entier, toutes parties
+        _, tout = charger(args.zip, ["train", "valid", "test"])
+        avec = [im for im in tout if len(im["boites"])]
+        print("Aucun bananier dans les images évaluées : échelle prise sur l'ensemble du jeu")
+    tailles = np.concatenate([(im["boites"][:, 2] + im["boites"][:, 3]) / 2 for im in avec])
     mediane = float(np.median(tailles))
     facteur = args.boite_cible / mediane
     print(f"{len(images)} images ({', '.join(args.parties)}), {sum(len(i['boites']) for i in images)} bananiers annotés")

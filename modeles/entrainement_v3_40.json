@@ -1,0 +1,287 @@
+{
+  "versions": {
+    "deepforest": "2.1.0",
+    "torch": "2.11.0+cu130",
+    "python": "3.13.16",
+    "gpu": "Tesla T4"
+  },
+  "reglages": {
+    "epochs": 40,
+    "lr": 0.0005,
+    "batch_size": 2,
+    "ecretage_gradients": 1.0,
+    "squelette_gele": true,
+    "tuiles_vides_retirees": true,
+    "reduction_automatique": false
+  },
+  "resolution_cm": 10,
+  "taille_tuile_px": 400,
+  "pertes_par_epoque": [
+    {
+      "train_classification": 0.7676,
+      "train_bbox_regression": 0.5356
+    },
+    {
+      "train_classification": 0.6694,
+      "train_bbox_regression": 0.4426
+    },
+    {
+      "train_classification": 0.6209,
+      "train_bbox_regression": 0.4148
+    },
+    {
+      "train_classification": 0.6411,
+      "train_bbox_regression": 0.3979
+    },
+    {
+      "train_classification": 0.6492,
+      "train_bbox_regression": 0.3894
+    },
+    {
+      "train_classification": 0.577,
+      "train_bbox_regression": 0.3853
+    },
+    {
+      "train_classification": 0.5814,
+      "train_bbox_regression": 0.3809
+    },
+    {
+      "train_classification": 0.5836,
+      "train_bbox_regression": 0.3768
+    },
+    {
+      "train_classification": 0.572,
+      "train_bbox_regression": 0.3752
+    },
+    {
+      "train_classification": 0.5543,
+      "train_bbox_regression": 0.373
+    },
+    {
+      "train_classification": 0.5253,
+      "train_bbox_regression": 0.3719
+    },
+    {
+      "train_classification": 0.5277,
+      "train_bbox_regression": 0.3695
+    },
+    {
+      "train_classification": 0.5009,
+      "train_bbox_regression": 0.3689
+    },
+    {
+      "train_classification": 0.4843,
+      "train_bbox_regression": 0.3683
+    },
+    {
+      "train_classification": 0.4945,
+      "train_bbox_regression": 0.3646
+    },
+    {
+      "train_classification": 0.4718,
+      "train_bbox_regression": 0.3633
+    },
+    {
+      "train_classification": 0.4757,
+      "train_bbox_regression": 0.3634
+    },
+    {
+      "train_classification": 0.4728,
+      "train_bbox_regression": 0.3619
+    },
+    {
+      "train_classification": 0.4522,
+      "train_bbox_regression": 0.3627
+    },
+    {
+      "train_classification": 0.4684,
+      "train_bbox_regression": 0.362
+    },
+    {
+      "train_classification": 0.4448,
+      "train_bbox_regression": 0.3602
+    },
+    {
+      "train_classification": 0.4265,
+      "train_bbox_regression": 0.3594
+    },
+    {
+      "train_classification": 0.4382,
+      "train_bbox_regression": 0.3577
+    },
+    {
+      "train_classification": 0.4363,
+      "train_bbox_regression": 0.3566
+    },
+    {
+      "train_classification": 0.433,
+      "train_bbox_regression": 0.3559
+    },
+    {
+      "train_classification": 0.424,
+      "train_bbox_regression": 0.3563
+    },
+    {
+      "train_classification": 0.4136,
+      "train_bbox_regression": 0.3562
+    },
+    {
+      "train_classification": 0.4214,
+      "train_bbox_regression": 0.3558
+    },
+    {
+      "train_classification": 0.412,
+      "train_bbox_regression": 0.3528
+    },
+    {
+      "train_classification": 0.4101,
+      "train_bbox_regression": 0.352
+    },
+    {
+      "train_classification": 0.4058,
+      "train_bbox_regression": 0.3514
+    },
+    {
+      "train_classification": 0.4081,
+      "train_bbox_regression": 0.3506
+    },
+    {
+      "train_classification": 0.3988,
+      "train_bbox_regression": 0.3505
+    },
+    {
+      "train_classification": 0.4037,
+      "train_bbox_regression": 0.3506
+    },
+    {
+      "train_classification": 0.3922,
+      "train_bbox_regression": 0.3508
+    },
+    {
+      "train_classification": 0.396,
+      "train_bbox_regression": 0.3489
+    },
+    {
+      "train_classification": 0.403,
+      "train_bbox_regression": 0.3484
+    },
+    {
+      "train_classification": 0.4007,
+      "train_bbox_regression": 0.35
+    },
+    {
+      "train_classification": 0.3906,
+      "train_bbox_regression": 0.3479
+    },
+    {
+      "train_classification": 0.3941,
+      "train_bbox_regression": 0.3484
+    }
+  ],
+  "suivi_validation": [
+    {
+      "epoque": 0,
+      "seuil": 0.1,
+      "detections": 778.0,
+      "vp": 204.0,
+      "precision": 0.262,
+      "rappel": 0.452,
+      "f1": 0.332
+    },
+    {
+      "epoque": 4,
+      "seuil": 0.3,
+      "detections": 605.0,
+      "vp": 223.0,
+      "precision": 0.369,
+      "rappel": 0.494,
+      "f1": 0.422
+    },
+    {
+      "epoque": 8,
+      "seuil": 0.4,
+      "detections": 265.0,
+      "vp": 162.0,
+      "precision": 0.611,
+      "rappel": 0.359,
+      "f1": 0.453
+    },
+    {
+      "epoque": 12,
+      "seuil": 0.4,
+      "detections": 301.0,
+      "vp": 194.0,
+      "precision": 0.645,
+      "rappel": 0.43,
+      "f1": 0.516
+    },
+    {
+      "epoque": 16,
+      "seuil": 0.4,
+      "detections": 327.0,
+      "vp": 215.0,
+      "precision": 0.657,
+      "rappel": 0.477,
+      "f1": 0.553
+    },
+    {
+      "epoque": 20,
+      "seuil": 0.4,
+      "detections": 334.0,
+      "vp": 223.0,
+      "precision": 0.668,
+      "rappel": 0.494,
+      "f1": 0.568
+    },
+    {
+      "epoque": 24,
+      "seuil": 0.4,
+      "detections": 371.0,
+      "vp": 241.0,
+      "precision": 0.65,
+      "rappel": 0.534,
+      "f1": 0.586
+    },
+    {
+      "epoque": 28,
+      "seuil": 0.4,
+      "detections": 392.0,
+      "vp": 255.0,
+      "precision": 0.651,
+      "rappel": 0.565,
+      "f1": 0.605
+    },
+    {
+      "epoque": 32,
+      "seuil": 0.4,
+      "detections": 398.0,
+      "vp": 261.0,
+      "precision": 0.656,
+      "rappel": 0.579,
+      "f1": 0.615
+    },
+    {
+      "epoque": 36,
+      "seuil": 0.4,
+      "detections": 401.0,
+      "vp": 264.0,
+      "precision": 0.658,
+      "rappel": 0.585,
+      "f1": 0.62
+    },
+    {
+      "epoque": 40,
+      "seuil": 0.4,
+      "detections": 490.0,
+      "vp": 295.0,
+      "precision": 0.602,
+      "rappel": 0.654,
+      "f1": 0.627
+    }
+  ],
+  "epoque_retenue": 40,
+  "seuil_retenu": 0.4,
+  "f1_suivi": 0.627,
+  "point_controle": "/content/drive/MyDrive/field_scan/modeles/v3_40/v3_40-epoch=39.ckpt",
+  "remarque": "Suivi mesuré contre les annotations ReforesTree de Manuel Macias (incomplètes), appariement des centres à 1 m. Mesure de référence : annotations manuelles MM1 et MM2."
+}
