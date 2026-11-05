@@ -51,6 +51,47 @@ Le v4 n'a vu aucune image de banavista. Il est mesuré sur la même validation, 
 
 **banano_dense (test neuf, dense industriel)**, segmento est, `banana_tree_detection`, CG1-CG9, images sans bananier. Aucun réglage après.
 
+## 7 bis. Fourchette du bulletin (règle écrite le 5 novembre 2026, après l'adoption, avant de la mesurer)
+
+Même règle que le v4 (protocole v4, section 7 bis), sur les **quatre validations du v5**. On calcule le rapport réel / détecté du v5 à son seuil (0,30), avec le détecteur de la chaîne, sur :
+- banavista session B (disque de 2 000 px) ;
+- `plantas_platano` 100_metros ;
+- jeunes bananiers dji_0544 (disque) ;
+- MM1-MM2 (mères seules).
+
+coefficient_bas = plus petit rapport, coefficient_haut = plus grand. Jamais le test.
+
 ## 8. Contrôle visuel en fin de test
 
 Images tirées avant tout résultat (graine 2026) : 6 tuiles de banano_dense (parmi celles qui contiennent au moins 20 boîtes) ajoutées à la liste du v4 (`docs/controle_visuel_v5.json`). Planches v4 / v5.
+
+## 9. Résultats (5 novembre 2026, carnet Kaggle v5, 66 min sur T4)
+
+**Choix (validation)** : époque 15, seuil 0,30. F1 : dense banavista 0,777, plantain 0,885, jeunes 0,893, MM 0,857 (moyenne 0,853). Fausses détections sans bananier : 0,26 % (17).
+
+**Adoption** : le v4 (ONNX) est mesuré sur la même validation, avec son meilleur seuil 0,40. F1 : dense 0,718, plantain 0,893, jeunes 0,889, MM 0,789 (moyenne 0,822). **Le v5 remplace le v4** (écart de 0,031).
+
+Le choix de l'époque tient en partie à un pic de MM : 0,857 à l'époque 15, alors que MM varie de 0,69 à 0,86 selon les époques (environ 70 arbres). L'adoption ne dépend pas de ce pic : de l'époque 13 à l'époque 30, la moyenne du v5 reste entre 0,829 et 0,853, au-dessus des 0,822 du v4.
+
+**Test (une seule fois)** :
+
+| Test | v4 (seuil 0,40) | v5 (seuil 0,30) |
+| --- | --- | --- |
+| dense industrielle, banano (test neuf) | P 0,851, R 0,747, F1 0,796 (4 412 détectés / 5 029 annotés) | P 0,841, R 0,776, F1 0,807 (4 641 / 5 029) |
+| dense, segmento est | P 0,865, R 0,452, F1 0,594 (2 127 / 4 067) | P 0,807, R 0,577, F1 0,673 (2 908 / 4 067) |
+| espacée, `banana_tree_detection` | P 0,974, R 0,586, F1 0,732 (23 336 / 38 790) | P 0,943, R 0,384, F1 0,546 (15 816 / 38 790) |
+| agroforesterie, CG mères seules | P 0,777, R 0,252, F1 0,380 | P 0,848, R 0,193, F1 0,315 |
+| CG tous pieds | F1 0,363 | F1 0,295 |
+| images sans bananier | 5 fausses détections / 7 876 arbres (0,1 %) | 36 / 7 876 (0,5 %) |
+
+Le v4 retrouve, à 0,002 près, les chiffres de son propre test (protocole v4, section 9) : la mesure est reproductible. ONNX v5 : 45 Mo, écart maximal avec PyTorch 6e-6, environ 2 s par hectare.
+
+**Lecture** :
+- **Dense, test neuf (banano)** : le gain est faible, +0,011 de F1 (rappel 0,776 contre 0,747). Sur la validation dense, il était de +0,059. Cette validation vient de la même ferme que l'entraînement (limite écrite à la section 2) et a surestimé le gain.
+- **Segmento est** (dense, déjà vu au test du v3 et du v4) : le v5 regagne une partie du rappel perdu par le v4 (0,577 contre 0,452), sans revenir au niveau du v3 (F1 0,733).
+- **Plantation espacée** : le v5 recule nettement, F1 0,546 contre 0,732 (rappel 0,384 contre 0,586) ; le v3 faisait 0,814. Aucune validation du v5 n'est une plantation espacée indépendante : la validation plantain (100_metros) n'a baissé que de 0,008 et n'a pas signalé ce recul.
+- **Agroforesterie (CG)** : le v5 recule aussi, 0,315 contre 0,380, avec plus de précision et moins de rappel.
+- **Images sans bananier** : 0,5 % de fausses détections, sous la limite de 5 %.
+- **D'une version à l'autre**, chaque gain sur un type de plantation s'accompagne d'une perte sur un autre. Du v3 au v4, l'agroforesterie s'améliore et les plantations reculent ; du v4 au v5, le dense s'améliore, l'espacée et l'agroforesterie reculent. Un seul détecteur avec un seul seuil couvre mal les trois situations.
+- **Conformément au protocole, le v5 reste adopté** et le compromis est rapporté tel quel. Revenir au v4 à cause de ce test serait une décision prise sur le test. Dans les plantations espacées, le bulletin sous-comptera ; la fourchette, mesurée sur la validation, ne couvre pas ce cas.
+- **Limite** : segmento est, `banana_tree_detection` et CG ont servi au test du v3 et du v4, et le test du v4 a motivé la v5. Ce ne sont plus des tests vierges. Pour cette version, seul banano l'était.
