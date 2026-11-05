@@ -10,6 +10,8 @@
 
 **Modification 4 du 5 novembre 2026 (pendant l'entraînement, avant tout résultat ; annule la modification 3)** : `banano-qpl6j` n'est **pas utilisé dans la v4**, ni en test. Il est réservé à une éventuelle v5 (moitié de l'orthomosaïque en entraînement, autre moitié en test, séparées par une bande vide, découpage fixé avant tout entraînement). Aucun modèle n'est mesuré dessus d'ici là, pour que la moitié de test reste vierge.
 
+**Modification 5 du 5 novembre 2026 (pendant l'entraînement, avant tout résultat)** : `banana-detection-4hbck` (Roboflow Universe, banavista, CC BY 4.0 ; 364 photos DJI brutes d'une plantation dense, une boîte par plant, classes `Bananas` et `Others`) est **réservé lui aussi à une éventuelle v5** et n'est pas utilisé dans la v4. Seuls des contrôles sans modèle sont faits d'ici là (doublons, fuites, regroupement par vol et recouvrement des photos, complétude des annotations, échelle).
+
 **Note du 5 novembre 2026 (vérification du code, avant l'entraînement)** : lors de l'essai local du carnet (3 images par groupe, 2 époques), le v3 a été mesuré sur 3 images de segmento est et 3 de `banana_tree_detection`, et ces chiffres se sont affichés une fois avant que l'affichage du test soit masqué en essai local. Aucune règle n'a été modifiée après (règles commitées avant, décisions automatiques dans le carnet).
 
 **Préparation (5 novembre 2026)** : échelles obtenues par la règle de la section 3 : `plantas_platano` 100_metros 2,42 cm/px, lote_2 2,60, lote_2_parte_2 2,92 ; `banana_tree_detection` 3,14 ; `platano_lasuiza` couronne médiane 94 px (facteur 0,635). Images de validation et de test bananiers gardées entières (pas de tuiles qui se recouvrent). Contrôle visuel des tuiles préparées : cibles centrées sur les plants.
