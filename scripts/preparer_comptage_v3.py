@@ -44,8 +44,13 @@ import preparer_validation_points  # noqa: E402
 
 PX_PAR_M = 20                                     # 5 cm par pixel
 COURONNE_M = {"Banana": 3.0, "Banana-plant": 3.0, "Cacao": 3.0, "Oil Palm Tree": 9.0, "coconut_tree": 7.0,
-              "platano": 3.0}
-BANANE = {"Banana", "Banana-plant", "0", "platano", "banana-tree"}
+              "platano": 3.0, "Bananas": 3.0, "banana": 3.0}
+BANANE = {"Banana", "Banana-plant", "0", "platano", "banana-tree", "Bananas", "banana"}
+# v5 (docs/protocole_comptage_v5.md) : banavista (photos brutes, disque gardé) et banano_dense (test neuf)
+ENSEMBLE_V5 = {"val": {"jeunes_dji_0544": "val_jeunes", "pp_100_metros": "val_plantain", "bv_b_val": "val_dense_bv"},
+               "test": {"segmento_est": "test_dense", "btd": "test_espace", "banano": "test_banano"}}
+RAYON_PHOTO_PX = 2000                             # v5 : disque gardé des photos banavista (même règle que les DJI)
+BOITE_ABERRANTE = 3.0                             # v5 : banano_dense, boîtes de plus de 3 fois la taille médiane retirées
 ENSEMBLE = {"val": {"segmento_est": "val_dense", "jeunes_dji_0544": "val_jeunes"},
             "test": {}}
 # v4 (docs/protocole_comptage_v4.md) : segmento est en test ; plantations ajoutées
@@ -123,7 +128,7 @@ def lire_boites(chemin_zip):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--version", choices=["v3", "v4"], default="v3")
+    ap.add_argument("--version", choices=["v3", "v4", "v5"], default="v3")
     ap.add_argument("--decoupage", default=None, help="défaut : data/drone/decoupage_comptage[_v4]/decoupage.csv")
     ap.add_argument("--roboflow", default="data/roboflow")
     ap.add_argument("--reforestree", default="data/drone/reforestree/deepforest_5cm", help="tuiles ReforesTree à 5 cm (train.csv)")
@@ -137,10 +142,12 @@ def main(argv=None):
     ap.add_argument("--taille-jeune-m", type=float, default=2.5)
     ap.add_argument("--graine", type=int, default=2026)
     args = ap.parse_args(argv)
-    v4 = args.version == "v4"
-    args.decoupage = args.decoupage or f"data/drone/decoupage_comptage{'_v4' if v4 else ''}/decoupage.csv"
+    v4 = args.version in ("v4", "v5")             # le v5 reprend tout le v4
+    v5 = args.version == "v5"
+    suffixe = "" if args.version == "v3" else "_" + args.version
+    args.decoupage = args.decoupage or f"data/drone/decoupage_comptage{suffixe}/decoupage.csv"
     args.out = args.out or f"data/drone/comptage_{args.version}_5cm"
-    ens_par_groupe = ENSEMBLE_V4 if v4 else ENSEMBLE
+    ens_par_groupe = ENSEMBLE_V5 if v5 else ENSEMBLE_V4 if v4 else ENSEMBLE
     out = Path(args.out)
     if out.exists():
         shutil.rmtree(out)
@@ -179,13 +186,22 @@ def main(argv=None):
     sources_rob = ["plants_bana", "count_banana_plants", "multiple_tree"]
     if v4:
         sources_rob += ["plantas_platano", "platano_lasuiza", "banana_tree_detection"]
+    if v5:
+        sources_rob += ["banavista", "banano_dense"]
     rob = dec[dec.source.isin(sources_rob) & ~dec.groupe.str.startswith("jeunes_dji")]
     for se, g in rob.groupby(rob.groupe.map(source_echelle)):
         tailles, ref = {}, None
+        if se == "banano":                          # v5 : boîtes aberrantes (plus de 3 fois la taille médiane) retirées
+            tous = [((x1 - x0) + (y1 - y0)) / 2 for _, r in g.iterrows() for c, x0, y0, x1, y1 in zips[r.zip][1][r.image]]
+            limite = BOITE_ABERRANTE * float(np.median(tous))
+            for _, r in g.iterrows():
+                zips[r.zip][1][r.image] = [bb for bb in zips[r.zip][1][r.image] if ((bb[3] - bb[1]) + (bb[4] - bb[2])) / 2 <= limite]
+            facteurs["banano_boites_retirees"] = dict(limite_px=round(limite, 1), nombre=sum(1 for t_ in tous if t_ > limite))
+            print(f"banano : {sum(1 for t_ in tous if t_ > limite)} boîtes aberrantes retirées (> {limite:.0f} px)")
         for _, r in g.iterrows():
             for c, x0, y0, x1, y1 in zips[r.zip][1][r.image]:
                 tailles.setdefault(c, []).append(((x1 - x0) + (y1 - y0)) / 2)
-        classe = next((c for c in ("Banana", "Banana-plant", "0", "platano", "banana-tree") if c in tailles), None) \
+        classe = next((c for c in ("Banana", "Banana-plant", "0", "platano", "banana-tree", "Bananas", "banana") if c in tailles), None) \
             or max(tailles, key=lambda c: len(tailles[c]))
         par_espacement = v4 and se.startswith(GROUPES_ESPACEMENT)
         taille_fixe = None
@@ -210,7 +226,24 @@ def main(argv=None):
             img = img.resize((max(1, round(img.width * f)), max(1, round(img.height * f))), Image.LANCZOS)
             b = [(c, x0 * f, y0 * f, x1 * f, y1 * f) for c, x0, y0, x1, y1 in boites[r.image]]
             tf = taille_fixe * (f / facteur) if taille_fixe else None
-            if v4 and ens in ("val_plantain", "test_dense", "test_espace"):
+            if r.source == "banavista":                 # v5 : photo brute, disque gardé autour du centre
+                cx0, cy0, rr = img.width / 2, img.height / 2, RAYON_PHOTO_PX * f
+                if ens == "train":
+                    T = args.taille
+                    pas = int(T * 0.8)
+                    pos = lambda n: sorted(set(list(range(0, max(n - T, 0) + 1, pas)) + [max(n - T, 0)]))
+                    for j, (y0, x0) in enumerate([(y, x) for y in pos(img.height) for x in pos(img.width)]):
+                        t = Image.new("RGB", (T, T))
+                        t.paste(img.crop((x0, y0, min(x0 + T, img.width), min(y0 + T, img.height))))
+                        garde = [(c, a0 - x0, b0 - y0, a1 - x0, b1 - y0) for c, a0, b0, a1, b1 in b
+                                 if x0 <= (a0 + a1) / 2 < x0 + T and y0 <= (b0 + b1) / 2 < y0 + T]
+                        ajouter_tuile(f"bv_{r.groupe}_{k:04d}_{j}.jpg", t, ens, r, f, garde,
+                                      masque=(round(cx0 - x0, 1), round(cy0 - y0, 1), round(rr, 1)))
+                else:
+                    ajouter_tuile(f"bv_{r.groupe}_{k:04d}.jpg", img, ens, r, f, b,
+                                  masque=(round(cx0, 1), round(cy0, 1), round(rr, 1)))
+                continue
+            if v4 and ens in ("val_plantain", "test_dense", "test_espace", "test_banano"):
                 # v4 : images de mesure gardées entières (pas de tuiles qui se recouvrent, donc pas de double compte)
                 garde = [bb for bb in b if 0 <= (bb[1] + bb[3]) / 2 < img.width and 0 <= (bb[2] + bb[4]) / 2 < img.height]
                 ajouter_tuile(f"{r.groupe}_{k:04d}.jpg", img, ens, r, f, garde, taille_fixe=tf)

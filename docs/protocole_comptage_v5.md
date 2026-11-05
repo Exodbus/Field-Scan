@@ -2,6 +2,8 @@
 
 Écrit le 5 novembre 2026 et validé par Corentin le même jour, **avant** toute préparation et tout entraînement du v5. Reprend le protocole v4 (`docs/protocole_comptage_v4.md`) ; seuls les points ci-dessous changent. Toute modification ultérieure est datée et justifiée.
 
+**Préparation (5 novembre 2026, avant l'entraînement)** : découpage v5 sans fuite (photo, image, groupe, MD5) ; banavista : 123 photos session A et 71 lignes 757-841 en entraînement, 20 photos de bande tampon exclues, 84 photos en validation (8 838 plants avant disque), 14 orthophotos exclues ; échelles par la règle des couronnes : banavista 1,07 à 1,13 cm/px, banano_dense 2,74 cm/px (49 boîtes aberrantes de plus de 328 px retirées). Archive `comptage_v5_5cm.zip` (953 Mo). Carnet vérifié en local sur un petit échantillon ; le test y est calculé sans être affiché.
+
 ## 0. Pourquoi une v5 (décision informée par le test du v4, à écrire tel quel)
 
 Le test du v4 (regardé une fois) montre un rappel faible en plantation : dense 0,45 (segmento est), espacée 0,59 (`banana_tree_detection`) ; le contrôle visuel d'El Oro va dans le même sens (« la v4 en détecte moins en milieu dense »). La validation du v4 ne contenait pas de plantation dense indépendante : la validation plantain (100_metros) vient probablement de la même ferme que l'entraînement. La v5 ajoute une plantation dense industrielle en entraînement **et** en validation, et un **test dense neuf** que ni le v3 ni le v4 n'ont vu. Comme cette décision vient d'un résultat de test, la v5 est jugée surtout sur le test neuf (`banano`).
