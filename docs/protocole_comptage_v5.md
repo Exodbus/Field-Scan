@@ -2,7 +2,7 @@
 
 Écrit le 5 novembre 2026 et validé par Corentin le même jour, **avant** toute préparation et tout entraînement du v5. Reprend le protocole v4 (`docs/protocole_comptage_v4.md`) ; seuls les points ci-dessous changent. Toute modification ultérieure est datée et justifiée.
 
-**Préparation (5 novembre 2026, avant l'entraînement)** : découpage v5 sans fuite (photo, image, groupe, MD5) ; banavista : 123 photos session A et 71 lignes 757-841 en entraînement, 20 photos de bande tampon exclues, 84 photos en validation (8 838 plants avant disque), 14 orthophotos exclues ; échelles par la règle des couronnes : banavista 1,07 à 1,13 cm/px, banano_dense 2,74 cm/px (49 boîtes aberrantes de plus de 328 px retirées). Archive `comptage_v5_5cm.zip` (953 Mo). Carnet vérifié en local sur un petit échantillon ; le test y est calculé sans être affiché.
+**Préparation (5 novembre 2026, avant l'entraînement)** : découpage v5 sans fuite (photo, image, groupe, MD5) ; banavista : 123 photos de la session A et 71 photos des lignes DJI_0757 à 0841 en entraînement, 20 photos de bande tampon exclues, 84 photos en validation (8 838 plants avant disque), 14 orthophotos exclues ; échelles par la règle des couronnes : banavista 1,07 à 1,13 cm/px, banano_dense 2,74 cm/px (49 boîtes aberrantes de plus de 328 px retirées). Archive `comptage_v5_5cm.zip` (953 Mo). Carnet vérifié en local sur un petit échantillon ; le test y est calculé sans être affiché.
 
 ## 0. Pourquoi une v5 (décision informée par le test du v4, à écrire tel quel)
 
