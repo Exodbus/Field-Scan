@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Prépare les tuiles du détecteur de comptage v3 à 5 cm par pixel, d'après le découpage figé (decouper_comptage.py).
+"""Prépare les tuiles du détecteur de comptage v3 (ou v4, --version v4) à 5 cm par pixel, d'après le découpage figé.
+
+v4 (docs/protocole_comptage_v4.md, section 3) : plantas_platano (chaque orthomosaïque) et banana_tree_detection mis à
+l'échelle par l'espacement médian entre plants voisins ramené à 2,5 m ; points de plantas_platano en cibles de 2,5 m ;
+platano_lasuiza par la couronne médiane (3 m) ; images de validation et de test bananiers gardées entières.
 
 Règles (docs/protocole_comptage_v3.md, section « Préparation ») :
 - échelle : un facteur par source d'images (même orthomosaïque ou même jeu de vols) ; la couronne médiane annotée
@@ -39,10 +43,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import preparer_validation_points  # noqa: E402
 
 PX_PAR_M = 20                                     # 5 cm par pixel
-COURONNE_M = {"Banana": 3.0, "Banana-plant": 3.0, "Cacao": 3.0, "Oil Palm Tree": 9.0, "coconut_tree": 7.0}
-BANANE = {"Banana", "Banana-plant"}
+COURONNE_M = {"Banana": 3.0, "Banana-plant": 3.0, "Cacao": 3.0, "Oil Palm Tree": 9.0, "coconut_tree": 7.0,
+              "platano": 3.0}
+BANANE = {"Banana", "Banana-plant", "0", "platano", "banana-tree"}
 ENSEMBLE = {"val": {"segmento_est": "val_dense", "jeunes_dji_0544": "val_jeunes"},
             "test": {}}
+# v4 (docs/protocole_comptage_v4.md) : segmento est en test ; plantations ajoutées
+ENSEMBLE_V4 = {"val": {"jeunes_dji_0544": "val_jeunes", "pp_100_metros": "val_plantain"},
+               "test": {"segmento_est": "test_dense", "btd": "test_espace"}}
+ESPACEMENT_M = 2.5                                # v4 : écart médian entre plants voisins (sources en points ou jeunes plants)
+GROUPES_ESPACEMENT = ("pp_", "btd")               # v4 : échelle par l'espacement ; points en cibles de 2,5 m pour plantas_platano
 
 
 def source_echelle(groupe):
@@ -53,7 +63,19 @@ def source_echelle(groupe):
         return "count_100_022x_corte"
     if groupe.startswith("cocotier"):
         return "cocotiers"
-    return groupe
+    return groupe                                  # v4 : chaque orthomosaïque de plantas_platano à part, lasuiza, btd
+
+
+def espacement_median(boites_par_image):
+    """Distance médiane au plus proche voisin entre centres de boîtes bananier (images d'au moins 4 plants)."""
+    from scipy.spatial import cKDTree
+    d = []
+    for b in boites_par_image:
+        c = np.array([((x0 + x1) / 2, (y0 + y1) / 2) for cl, x0, y0, x1, y1 in b if cl in BANANE])
+        if len(c) >= 4:
+            dd, _ = cKDTree(c).query(c, k=2)
+            d += list(dd[:, 1])
+    return float(np.median(d))
 
 
 def tuiles_classes(img, boites, taille, recouvrement=0.2, part_min=0.5):
@@ -101,11 +123,12 @@ def lire_boites(chemin_zip):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--decoupage", default="data/drone/decoupage_comptage/decoupage.csv")
+    ap.add_argument("--version", choices=["v3", "v4"], default="v3")
+    ap.add_argument("--decoupage", default=None, help="défaut : data/drone/decoupage_comptage[_v4]/decoupage.csv")
     ap.add_argument("--roboflow", default="data/roboflow")
     ap.add_argument("--reforestree", default="data/drone/reforestree/deepforest_5cm", help="tuiles ReforesTree à 5 cm (train.csv)")
     ap.add_argument("--jeunes", default="data/drone/jeunes_bananiers")
-    ap.add_argument("--out", default="data/drone/comptage_v3_5cm")
+    ap.add_argument("--out", default=None, help="défaut : data/drone/comptage_v3_5cm ou comptage_v4_5cm")
     ap.add_argument("--taille", type=int, default=512)
     ap.add_argument("--echelle-min", type=float, default=0.75)
     ap.add_argument("--echelle-max", type=float, default=1.4)
@@ -114,6 +137,10 @@ def main(argv=None):
     ap.add_argument("--taille-jeune-m", type=float, default=2.5)
     ap.add_argument("--graine", type=int, default=2026)
     args = ap.parse_args(argv)
+    v4 = args.version == "v4"
+    args.decoupage = args.decoupage or f"data/drone/decoupage_comptage{'_v4' if v4 else ''}/decoupage.csv"
+    args.out = args.out or f"data/drone/comptage_{args.version}_5cm"
+    ens_par_groupe = ENSEMBLE_V4 if v4 else ENSEMBLE
     out = Path(args.out)
     if out.exists():
         shutil.rmtree(out)
@@ -126,17 +153,17 @@ def main(argv=None):
     def ensemble(r):
         if r.partie == "train":
             return "train"
-        if r.groupe in ENSEMBLE.get(r.partie, {}):
-            return ENSEMBLE[r.partie][r.groupe]
+        if r.groupe in ens_par_groupe.get(r.partie, {}):
+            return ens_par_groupe[r.partie][r.groupe]
         return f"{r.partie}_negatifs"
 
-    def ajouter_tuile(nom, img, ens, r, facteur, boites, masque=None, points=None):
+    def ajouter_tuile(nom, img, ens, r, facteur, boites, masque=None, points=None, taille_fixe=None):
         img.save(out / "images" / nom, quality=95)
         ban = [b for b in boites if b[0] in BANANE]
         autres = [b for b in boites if b[0] not in BANANE]
         for c, x0, y0, x1, y1 in ban:
             lignes_o.append(dict(image_path=nom, cx=round((x0 + x1) / 2, 1), cy=round((y0 + y1) / 2, 1),
-                                 taille=round(((x1 - x0) + (y1 - y0)) / 2, 1), type="mere"))
+                                 taille=round(taille_fixe or ((x1 - x0) + (y1 - y0)) / 2, 1), type="mere"))
         for cx, cy, t, typ in (points or []):
             lignes_o.append(dict(image_path=nom, cx=round(cx, 1), cy=round(cy, 1), taille=round(t, 1), type=typ))
         n_ban = len(ban) + sum(1 for p in (points or []) if p[3] == "mere")
@@ -149,17 +176,32 @@ def main(argv=None):
     zips = {}
     for nom_zip in sorted(dec.zip.dropna().unique()):
         zips[nom_zip] = lire_boites(Path(args.roboflow) / nom_zip)
-    rob = dec[dec.source.isin(["plants_bana", "count_banana_plants", "multiple_tree"]) & ~dec.groupe.str.startswith("jeunes_dji")]
+    sources_rob = ["plants_bana", "count_banana_plants", "multiple_tree"]
+    if v4:
+        sources_rob += ["plantas_platano", "platano_lasuiza", "banana_tree_detection"]
+    rob = dec[dec.source.isin(sources_rob) & ~dec.groupe.str.startswith("jeunes_dji")]
     for se, g in rob.groupby(rob.groupe.map(source_echelle)):
         tailles, ref = {}, None
         for _, r in g.iterrows():
             for c, x0, y0, x1, y1 in zips[r.zip][1][r.image]:
                 tailles.setdefault(c, []).append(((x1 - x0) + (y1 - y0)) / 2)
-        classe = next((c for c in ("Banana", "Banana-plant") if c in tailles), None) or max(tailles, key=lambda c: len(tailles[c]))
-        facteur = COURONNE_M[classe] * PX_PAR_M / float(np.median(tailles[classe]))
-        facteurs[se] = dict(classe_de_reference=classe, couronne_m=COURONNE_M[classe], mediane_px=round(float(np.median(tailles[classe])), 1),
-                            facteur=round(facteur, 4), images=len(g))
-        print(f"{se:22s} : {len(g):4d} images, {classe} médian {np.median(tailles[classe]):.0f} px -> facteur {facteur:.3f}")
+        classe = next((c for c in ("Banana", "Banana-plant", "0", "platano", "banana-tree") if c in tailles), None) \
+            or max(tailles, key=lambda c: len(tailles[c]))
+        par_espacement = v4 and se.startswith(GROUPES_ESPACEMENT)
+        taille_fixe = None
+        if par_espacement:                         # v4 : écart médian entre plants voisins ramené à 2,5 m
+            esp = espacement_median([zips[r.zip][1][r.image] for _, r in g.iterrows()])
+            facteur = ESPACEMENT_M * PX_PAR_M / esp
+            if se.startswith("pp_"):               # points (boîtes fixes de 13 px) : cible de 2,5 m
+                taille_fixe = args.taille_jeune_m * PX_PAR_M
+            facteurs[se] = dict(regle=f"espacement médian ramené à {ESPACEMENT_M} m", espacement_px=round(esp, 1),
+                                cm_par_pixel_estime=round(ESPACEMENT_M * 100 / esp, 2), facteur=round(facteur, 4), images=len(g))
+            print(f"{se:22s} : {len(g):4d} images, espacement médian {esp:.0f} px -> {ESPACEMENT_M * 100 / esp:.2f} cm/px, facteur {facteur:.3f}")
+        else:
+            facteur = COURONNE_M[classe] * PX_PAR_M / float(np.median(tailles[classe]))
+            facteurs[se] = dict(classe_de_reference=classe, couronne_m=COURONNE_M[classe], mediane_px=round(float(np.median(tailles[classe])), 1),
+                                facteur=round(facteur, 4), images=len(g))
+            print(f"{se:22s} : {len(g):4d} images, {classe} médian {np.median(tailles[classe]):.0f} px -> facteur {facteur:.3f}")
         for k, (_, r) in enumerate(g.sort_values("image").iterrows()):
             z, boites = zips[r.zip]
             ens = ensemble(r)
@@ -167,8 +209,14 @@ def main(argv=None):
             img = Image.open(io.BytesIO(z.read(r.image))).convert("RGB")
             img = img.resize((max(1, round(img.width * f)), max(1, round(img.height * f))), Image.LANCZOS)
             b = [(c, x0 * f, y0 * f, x1 * f, y1 * f) for c, x0, y0, x1, y1 in boites[r.image]]
+            tf = taille_fixe * (f / facteur) if taille_fixe else None
+            if v4 and ens in ("val_plantain", "test_dense", "test_espace"):
+                # v4 : images de mesure gardées entières (pas de tuiles qui se recouvrent, donc pas de double compte)
+                garde = [bb for bb in b if 0 <= (bb[1] + bb[3]) / 2 < img.width and 0 <= (bb[2] + bb[4]) / 2 < img.height]
+                ajouter_tuile(f"{r.groupe}_{k:04d}.jpg", img, ens, r, f, garde, taille_fixe=tf)
+                continue
             for j, (t, garde) in enumerate(tuiles_classes(img, b, args.taille)):
-                ajouter_tuile(f"{r.groupe}_{k:04d}_{j}.jpg", t, ens, r, f, garde)
+                ajouter_tuile(f"{r.groupe}_{k:04d}_{j}.jpg", t, ens, r, f, garde, taille_fixe=tf)
 
     # 2. Jeunes bananiers DJI : points manuels, échelle mesurée, disque gardé
     import geopandas as gpd

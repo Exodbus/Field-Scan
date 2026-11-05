@@ -69,6 +69,15 @@ PARTIES = {
     "palmier_52000_20000": "train", "palmier_44000_16000": "val", "palmier_44000_4000": "test",
     "cocotier_0000_0899": "train", "cocotier_0900_1299": "val", "cocotier_1300_plus": "test",
 }
+# v4 (docs/protocole_comptage_v4.md) : nouvelles sources et segmento est en test
+PARTIES_V4 = {**PARTIES,
+              "segmento_est": "test",                 # plantation dense (test, boîtes Roboflow)
+              "pp_lote_2": "train", "pp_lote_2_parte_2": "train",   # plantas_platano : même lot, en deux parties
+              "pp_100_metros": "val",                 # plantas_platano : autre orthomosaïque
+              "lasuiza": "train",                     # platano_lasuiza : orthomosaïques non distinguables
+              "btd": "test"}                          # banana_tree_detection : site indépendant, plantation espacée
+SOURCES_V4 = {"plantas_platano.zip": "plantas_platano", "platano_lasuiza.zip": "platano_lasuiza",
+              "banana_tree_detection.zip": "banana_tree_detection"}
 SITES_RT = {"Flora Pluas": "rt_flora_pluas", "Nestor Macias": "rt_nestor_macias", "Leonor Aspiazu": "rt_leonor_aspiazu",
             "Manuel Macias": "rt_manuel_macias", "Carlos Vera Guevara": "rt_carlos_vera_guevara",
             "Carlos Vera Arteaga": "rt_carlos_vera_arteaga"}
@@ -94,6 +103,27 @@ def groupe_banane(p):
         if p.startswith(prefixe):
             return g
     return None
+
+
+def groupe_v4(source, o):
+    """Groupe d'une image des sources ajoutées en v4 (o = nom d'origine, en minuscules)."""
+    if source == "plantas_platano":
+        m = re.match(r"^(100_metros|lote_2_parte_2|lote_2)_chunk", o)
+        return f"pp_{m.group(1)}" if m else None
+    if source == "platano_lasuiza":
+        return "lasuiza" if o.startswith("tile_") else None
+    if source == "banana_tree_detection":
+        return "btd" if o.startswith("uav20221018") else None
+    return None
+
+
+def cadres_dessines(octets):
+    """Vrai si l'image contient des cadres d'annotation dessinés dans les pixels (vert pur aligné en lignes)."""
+    a = np.asarray(Image.open(io.BytesIO(octets)).convert("RGB")).astype(int)
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    vert = (g > 180) & (r < 110) & (b < 110) & (g - r > 100)
+    lignes = int((vert.sum(1) > 40).sum() + (vert.sum(0) > 40).sum())
+    return bool(vert.mean() > 0.002 and lignes >= 2)
 
 
 def groupe_palmier(o):
@@ -126,14 +156,16 @@ def lire_coco(chemin_zip):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--out", default="data/drone/decoupage_comptage")
+    ap.add_argument("--version", choices=["v3", "v4"], default="v3", help="découpage du protocole v3 ou v4")
+    ap.add_argument("--out", default=None, help="défaut : data/drone/decoupage_comptage (v3) ou ..._v4")
     ap.add_argument("--sites", default="data/drone/reforestree/prepare/resume_sites.csv",
                     help="liste des sites ReforesTree (colonne site)")
     ap.add_argument("--points-jeunes", default="data/drone/jeunes_bananiers/points_jeunes_bananiers.geojson",
                     help="points manuels des jeunes bananiers (GeoJSON versionné, repère local de cadres.json)")
     args = ap.parse_args(argv)
-    out = Path(args.out)
+    out = Path(args.out or ("data/drone/decoupage_comptage" + ("_v4" if args.version == "v4" else "")))
     out.mkdir(parents=True, exist_ok=True)
+    parties = PARTIES_V4 if args.version == "v4" else PARTIES
     rapport, erreurs = [], []
 
     # 1. Bananiers : plants_bana_originaux, une ligne par image d'origine (les copies augmentées sont retirées)
@@ -215,14 +247,36 @@ def main(argv=None):
                             n_Banana=r.get("bananiers", 0),
                             annotations=ref.get(SITES_RT.get(r[col]), "boîtes ReforesTree (incomplètes)")) for _, r in sites.iterrows()])
 
-    tab = pd.concat([pb, mt_pal, rt], ignore_index=True)
+    # 3 bis (v4). Plantations ajoutées : une copie par image (MD5 et nom d'origine) ; images à cadres dessinés retirées
+    nouveaux = []
+    if args.version == "v4":
+        for nom_zip, source in SOURCES_V4.items():
+            t = lire_coco(RACINE / nom_zip)
+            avant = len(t)
+            zz = zipfile.ZipFile(RACINE / nom_zip)
+            t["cadres_dessines"] = t.image.map(lambda n: cadres_dessines(zz.read(n)))
+            n_cadres = int(t.cadres_dessines.sum())
+            t = t[~t.cadres_dessines].drop(columns="cadres_dessines")
+            t = t.sort_values("image").drop_duplicates("empreinte")
+            if source != "platano_lasuiza":          # lasuiza : même nom pour des images différentes (plusieurs orthomosaïques)
+                t = t.drop_duplicates("origine")
+            t["groupe"] = [groupe_v4(source, o) for o in t.origine]
+            t["source"] = source
+            t["annotations"] = f"{source} (Roboflow, " + ("points" if source == "plantas_platano" else "boîtes") + ")"
+            # photo d'origine = nom d'origine (tuiles d'orthomosaïque nommées par leur position)
+            t["photo"] = t.origine if source != "platano_lasuiza" else "lasuiza_" + t.origine
+            rapport.append(f"{source} : {avant} images, {n_cadres} à cadres dessinés retirées, {len(t)} gardées "
+                           f"(copies retirées) ; groupes {dict(t.groupe.value_counts())}")
+            nouveaux.append(t)
+
+    tab = pd.concat([pb, mt_pal, rt] + nouveaux, ignore_index=True)
     sans_groupe = tab[tab.groupe.isna()]
     if len(sans_groupe):
         erreurs.append(f"{len(sans_groupe)} images sans groupe, ex. {sans_groupe.photo.head(5).tolist()}")
-    inconnus = set(tab.groupe.dropna()) - set(PARTIES)
+    inconnus = set(tab.groupe.dropna()) - set(parties)
     if inconnus:
         erreurs.append(f"groupes sans partie : {sorted(inconnus)}")
-    tab["partie"] = tab.groupe.map(PARTIES)
+    tab["partie"] = tab.groupe.map(parties)
     for c in [c for c in tab.columns if c.startswith("n_")]:
         tab[c] = tab[c].fillna(0).astype(int)
 

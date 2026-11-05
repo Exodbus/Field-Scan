@@ -6,6 +6,10 @@
 
 **Modification 2 du 5 novembre 2026 (avant toute préparation et tout entraînement)** : le test doit couvrir trois situations : plantation dense, plantation espacée, plantation mêlée à d'autres arbres avec rejets. **segmento est passe de la validation au test** (plantation dense) ; la validation garde **trois** F1. Un **contrôle visuel** des détections est fait à la fin du test sur des tuiles tirées dès maintenant (section 8). Les sections ci-dessous intègrent ces deux modifications.
 
+**Note du 5 novembre 2026 (vérification du code, avant l'entraînement)** : lors de l'essai local du carnet (3 images par groupe, 2 époques), le v3 a été mesuré sur 3 images de segmento est et 3 de `banana_tree_detection`, et ces chiffres se sont affichés une fois avant que l'affichage du test soit masqué en essai local. Aucune règle n'a été modifiée après (règles commitées avant, décisions automatiques dans le carnet).
+
+**Préparation (5 novembre 2026)** : échelles obtenues par la règle de la section 3 : `plantas_platano` 100_metros 2,42 cm/px, lote_2 2,60, lote_2_parte_2 2,92 ; `banana_tree_detection` 3,14 ; `platano_lasuiza` couronne médiane 94 px (facteur 0,635). Images de validation et de test bananiers gardées entières (pas de tuiles qui se recouvrent). Contrôle visuel des tuiles préparées : cibles centrées sur les plants.
+
 ## 0. Pourquoi une v4
 
 Le v3 a une bonne précision mais un rappel faible hors de ses données : CG1-CG9 (test) rappel 0,13 ; El Oro (bananeraie commerciale, contrôle visuel sans référence) 302 pieds détectés contre 388 pour le modèle hébergé Roboflow et 399 pour le v2, les points du v3 étant presque tous retrouvés par les deux autres. La validation du v3 ne contenait presque pas de plantation commerciale vue à 2-7 cm. La v4 ajoute des plantations annotées et une validation qui en contient.
