@@ -1,0 +1,27 @@
+{
+  "graine": 2026,
+  "date": "2026-11-05",
+  "segmento_est": [
+    "train/segmento_24320_11520_jpg.rf.0cc83f65a6d4046d5750108b047e09ec.jpg",
+    "train/segmento_28800_32640_jpg.rf.2a02ae109e93ace2efb4031898f161f1.jpg",
+    "train/segmento_32000_33280_jpg.rf.138552675f1af586b12d3db8db665cfc.jpg",
+    "train/segmento_33280_33920_jpg.rf.41a306d5df63940922dd2eddec5e36e4.jpg",
+    "test/segmento_31360_33280_jpg.rf.16fb1db0b8004b6e787789564a1bf6d7.jpg",
+    "train/segmento_26880_35200_jpg.rf.7d9241605334e14cbdcb86a543595056.jpg"
+  ],
+  "banana_tree_detection": [
+    "train/uav20221018_ixfZ_3857_405_png.rf.db3f551799da090824bf9915609c210b.jpg",
+    "train/uav20221018_ixfZ_3857_416_png.rf.2d6824c96f5c8be24bfab1b385ee262d.jpg",
+    "test/uav20221018_ixfZ_3857_385_png.rf.5999cfdfdfb9dbe2ac99a616d7457094.jpg",
+    "train/uav20221018_ixfZ_3857_311_png.rf.631785e58bbad60b1d4ccfc8efc95a5b.jpg",
+    "train/uav20221018_ixfZ_3857_393_png.rf.9a8c19934d9443977600ab9973969a4a.jpg",
+    "test/uav20221018_ixfZ_3857_381_png.rf.e2fc830f582312823ed72f4aadd357ed.jpg"
+  ],
+  "el_oro": [
+    "EO1",
+    "EO2",
+    "EO3",
+    "EO4"
+  ],
+  "regle": "tirage avant tout résultat du v4 ; planches v3 / v4 / plants-bana/3 sur ces images seulement"
+}
