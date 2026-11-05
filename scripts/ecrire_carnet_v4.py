@@ -44,7 +44,13 @@ if ESSAI:
     os.makedirs(SORTIE, exist_ok=True)
     ONNX_V3 = os.environ.get('FS_ONNX_V3', 'modeles/centres_5cm_v3.onnx')
 else:
-    !pip -q install onnxruntime
+    print('Installation de onnxruntime (il faut Internet activé dans les réglages du carnet)…', flush=True)
+    !pip install -q --timeout 20 --retries 1 onnxruntime
+    try:
+        import onnxruntime
+    except ImportError:
+        raise SystemExit("onnxruntime n'a pas pu être installé : activer Internet (Settings > Internet on) puis relancer")
+    print('Recherche des données…', flush=True)
     z = [p for p in glob.glob('/kaggle/input/**/comptage_v4_5cm*.zip', recursive=True) if os.path.isfile(p)]
     d = [os.path.dirname(p) for p in glob.glob('/kaggle/input/**/tuiles.csv', recursive=True) if 'v4' in p]
     assert z or d, 'Introuvable : comptage_v4_5cm.zip (ou un dossier comptage_v4_5cm contenant tuiles.csv)'
@@ -54,7 +60,7 @@ else:
         with zipfile.ZipFile(z[0]) as zz:
             zz.extractall(D)
     else:
-        shutil.copytree(d[0], D)
+        D = d[0]                                   # dossier déjà décompressé par Kaggle : lu sur place (lecture seule), sans copie
     o = [p for p in glob.glob('/kaggle/input/**/centres_5cm_v3.onnx', recursive=True)]
     assert o, 'Introuvable : centres_5cm_v3.onnx (à ajouter au jeu field-scan-comptage)'
     ONNX_V3 = o[0]
@@ -88,8 +94,11 @@ if ESSAI:
     TUILES = TUILES.groupby(['ensemble', 'groupe']).head(3)
 RAYON_IGNORE = 20.0
 
+OBJ_PAR_IMAGE = {k: g for k, g in OBJETS.groupby('image_path')}   # une seule passe (au lieu d'un filtre par tuile)
+VIDE = OBJETS.iloc[:0]
+
 def echantillon(r):
-    o = OBJETS[OBJETS.image_path == r.image_path]
+    o = OBJ_PAR_IMAGE.get(r.image_path, VIDE)
     meres = o[o.type == 'mere'][['cx', 'cy', 'taille']].to_numpy('float32').reshape(-1, 3)
     ign = o[o.type != 'mere'][['cx', 'cy']].to_numpy('float32').reshape(-1, 2)
     ign = np.c_[ign, np.full(len(ign), RAYON_IGNORE, 'float32')] if len(ign) else np.zeros((0, 3), 'float32')
@@ -482,8 +491,8 @@ for nom_m, pred in (('v4', V4), ('v3', V3)):
     print(f"  sans bananier : {neg['fp']} fausses détections pour {neg['arbres']} arbres ({neg['taux']:.1%})")
 
 if not ESSAI:
-    !pip -q install onnx
-cpu = DetecteurCentres(); cpu.load_state_dict(torch.load(f'{SORTIE}/meilleur.pt', map_location='cpu')); cpu.eval()
+    !pip install -q --timeout 20 --retries 1 onnx
+cpu =DetecteurCentres(); cpu.load_state_dict(torch.load(f'{SORTIE}/meilleur.pt', map_location='cpu')); cpu.eval()
 chemin_onnx = f'{SORTIE}/centres_5cm_v4.onnx'
 try:
     torch.onnx.export(cpu, torch.randn(1, 3, 512, 512), chemin_onnx, input_names=['image'], output_names=['logits'], opset_version=17,
