@@ -7,8 +7,12 @@ maladies:
   modele: modeles/maladies/maladies_v2.onnx
   seuil_rejet: 0.7076      # probabilité maximale, 95 % des feuilles connues de la validation acceptées
 comptage:
-  modele: modeles/centres_5cm_v2.onnx   # détecteur de centres v2 (ResNet-18, 5 cm, ONNX, palmiers en exemples négatifs) ; seuil (0,25) et résolution lus dans centres_5cm_v2.json
-  coefficient_bas: 0.80    # plantation dense : validation de Count banana plants (1614 réels / 2010 détectés), indicatif (images liées à l'entraînement)
-  coefficient_haut: 1.33   # agroforesterie : référence manuelle MM1-MM2, mères seules (69 réels / 52 détectés)
+  modele: modeles/centres_5cm_v4.onnx   # détecteur de centres v4 (adopté par la règle du protocole docs/protocole_comptage_v4.md) ; seuil (0,40) et résolution lus dans centres_5cm_v4.json
+  coefficient_bas: 0.82    # plus petit rapport réel / détecté en validation : MM1-MM2 mères seules (69 / 84)
+  coefficient_haut: 1.02   # plus grand : plantas_platano 100_metros (2633 / 2569) ; jeunes bananiers dji_0544 : 118 / 134 (scripts/mesurer_fourchette_v3.py)
+  # Test (une fois) : rappel 0,45 en plantation dense, 0,59 en plantation espacée, 0,25 en agroforesterie (CG) :
+  # ces situations sont sous-comptées au-delà de la fourchette
+  # Détecteur de centres v3 (comparaison) : modele: modeles/centres_5cm_v3.onnx, coefficients 0.85 et 0.95
+  # Détecteur de centres v2 (comparaison) : modele: modeles/centres_5cm_v2.onnx, coefficients 0.80 et 1.33
   # Détecteur de centres v1 (comparaison) : modele: modeles/centres_5cm.onnx, coefficients 0.93 et 1.21
   # Ancien détecteur à boîtes (comparaison) : modele: modeles/bananiers_deepforest_dense_v2.ckpt, seuil_score: 0.5, resolution_cm: 8

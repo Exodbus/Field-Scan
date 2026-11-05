@@ -7,7 +7,7 @@ gardé pour comparaison). Le détecteur de centres lit son seuil et sa résoluti
 Les réglages réellement appliqués sont écrits dans journal.json (« comptage_effectif »).
 
 Pieds estimés : une fourchette, pieds détectés x [coefficient_bas, coefficient_haut], les rapports réel / détecté
-mesurés en validation (détecteur de centres v2 : 0,80 en plantation dense, indicatif, 1,33 en agroforesterie).
+mesurés en validation (détecteur de centres v4 : 0,82 à 1,02, voir docs/protocole_comptage_v4.md).
 Sans connaître le milieu de chaque parcelle, on affiche les deux bornes. Les jeunes plantations et les bananiers
 cachés sous d'autres arbres sont sous-comptés bien au-delà de la fourchette (voir le carnet de données).
 Les alertes de densité comparent les parcelles entre elles : le coefficient s'y annule.

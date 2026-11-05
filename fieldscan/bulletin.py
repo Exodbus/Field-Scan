@@ -175,8 +175,9 @@ def _html(ctx, tab, alertes, statuts, chemin):
         note_comptage = (f"<p><b>Pieds</b> : {rc.get('pieds', 0)} pieds détectés sur l'orthomosaïque, soit environ "
                          f"{rc.get('pieds_estimes_bas', 0)} à {rc.get('pieds_estimes_haut', 0)} pieds estimés (détectés x "
                          f"{rc.get('coefficient_bas')} à x{rc.get('coefficient_haut')}, rapports réel / détecté mesurés en "
-                         "validation en plantation dense et en agroforesterie). Les jeunes plantations aux feuilles fines "
-                         "sont sous-comptées au-delà de cette fourchette. Les points détectés sont dans pieds.geojson.</p>")
+                         "validation en plantation dense, en jeune plantation et en agroforesterie). Les jeunes plants et "
+                         "les bananiers cachés sous d'autres arbres sont sous-comptés bien au-delà de cette fourchette. "
+                         "Les points détectés sont dans pieds.geojson.</p>")
     photos_html = ""
     if "maladies" in ctx.resultats:
         ph = ctx.resultats["maladies"].resume.get("photos", [])

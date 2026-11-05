@@ -68,6 +68,10 @@ Mesures sur la validation seulement, appariement des centres à 1 m, rejets et i
 
 **Adoption** : le v3 remplace le v2 par principe de protocole (le v2 a été entraîné sur des images qui sont maintenant en validation : aucune comparaison loyale n'est possible sur la validation, et comparer sur le test serait un choix sur le test). Les deux sont mesurés une fois sur le test et rapportés tous les deux.
 
+## 4 bis. Fourchette d'estimation du bulletin (règle écrite le 5 novembre 2026, avant de la mesurer)
+
+Pieds estimés = détectés × [coefficient_bas, coefficient_haut]. Rapport réel / détecté du v3 au seuil retenu, mesuré avec le détecteur de la chaîne (`fieldscan.drone.DetecteurCentres`, ONNX sur processeur), sur les **trois validations seulement** : segmento est (plantation dense, boîtes Roboflow), dji_0544 dans le disque (jeunes plants, points manuels), MM1-MM2 (agroforesterie, mères seules). **coefficient_bas = le plus petit des trois rapports, coefficient_haut = le plus grand.** Jamais CG. Script : `scripts/mesurer_fourchette_v3.py`.
+
 ## 5. Test
 
 Regardé une seule fois, après le choix : F1 et erreur de comptage sur CG1-CG9 (tous pieds et mères seules), fausses détections sur les images de test sans bananier. Aucun réglage après.

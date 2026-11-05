@@ -69,6 +69,32 @@ Le v3 n'a vu aucune des trois validations à l'entraînement ; il est mesuré su
 
 segmento est (F1 contre les boîtes Roboflow), `banana_tree_detection` (F1 et erreur de comptage), CG1-CG9 (mères seules et tous pieds), images de test sans bananier (fausses détections rapportées au nombre d'arbres). Aucun réglage après.
 
+## 7 bis. Fourchette du bulletin (règle écrite le 5 novembre 2026, après l'adoption, avant de la mesurer)
+
+Même règle que le v3 (protocole v3, section 4 bis), sur les **trois validations du v4** : rapport réel / détecté du modèle adopté à son seuil, avec le détecteur de la chaîne, sur `plantas_platano` 100_metros, jeunes bananiers dji_0544 (disque) et MM1-MM2 (mères seules). coefficient_bas = plus petit rapport, coefficient_haut = plus grand. Jamais le test.
+
 ## 8. Contrôle visuel en fin de test (tuiles tirées le 5 novembre 2026, avant tout résultat)
 
 Liste dans `docs/controle_visuel_v4.json` (`scripts/tirer_controle_visuel_v4.py`, graine 2026) : 6 images de segmento est, 6 de `banana_tree_detection`, les carrés El Oro EO1-EO4. Planches côte à côte v3 / v4 / modèle hébergé Roboflow (`plants-bana/3`) sur ces tuiles seulement ; l'appréciation de Corentin (oublis, fausses détections) est rapportée telle quelle, à côté des chiffres, et ne change ni le choix ni l'adoption.
+
+## 9. Résultats (5 novembre 2026)
+
+**Choix (validation)** : époque 14, seuil 0,40 ; F1 plantain 0,892, jeunes 0,889, MM 0,784 (moyenne 0,855) ; fausses détections sans bananier 0,1 %. **Adoption** : v3 sur la même validation, meilleur seuil 0,20 : plantain 0,823, jeunes 0,850, MM 0,866 (moyenne 0,846) : **le v4 remplace le v3** (écart de 0,009).
+
+**Test (une seule fois)** :
+
+| Test | v3 (seuil 0,20) | v4 (seuil 0,40) |
+| --- | --- | --- |
+| dense, segmento est | P 0,668, R 0,811, F1 0,733 (4 932 détectés / 4 067 annotés) | P 0,854, R 0,453, F1 0,592 (2 157 / 4 067) |
+| espacée, `banana_tree_detection` | P 0,933, R 0,721, F1 0,814 | P 0,972, R 0,586, F1 0,731 |
+| agroforesterie, CG mères seules | P 0,884, R 0,131, F1 0,228 | P 0,777, R 0,252, F1 0,380 |
+| CG tous pieds | F1 0,213 | F1 0,363 |
+| images sans bananier | 183 fausses détections / 7 876 arbres (2,3 %) | 5 / 7 876 (0,1 %) |
+
+ONNX v4 : 45 Mo, environ 2 s par hectare (processeur Kaggle).
+
+**Lecture** : le v4 est plus prudent (précision plus haute partout, beaucoup moins de fausses détections sur les palmiers, nettement meilleur en agroforesterie) mais oublie beaucoup plus de plants en plantation (dense et espacée). La règle d'adoption a été emportée par la validation plantain (100_metros), qui vient probablement de la même ferme que l'entraînement (limite écrite à la section 2) : le gain du v4 y est le plus fort (0,892 contre 0,823) et ne s'est pas reporté sur les plantations du test. Conformément au protocole, le v4 reste adopté ; le compromis est rapporté tel quel.
+
+**Contrôle visuel (section 8)** : décompte sur les 12 images tirées (segmento est : v3 503 boîtes retrouvées sur 625 et 206 détections sans boîte, v4 275 et 25 ; `banana_tree_detection` : v3 473 sur 638, v4 408) ; El Oro EO1-EO4 : Roboflow 388, v3 302, v4 212 (EO1, plantation fermée : 61 / 56 / 12). **Appréciation de Corentin : « la v4 en détecte moins en milieu dense. »**
+
+**Fourchette du bulletin (section 7 bis)** : plantain 100_metros 2 633 / 2 569 (1,02), dji_0544 118 / 134 (0,88), MM 69 / 84 (0,82) : coefficients 0,82 à 1,02.
