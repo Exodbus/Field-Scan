@@ -1,0 +1,175 @@
+{
+ "identifiant": "E-010",
+ "choix": {
+  "r_max": 1.6,
+  "echelles": "simple",
+  "sigmas_t_m": [
+   0.1
+  ],
+  "p": 1.0,
+  "r_nms": 1.0,
+  "seuil_z": 2.2381955265998843,
+  "f1": 0.6368,
+  "precision": 0.6304,
+  "rappel": 0.6432
+ },
+ "grille_f1_max": 0.6371,
+ "gain_multi_moins_simple": {
+  "1.6": 0.0003,
+  "2.0": -0.0013,
+  "2.4": -0.0007
+ },
+ "temps_s_par_ha_8_coeurs": {
+  "simple": 0.518,
+  "multi": 1.564,
+  "note": "champ + une carte de votes (r_max 2,0) par échelle, un cœur ÷ 8, hors lecture et maxima"
+ },
+ "controle_passe2_identique": {
+  "n_passe1": 16650,
+  "n_passe2": 16650
+ },
+ "regle_rotation": {
+  "n_ref": 8649,
+  "f1_orig_budget": 0.6361,
+  "f1_rot_budget": 0.2921,
+  "f1_veg": 0.3312,
+  "exces_rot": -0.0391,
+  "exces_orig": 0.305,
+  "condition_1": true,
+  "condition_2": true,
+  "passe": true,
+  "rapporte_sans_decider": {
+   "ic95_f1rot_moins_f1veg": [
+    -0.0504,
+    -0.027
+   ],
+   "f1_rot_au_seuil": 0.2973
+  },
+  "interpretation": "détections de l'image tournée lues dans le repère pixel de la tuile, sans rotation inverse"
+ },
+ "bv_session_a": {
+  "f1_seuil": 0.6368,
+  "ic95_f1": [
+   0.6243,
+   0.649
+  ],
+  "double_comptage": {
+   "paires": 2586,
+   "paires_doublees": 132,
+   "taux": 0.051
+  },
+  "OBJ_C3_bv_session_a": {
+   "mediane_meres": 1.207,
+   "p75_milieux": 0.717,
+   "auc_meres_vs_milieux": 0.7765,
+   "passe": true
+  },
+  "OBJ_C3_vols_100_022x": {
+   "mediane_meres": 1.41,
+   "p75_milieux": 0.362,
+   "auc_meres_vs_milieux": 0.8359,
+   "passe": true
+  }
+ },
+ "attributs_bv_session_a": {
+  "faux_positifs": {
+   "n": 3261,
+   "mediane_n_soutien": 999.0,
+   "mediane_fraction_soutien": 0.507,
+   "mediane_couverture": 0.625,
+   "mediane_rayon": 1.2,
+   "q25_q75_fraction_soutien": [
+    0.478,
+    0.545
+   ],
+   "q25_q75_couverture": [
+    0.5,
+    0.75
+   ],
+   "q25_q75_rayon": [
+    1.0,
+    1.4
+   ]
+  },
+  "vrais_positifs": {
+   "n": 5563,
+   "mediane_n_soutien": 1187.0,
+   "mediane_fraction_soutien": 0.543,
+   "mediane_couverture": 0.75,
+   "mediane_rayon": 1.4,
+   "q25_q75_fraction_soutien": [
+    0.504,
+    0.588
+   ],
+   "q25_q75_couverture": [
+    0.625,
+    0.75
+   ],
+   "q25_q75_rayon": [
+    1.2,
+    1.6
+   ]
+  },
+  "auc_vp_vs_fp": {
+   "n_soutien": 0.6177,
+   "fraction_soutien": 0.6646,
+   "couverture": 0.6606,
+   "rayon": 0.5496
+  }
+ },
+ "dev_transfert": {
+  "precision": 0.4421,
+  "rappel": 0.712,
+  "f1": 0.5455,
+  "ic95_f1": [
+   0.519,
+   0.5689
+  ],
+  "detections": 18042,
+  "meres": 11204,
+  "par_groupe": {
+   "corte": {
+    "vp": 576,
+    "fp": 343,
+    "fn": 233,
+    "detections": 919,
+    "meres": 809,
+    "precision": 0.6268,
+    "rappel": 0.712,
+    "f1": 0.6667,
+    "erreur_comptage_relative": 0.136
+   },
+   "lasuiza": {
+    "vp": 4148,
+    "fp": 5805,
+    "fn": 1543,
+    "detections": 9953,
+    "meres": 5691,
+    "precision": 0.4168,
+    "rappel": 0.7289,
+    "f1": 0.5303,
+    "erreur_comptage_relative": 0.7489
+   },
+   "vols_100_022x": {
+    "vp": 3253,
+    "fp": 3917,
+    "fn": 1451,
+    "detections": 7170,
+    "meres": 4704,
+    "precision": 0.4537,
+    "rappel": 0.6915,
+    "f1": 0.5479,
+    "erreur_comptage_relative": 0.5242
+   }
+  },
+  "double_comptage": {
+   "paires": 3307,
+   "paires_doublees": 139,
+   "taux": 0.042
+  }
+ },
+ "empreinte_script_sha256": "212b8a56d76816dfaf92b18f40d69f92c379ead463985ae89ada582011fbb614",
+ "empreinte_votes_sha256": "993bff462eb42e09c0694f8a96fa7affef2d17df5a09567f1119732788ec6fc9",
+ "empreinte_orientation_sha256": "e3343982eea20c7f8dcc4db34ab30f366fdb56eac0bb808324e9f728e7f356be",
+ "duree_totale_s": 457.9
+}
