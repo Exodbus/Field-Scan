@@ -60,9 +60,24 @@ Limite : les 272 images prises dans `train` peuvent être des copies augmentées
 | Modèle | Fichiers | Décision |
 | --- | --- | --- |
 | B0 (Corentin) | `modeles/maladies/maladies_v2.onnx`, `entrainement_maladies.json` | 4 vues ; malade si P(cercosporiose) + P(fusariose) ≥ 0,5 ; rejet par probabilité maximale, seuil 0,7076 (`fieldscan/modules/maladies.py`) |
-| v2 ConvNeXt (binôme) | 3 ConvNeXt-Tiny, `seuils.json` | 4 vues, 3 graines ; malade si P(Black Sigatoka) + P(Fusarium) ≥ 0,30 ; nom de maladie si confiance ≥ 0,50 ; « je ne sais pas » sous 0,646 (sa propre chaîne) |
+| v2 ConvNeXt (binôme) | 3 ConvNeXt-Tiny, `seuils.json`, `classifieur.py` (`modeles/maladies_binome/maladies_v2/`) | photo recadrée en carré 224 et réenregistrée en JPEG 95 ; 4 vues (identité, deux miroirs, quart de tour) × 3 réseaux ; malade si P(Black Sigatoka) + P(Fusarium) ≥ 0,30 ; maladie nommée si elle fait au moins 50 % de P(malade), sinon « malade, non identifiée » ; « je ne sais pas » (`inconnu`) si la plus forte probabilité est sous 0,6459, quelle que soit la réponse |
 
 - Le SHA-256 des poids, des seuils et du code de prédiction de chaque modèle est noté ici avant la mesure.
+
+**Empreintes (SHA-256), relevées le 8 novembre 2026 avant la mesure** :
+
+| Fichier | SHA-256 |
+| --- | --- |
+| B0 : `modeles/maladies/maladies_v2.onnx` | `241841de12ce86fb0d4f411575f7300c7ec4785a23672824283ac3a5a00cf6a7` |
+| B0 : `modeles/maladies/entrainement_maladies.json` | `3e766e578b207c8dd85259aea34487f57d2169a9a607cc32534dc092bba0ca98` |
+| B0 : `fieldscan/modules/maladies.py` (commit `df4d28f`) | `fec6a9fe3a09105a91983bc1521f0d7c0f634017e9f22e965cadae08c29d01da` |
+| v2 : `poids/maladies_v2_convnext_tiny_1.pt` | `276630d275c32c83a6f05942d6eb00036980c1a0a5fdb3c7130ab848265229b7` |
+| v2 : `poids/maladies_v2_convnext_tiny_2.pt` | `1ad6e8981463a36eeefe5b130c709c8a3fb00de42779c0f6afd062da561db683` |
+| v2 : `poids/maladies_v2_convnext_tiny_3.pt` | `711a202fc6f2d151c2ee75bf82d89f085ea02df35d0b6ad6d4bfdf2afff4e395` |
+| v2 : `poids/seuils.json` | `a5a52d957b172a86e7737f8903a6f0bb3bf798af84321d0a56d374e80e4fd418` |
+| v2 : `classifieur.py` | `7179ad81f55437a506eaa83a6e8a643363135fa39334096c7dff68865d8a7041` |
+
+Les poids de la v2 (3 × 56 Mo) restent hors du dépôt ; seules leurs empreintes y sont.
 - Chaque modèle passe **une seule fois** par sa propre chaîne de décision, sans aucun réglage.
 - On écrit un fichier de réponses par modèle (fichier, réponse, probabilités).
 
@@ -103,8 +118,11 @@ ROAMER Healthy, Bunchy-top, Fusarium wilt et kewalee sont écartés : plantes en
 
 1. Validation de ce protocole par les deux étudiants.
 2. Script de sélection (section 3) ; empreinte de la liste notée ici. **Fait le 8 novembre 2026.**
-3. Contrôle de fuite de khadavy contre la campagne tanzanienne 2022-2023 complète (amendement 1), sans modèle ; résultat noté ici.
-4. Empreintes des deux modèles notées ici ; commit du protocole (avec accord).
+3. Contrôle de fuite de khadavy contre la campagne tanzanienne 2022-2023 complète (amendement 1), sans modèle ; résultat noté ici. **Fait le 8 novembre 2026** :
+    - références : 14 232 images (BLACK SIGATOKA_1 et _2, FUSARIUM WILT_1 et _2, HEALTHY_2, dossier healthy_1), soit plus que les 11 766 de la validation du binôme. Les 3 071 autres entrées sont des fichiers de métadonnées macOS (`__MACOSX/._*`), pas des photos ;
+    - méthode des contrôles précédents, sur les 624 images figées (khadavy, ROAMER Black-sigatoka, panama wilt), sous les 8 symétries ;
+    - **aucune fuite**. Écarts minimaux : khadavy 7,97, ROAMER 24,61, panama 29,52. Les 4 paires les plus proches ont été vérifiées à l'œil : photos différentes (`out/maladies/roboflow_nouveaux/fuite_tanzanie_complete/paires.jpg`).
+4. Empreintes des deux modèles notées ici (**fait le 8 novembre 2026**, section 4) ; commit du protocole (avec accord).
 5. Mesure unique : un script, un passage par modèle, un fichier de résultats.
 6. Résultats écrits ici tels quels, même s'ils sont mauvais. Aucun changement de modèle, de seuil ou de réglage après coup.
 
