@@ -112,6 +112,16 @@ Si une condition échoue, la v2 reste dans la chaîne. Décision prise et écrit
 | Panama, Panama Leaf | fusariose | « fusariose » (et, à part, « malade » quel que soit le nom) |
 | Leafspot, Leafspot Leaf | maladie à taches, nom non vérifié | « malade », quel que soit le nom ; on rapporte à part la part « cercosporiose noire » |
 
+**Liste figée le 8 novembre 2026, avant toute préparation et tout entraînement de la v3** (`scripts/selectionner_test_banana_buddy.py`, sorties dans `data/test_banana_buddy/` : `liste.csv`, `empreinte.txt`, `exclusions.csv`, `planche.jpg`) :
+
+- 5 359 photos d'origine ; **2 145 exclues** au format tanzanien (`Image_N`) ; reste 3 214 photos (7 712 fichiers), regroupées en 1 889 photos distinctes ;
+- références : 39 085 images (Tanzanie 2021 index et zips complets, Tanzanie 2022-2023 locale, Pérou, BananaLSD, Banana Disease Recognition, khadavy, TDTU) ;
+- **19 groupes exclus** : 18 proches d'une référence (dont des copies de **TDTU**, 28 photos d'origine, et 6 de la Tanzanie 2021), 1 mêlant deux classes ;
+- **1 870 photos retenues** : saine 712 (Healthy 419, Healthy Leaf 293), fusariose 608 (Panama 546, Panama Leaf 62), maladie à taches 550 (Leafspot 371, Leafspot Leaf 179) ; gros plans 534, vues larges 1 336 ; parties `test` 300, `valid` 537, `train` 1 033 ;
+- **SHA-256 de `liste.csv` : `9eb9adcc5e3242c15020eae7f4ade6e971f7f91b494b4d1ffc8e5a9bfa5a8000`.**
+
+Constats sur la planche (48 photos tirées au hasard) : Leafspot ressemble à de la cercosporiose (stries jaunes et brunes) ; Panama mêle plantes flétries typiques, vues de plantation larges et quelques images probablement tirées d'Internet (`panama-N-Copy`, `download-N`, feuille sur fond blanc) ; des images de la partie `train` sont tournées par Roboflow, avec des coins noirs. Rien n'est retiré à la main : ces limites sont rapportées avec le résultat.
+
 **Mesures (v2 et v3, mêmes photos)** :
 
 - **malades dites saines** (Panama et Leafspot) et **fausses alertes** (Healthy), avec intervalles de Wilson ;
@@ -127,7 +137,7 @@ Aucun réglage après le test. Le résultat est écrit ici tel quel.
 ## 8. Ordre
 
 1. Validation de ce protocole par les deux étudiants ; commit (avec accord).
-2. Sélection et liste figée du test banana-buddy (section 7) ; empreinte notée ici.
+2. Sélection et liste figée du test banana-buddy (section 7) ; empreinte notée ici. **Fait le 8 novembre 2026.**
 3. Préparation de `feuilles_v3_ajouts.zip` et contrôle de fuite (section 3).
 4. Entraînement de la v3 sur Kaggle (binôme) ; seuils réglés sur la validation.
 5. Adoption (section 5), écrite ici.
