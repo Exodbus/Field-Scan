@@ -2,11 +2,21 @@
 
 Écrit le 8 novembre 2026, **avant toute mesure d'un modèle sur ces images**. À valider par Corentin et son binôme, puis à commiter (avec accord) avant la mesure. Toute modification ultérieure est datée et justifiée ; aucune ne peut suivre un résultat.
 
+**Amendement 1 du 8 novembre 2026 (avant toute mesure ; aucun modèle n'a vu khadavy)**. Proposé par le binôme, accepté par Corentin.
+
+- **Choix du modèle fait avant la mesure, sans khadavy** : la **v2 ConvNeXt** du binôme entre dans la chaîne. Motif, sur des mesures déjà connues : sur BananaLSD, elle nomme 95,1 % des Sigatoka contre 86,5 % pour le B0 ; elle n'y dit saine aucune feuille malade ; ses inconnues rejetées sont au même niveau (21 % contre 23 %).
+- **khadavy devient le test final du module maladies**, noté une seule fois, sur la v2 ConvNeXt. Le B0 est noté à côté, sur les mêmes photos, pour le tableau comparatif, **sans effet sur aucune décision**.
+- **La règle de choix de la section 5 (bootstrap apparié, B0 gardé en cas d'égalité) est annulée**. Elle est remplacée par la section 5 ci-dessous. Les sections 0 et 6 sont réécrites en conséquence.
+- **Bercak-Kuning** : deux mesures rapportées au lieu d'une (section 6).
+- **Contrôle de fuite ajouté avant la mesure** : khadavy contre la campagne tanzanienne 2022-2023 complète (11 766 images, validation du binôme), qui n'était présente qu'en partie (3 001 images) dans les références.
+
+Motif de l'amendement : quand un jeu sert à choisir le modèle, son score est flatté et le module n'a plus de test. En choisissant avant, khadavy donne un score honnête dans un pays jamais vu.
+
 ## 0. Pourquoi
 
-Le projet commun a deux classifieurs de maladies figés : le **B0** de Corentin et la **v2 ConvNeXt** de son binôme. Ils n'ont aucun jeu d'évaluation propre commun. BananaLSD et la Cordana du Pérou ont été consultés par les deux. Banana Disease Recognition a été évalué par les modèles du binôme. khadavy n'a été vu par aucun modèle des deux projets. Il sert à **choisir le modèle de la chaîne**, une seule fois, selon la règle de la section 5.
+Le projet commun a deux classifieurs de maladies figés : le **B0** de Corentin et la **v2 ConvNeXt** de son binôme. Ils n'ont aucun jeu d'évaluation propre commun. BananaLSD et la Cordana du Pérou ont été consultés par les deux. Banana Disease Recognition a été évalué par les modèles du binôme. khadavy n'a été vu par aucun modèle des deux projets. Depuis l'amendement 1, il est le **test final** de la v2 ConvNeXt, choisie avant la mesure, et il est noté une seule fois.
 
-**Statut à écrire tel quel** : khadavy sert à un choix entre deux modèles. Ce n'est donc pas un test final au sens strict, et le score du modèle choisi y est un peu optimiste (biais de sélection, faible avec deux candidats). Après cette mesure, le module maladies n'a plus de jeu vierge.
+**Statut à écrire tel quel** : le choix de la v2 ConvNeXt s'appuie sur BananaLSD, déjà consulté par les deux projets (validation hors domaine). Après cette mesure, le module maladies n'a plus de jeu vierge.
 
 ## 1. Source et contrôles (faits sans modèle le 8 novembre 2026)
 
@@ -56,31 +66,33 @@ Limite : les 272 images prises dans `train` peuvent être des copies augmentées
 - Chaque modèle passe **une seule fois** par sa propre chaîne de décision, sans aucun réglage.
 - On écrit un fichier de réponses par modèle (fichier, réponse, probabilités).
 
-## 5. Règle de choix (écrite avant)
+## 5. Score de test (amendement 1 ; remplace la règle de choix, annulée)
+
+Le modèle de la chaîne est déjà choisi (v2 ConvNeXt). Ce test ne décide rien : il donne le score du module, une seule fois, et aucun seuil ni réglage ne change après.
 
 Unité : la photo distincte. Les réponses « saine », « cercosporiose noire », « fusariose », « malade, non identifiée » et « je ne sais pas » sont normalisées dans les deux chaînes.
 
-**Critère principal : F1 macro sur les deux classes connues** (saine, cercosporiose noire ; 404 photos). Toute autre réponse compte comme une erreur, y compris « fusariose », « malade, non identifiée » et « je ne sais pas ».
+**Score principal du module : F1 macro de la v2 ConvNeXt sur les deux classes connues** (saine, cercosporiose noire ; 404 photos), avec un intervalle à 95 % par bootstrap (10 000 tirages des photos distinctes avec remise, graine 2026). Toute autre réponse compte comme une erreur, y compris « fusariose », « malade, non identifiée » et « je ne sais pas ».
 
-- On calcule l'écart (ConvNeXt − B0), avec un intervalle à 95 % par bootstrap apparié : 10 000 tirages des photos distinctes avec remise, graine 2026.
-- **Si la borne basse de l'intervalle est au-dessus de 0**, la v2 ConvNeXt entre dans la chaîne.
-- **Si la borne haute est sous 0**, le B0 entre dans la chaîne.
-- **Sinon (écart non significatif), le B0 entre dans la chaîne** : il est environ 30 fois plus rapide (35 ms contre environ 1 s par photo) et 10 fois plus léger (16 Mo contre 3 × 56 Mo).
+## 6. Mesures rapportées (v2 ConvNeXt, et B0 à côté, sur les mêmes photos)
 
-**Garde-fou, appliqué au modèle désigné** : sa part de **feuilles malades connues annoncées saines** ne doit pas dépasser celle de l'autre de plus de 5 points. Sinon, l'autre modèle entre dans la chaîne. Rater une maladie coûte plus qu'une fausse alerte.
-
-## 6. Mesures rapportées pour les deux modèles (sans effet sur le choix)
-
-- F1 par classe (saine, cercosporiose noire) et précision / rappel ;
+- **Sigatoka nommée** : part des 245 Bercak-Hitam annoncées « cercosporiose noire » ;
+- **saines bien classées** : part des 159 Sehat annoncées « saine » ;
 - **fausses alertes** : part des 159 saines annoncées malades (n'importe quelle maladie, ou « malade, non identifiée ») ;
-- **maladies signalées** : part des 272 feuilles malades (Bercak-Hitam et Bercak-Kuning) annoncées malades, et part annoncée saine ;
-- **inconnues bien signalées** : part des 27 Bercak-Kuning en « malade, non identifiée » ou « je ne sais pas » ; part annoncée « cercosporiose noire » (maladie voisine) ; intervalle à 95 % de Wilson, vu le petit effectif ;
-- matrice de confusion complète, en photos distinctes ;
+- **malades dites saines** : part des 272 feuilles malades (Bercak-Hitam et Bercak-Kuning) annoncées « saine », et part annoncée malade ;
+- **« je ne sais pas »** : part par classe ;
+- **Bercak-Kuning (27 photos), deux mesures, chacune avec un intervalle de Wilson à 95 %** :
+    - **signalée malade** : réponse juste si la feuille est dite malade, quel que soit le nom (cercosporiose noire, fusariose, « malade, non identifiée ») ;
+    - **reconnue inconnue** : réponse juste seulement si « malade, non identifiée » ou « je ne sais pas » ;
+    - et la part annoncée « cercosporiose noire » (maladie voisine) ;
+- F1 par classe, précision, rappel, matrice de confusion complète en photos distinctes ;
 - temps par photo sur le même processeur.
+
+Le B0 est rapporté avec les mêmes mesures, dans une colonne à part, pour le tableau comparatif du livrable.
 
 ## 7. Jeux indicatifs, mesurés dans le même passage
 
-Rapportés à part et **sans effet sur le choix**, une image par photo d'origine :
+Rapportés à part, pour les deux modèles, **sans effet sur aucune décision**, une image par photo d'origine :
 
 - **ROAMER Black-sigatoka** (Philippines, `roamer_black_sigatoka.zip`, 143 photos) : feuilles entières vues d'en dessous, contre le ciel. On mesure la part annoncée malade et la part annoncée « cercosporiose noire ». Pas de classe saine.
 - **panama wilt in banana** (`research_panama.zip`, 50 photos : 25 saines, 25 malades) : plantes et feuilles mêlées. On mesure la part des malades annoncées malades, la part annoncée « fusariose » et les fausses alertes sur les saines. C'est la seule mesure de la fusariose hors de Tanzanie, très petite.
@@ -91,9 +103,10 @@ ROAMER Healthy, Bunchy-top, Fusarium wilt et kewalee sont écartés : plantes en
 
 1. Validation de ce protocole par les deux étudiants.
 2. Script de sélection (section 3) ; empreinte de la liste notée ici. **Fait le 8 novembre 2026.**
-3. Empreintes des deux modèles notées ici ; commit du protocole (avec accord).
-4. Mesure unique : un script, un passage par modèle, un fichier de résultats.
-5. Résultats écrits ici tels quels, même s'ils sont mauvais ; choix appliqué selon la section 5, sans discussion après coup.
+3. Contrôle de fuite de khadavy contre la campagne tanzanienne 2022-2023 complète (amendement 1), sans modèle ; résultat noté ici.
+4. Empreintes des deux modèles notées ici ; commit du protocole (avec accord).
+5. Mesure unique : un script, un passage par modèle, un fichier de résultats.
+6. Résultats écrits ici tels quels, même s'ils sont mauvais. Aucun changement de modèle, de seuil ou de réglage après coup.
 
 ## 9. Résultats
 
