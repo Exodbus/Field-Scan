@@ -1,0 +1,138 @@
+# Protocole du classifieur de maladies v3 (ConvNeXt, nouvelles sources, classe « autre maladie »)
+
+Écrit le 8 novembre 2026, **avant toute préparation et tout entraînement de la v3**. À valider par les deux étudiants, puis à commiter (avec accord) avant la préparation. Toute modification ultérieure est datée et justifiée ; aucune ne peut suivre un résultat de la v3.
+
+Ce protocole remplace `docs/protocole_maladies_v3.md` (v3 sur EfficientNet-B0, écrit le 6 novembre, jamais validé ni lancé) : le modèle de la chaîne est désormais la v2 ConvNeXt (`docs/protocole_maladies_test_khadavy.md`, amendement 1).
+
+**Date limite** : si la v3 n'est pas entraînée et mesurée sur la validation le **11 novembre 2026 à 23 h 59**, elle est abandonnée et la v2 reste dans la chaîne. Le test (section 7) n'est alors pas lancé.
+
+## 0. Pourquoi une v3
+
+Le test khadavy (Indonésie, mesure unique du 8 novembre) montre trois faiblesses de la v2 :
+
+1. **taches précoces** : 28 % seulement des Bercak-Hitam nommées cercosporiose noire, 23 % dites saines ;
+2. **maladie inconnue nommée à tort** : la Sigatoka jaune (Bercak-Kuning) est toujours appelée fusariose ;
+3. **autres styles de photo** : les feuilles entières vues d'en dessous (ROAMER) sont presque toutes dites saines.
+
+La v3 garde la recette de la v2 et change deux choses :
+
+- **nouvelles sources d'entraînement** : khadavy (consommé comme test, il peut désormais servir à apprendre) et TDTU (Vietnam) ;
+- **une quatrième classe « autre maladie »**, pour que le modèle ait une réponse « malade, autre chose » au lieu de forcer une maladie connue.
+
+Ces choix viennent d'un résultat de test (khadavy). La v3 est donc jugée sur un **nouveau test vierge**, fixé ici avant tout entraînement (section 7).
+
+## 1. Sources
+
+| Source | Contrôles déjà faits (sans modèle) | Rôle |
+| --- | --- | --- |
+| Tanzanie 2021 (Harvard Dataverse) et Pérou (Mendeley) | ceux de la v2 | entraînement, comme la v2 |
+| **khadavy** (Roboflow `khadavy/klasifikasi-daun-pisang`, Indonésie, CC BY 4.0) | 431 photos distinctes ; aucune fuite vers Tanzanie 2021, Tanzanie 2022-2023 locale (3 001), Pérou, BananaLSD, Banana Disease Recognition, TDTU | **entraînement** (nouveau) |
+| **TDTU** (Roboflow `nh-nguyn-trn-qunh/banana-diseases-admyw`, Vietnam, CC BY 4.0) | 2 295 photos distinctes ; aucune fuite (contrôles du 6 et du 8 novembre) | **entraînement** (nouveau) |
+| Tanzanie 2022-2023 (Zenodo), validation de la v2 | — | **validation** (seuils), comme la v2 |
+| BananaLSD (Bangladesh) | consulté par les deux projets | **validation hors domaine** (adoption seulement) |
+| **banana-buddy, partie originale** (Roboflow `banana-buddy-research-sgury/banana-disease-identification`, CC BY 4.0) | voir section 7 | **test** (nouveau, une seule fois) |
+
+**Jamais utilisés pour la v3** : khadavy comme mesure (consommé), Banana Disease Recognition et PSFD (vus par le binôme), ROAMER, panama wilt, kewalee, BANANADETECT et sab a (copies ou plantes entières).
+
+## 2. Classes et correspondances
+
+Quatre classes : **saine**, **black_sigatoka**, **fusarium**, **autre_maladie**.
+
+| Source | Étiquette d'origine | Classe v3 |
+| --- | --- | --- |
+| khadavy | Sehat | saine |
+| khadavy | Bercak-Hitam | black_sigatoka |
+| khadavy | Bercak-Kuning (Sigatoka jaune probable) | autre_maladie |
+| TDTU | Healthy seul | saine |
+| TDTU | Black Segatoka (avec ou sans Healthy) | black_sigatoka |
+| TDTU | Xanthomonas wilt et/ou Bacterial wilt (avec ou sans Healthy) | autre_maladie |
+| TDTU | deux maladies différentes, étiquettes contradictoires, Aphids, Other, sans annotation | exclue |
+| Tanzanie, Pérou | comme la v2 | comme la v2 |
+
+khadavy : une image par photo distincte (431, liste `data/test_khadavy/liste.csv`). TDTU : une image par photo distincte, la première par nom (correspondance et effectifs du protocole du 6 novembre : 577 saines, 409 black_sigatoka, 677 autre_maladie).
+
+**Limite connue** : le sens des classes de khadavy n'est pas confirmé par l'auteur. Si Bercak-Hitam contient d'autres maladies à taches noires, la v3 apprendra à les appeler black_sigatoka.
+
+## 3. Préparation (par Corentin)
+
+- Archive Kaggle `feuilles_v3_ajouts.zip` : images de khadavy et de TDTU retenues, avec un `images.csv` au format du carnet de la v2 (colonnes `image`, `jeu`, `classe`, `source`).
+- Mêmes règles que la v2 : rotation EXIF, aucune image agrandie.
+- **Contrôle de fuite avant l'archive** : khadavy et TDTU contre la validation tanzanienne 2022-2023 et contre le test banana-buddy (section 7). Toute image d'entraînement identique ou presque à une image de validation ou de test est retirée de l'**entraînement**.
+- Effectifs réels notés ici après la préparation.
+
+## 4. Recette (par le binôme, carnet `maladies_v2_kaggle.ipynb` adapté)
+
+Recette de la v2 inchangée : ConvNeXt-Tiny ImageNet, 224 px, 6 époques, dernière époque gardée, lots de 32, taux 1e-4, recompression JPEG au hasard, lissage 0,1, mêmes augmentations, **3 réseaux** (3 graines), Pérou tiré 3 fois plus souvent.
+
+Changements, et seulement ceux-ci :
+
+- **4 classes** (section 2) ;
+- **échantillonnage** : autre_maladie est tirée pour **10 % des images de chaque époque** ; khadavy et TDTU sont tirés à leur proportion naturelle parmi les autres. Ces chiffres sont fixés ici et ne seront pas réglés ;
+- **décision** : P(malade) = P(black_sigatoka) + P(fusarium) + P(autre_maladie). Si la maladie la plus probable est autre_maladie, ou si sa part de P(malade) est sous le seuil de nom, la réponse est « malade, non identifiée ». Le « je ne sais pas » est inchangé.
+
+**Seuils** (alerte, nom, confiance) réglés sur la validation tanzanienne **par les mêmes règles que la v2** : coût 2 × malades ratées + fausses alertes ; maladie nommée juste au moins 95 % du temps ; 95 % des photos de validation acceptées. Rien d'autre n'est réglé.
+
+## 5. Adoption (v3 contre v2, sur les validations seulement, règle écrite avant)
+
+Les gains attendus portent sur des pays et des styles de photo absents des validations. La règle d'adoption est donc une règle de **non-régression** : la v3 remplace la v2 si **toutes** les conditions suivantes sont remplies.
+
+Sur la validation tanzanienne 2022-2023 (la même que la v2, même code, chaque modèle à ses propres seuils) :
+
+- malades dites saines : au plus **+0,5 point** par rapport à la v2 ;
+- fausses alertes sur les saines : au plus **+1 point** ;
+- maladie nommée juste (quand elle est nommée) : au moins **95 %**.
+
+Sur BananaLSD (validation hors domaine) :
+
+- Sigatoka nommée : au plus **−2 points** par rapport à la v2 ;
+- saines bien classées : au plus **−2 points** ;
+- inconnues (Cordana, Pestalotiopsis) dites saines : au plus **+1 point**.
+
+Si une condition échoue, la v2 reste dans la chaîne. Décision prise et écrite avant le test.
+
+## 6. Garde-fous
+
+- Cartes d'attention (Grad-CAM) sur quelques images de la validation, pour la lecture seulement.
+- Aucun essai multiple : **un seul entraînement de la v3** (3 réseaux). S'il échoue pour une raison technique (plantage, erreur de données), une seule relance, notée ici avec sa cause.
+
+## 7. Test (une seule fois, v2 et v3 rapportés, quel que soit le modèle adopté)
+
+**banana-buddy, partie originale**. Contrôles déjà faits le 8 novembre 2026 (`out/maladies/roboflow_nouveaux/banana_buddy/`, `fuite_tanzanie_complete/banana_buddy.csv`) : 12 860 fichiers, 5 359 photos d'origine, 4 027 distinctes ; **2 150 photos nommées `Image_N` sont des copies de la Tanzanie 2021** (écart jusqu'à 0,12).
+
+**Sélection (sans modèle, avant tout entraînement de la v3)** :
+
+- toute photo nommée `Image_N` (format tanzanien) est **exclue**, qu'une copie ait été trouvée ou non ;
+- tout groupe de photos contenant une image proche (écart ≤ 5) d'un jeu de référence (Tanzanie 2021 et 2022-2023 locale, Pérou, BananaLSD, Banana Disease Recognition, khadavy, TDTU) est exclu ;
+- une image par photo distincte, prise d'abord dans `test` ou `valid` (non augmentées) ;
+- la liste (photo, classe, SHA-256) est figée par un script sans modèle, et son empreinte est notée ici avant l'entraînement.
+
+| Classe du jeu | Classe de référence | Réponse juste |
+| --- | --- | --- |
+| Healthy, Healthy Leaf | saine | « saine » |
+| Panama, Panama Leaf | fusariose | « fusariose » (et, à part, « malade » quel que soit le nom) |
+| Leafspot, Leafspot Leaf | maladie à taches, nom non vérifié | « malade », quel que soit le nom ; on rapporte à part la part « cercosporiose noire » |
+
+**Mesures (v2 et v3, mêmes photos)** :
+
+- **malades dites saines** (Panama et Leafspot) et **fausses alertes** (Healthy), avec intervalles de Wilson ;
+- **fusariose nommée** (Panama) : première mesure de la fusariose hors de Tanzanie ;
+- F1 macro saine / fusariose ;
+- part des Leafspot dites cercosporiose noire, « malade, non identifiée » ou « je ne sais pas » ;
+- résultats séparés pour les gros plans (classes « … Leaf ») et les vues larges (autres classes).
+
+**Limites connues** : photos de 2023 d'origine inconnue (Sri Lanka probable) ; images de l'export redimensionnées en 640 × 640 et, pour la partie `train`, parfois tournées par Roboflow ; le binôme a entraîné sa v4 (non retenue) sur 562 feuilles saines de ce jeu, sans doute des copies tanzaniennes exclues ici.
+
+Aucun réglage après le test. Le résultat est écrit ici tel quel.
+
+## 8. Ordre
+
+1. Validation de ce protocole par les deux étudiants ; commit (avec accord).
+2. Sélection et liste figée du test banana-buddy (section 7) ; empreinte notée ici.
+3. Préparation de `feuilles_v3_ajouts.zip` et contrôle de fuite (section 3).
+4. Entraînement de la v3 sur Kaggle (binôme) ; seuils réglés sur la validation.
+5. Adoption (section 5), écrite ici.
+6. Test unique (section 7), v2 et v3.
+
+## 9. Résultats
+
+À remplir.

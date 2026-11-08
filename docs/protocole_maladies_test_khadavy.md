@@ -118,10 +118,12 @@ ROAMER Healthy, Bunchy-top, Fusarium wilt et kewalee sont écartés : plantes en
 
 1. Validation de ce protocole par les deux étudiants.
 2. Script de sélection (section 3) ; empreinte de la liste notée ici. **Fait le 8 novembre 2026.**
-3. Contrôle de fuite de khadavy contre la campagne tanzanienne 2022-2023 complète (amendement 1), sans modèle ; résultat noté ici. **Fait le 8 novembre 2026** :
-    - références : 14 232 images (BLACK SIGATOKA_1 et _2, FUSARIUM WILT_1 et _2, HEALTHY_2, dossier healthy_1), soit plus que les 11 766 de la validation du binôme. Les 3 071 autres entrées sont des fichiers de métadonnées macOS (`__MACOSX/._*`), pas des photos ;
-    - méthode des contrôles précédents, sur les 624 images figées (khadavy, ROAMER Black-sigatoka, panama wilt), sous les 8 symétries ;
-    - **aucune fuite**. Écarts minimaux : khadavy 7,97, ROAMER 24,61, panama 29,52. Les 4 paires les plus proches ont été vérifiées à l'œil : photos différentes (`out/maladies/roboflow_nouveaux/fuite_tanzanie_complete/paires.jpg`).
+3. Contrôle de fuite de khadavy contre la campagne tanzanienne 2022-2023 complète (amendement 1), sans modèle ; résultat noté ici. **Non fait en entier : voir la correction ci-dessous.**
+
+    **Correction du 8 novembre 2026 (après la mesure ; erreur d'identification de fichiers, sans lien avec les résultats)** : le contrôle noté ici avant la mesure a été fait contre les zips `BLACK SIGATOKA_1` et `_2`, `FUSARIUM WILT_1` et `_2`, `HEALTHY_2` (tiret bas). D'après le carnet de données, ces zips sont la **campagne 2021** (entraînement des deux modèles), pas la campagne 2022-2023 (zips à tiret, `BLACK SIGATOKA-1`…). Ce contrôle confirme donc seulement l'absence de fuite vers l'entraînement 2021 (14 232 images ; écart minimal khadavy 7,97, paires vérifiées à l'œil), déjà établie à la section 1.
+
+    - Contrôle refait le 8 novembre 2026 contre la campagne 2022-2023 **disponible en local** : `BLACK SIGATOKA-1` (1 000 images), `FUSARIUM WILT-1` (1 001), dossier `healthy_1` (1 000), soit les 3 001 images de la validation de Corentin. **Aucune fuite** ; écarts minimaux : khadavy 14,66, ROAMER 32,67, panama 35,39 (`out/maladies/roboflow_nouveaux/fuite_tanzanie_2022_locale/`).
+    - **Non contrôlé** : les 8 765 autres images de la campagne 2022-2023 (zips `-2` et `-3`, environ 25 Go, jamais téléchargés), qui font partie de la validation du binôme. Le risque est jugé faible (photos indonésiennes de 2024 contre photos tanzaniennes de 2022-2023, aucune fuite trouvée vers les 17 000 autres images tanzaniennes), mais le contrôle reste à faire par le binôme, qui a ces fichiers. Si une fuite apparaissait, les photos concernées seraient retirées du calcul et le score recalculé, en le signalant.
 4. Empreintes des deux modèles notées ici (**fait le 8 novembre 2026**, section 4) ; commit du protocole (avec accord).
 5. Mesure unique : un script, un passage par modèle, un fichier de résultats.
 6. Résultats écrits ici tels quels, même s'ils sont mauvais. Aucun changement de modèle, de seuil ou de réglage après coup.
