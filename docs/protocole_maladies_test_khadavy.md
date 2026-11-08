@@ -126,6 +126,42 @@ ROAMER Healthy, Bunchy-top, Fusarium wilt et kewalee sont écartés : plantes en
 5. Mesure unique : un script, un passage par modèle, un fichier de résultats.
 6. Résultats écrits ici tels quels, même s'ils sont mauvais. Aucun changement de modèle, de seuil ou de réglage après coup.
 
-## 9. Résultats
+## 9. Résultats (mesure unique du 8 novembre 2026)
 
-À remplir après la mesure.
+Script `scripts/mesurer_test_khadavy.py` (commit `5c0bf7d`, avant la mesure), lancé une seule fois ; empreintes des modèles, de la liste et des 624 images vérifiées par le script ; sorties dans `out/maladies/test_khadavy/` (`bilan.json`, `reponses_v2_convnext.csv`, `reponses_b0.csv`, `VERROU`). Rien n'a été changé après.
+
+**Score du module (v2 ConvNeXt, modèle de la chaîne)** : **F1 macro 0,623** [0,577 ; 0,668] sur saine et cercosporiose noire (404 photos). Le B0, à côté : 0,505 [0,459 ; 0,551].
+
+| Mesure (khadavy, photos distinctes) | v2 ConvNeXt | B0 |
+| --- | --- | --- |
+| F1 saine / F1 cercosporiose noire | 0,809 / 0,438 | 0,724 / 0,287 |
+| Sigatoka nommée (245 Bercak-Hitam) | 69 (28,2 %) | 41 (16,7 %) |
+| Saines bien classées (159) | 150 (94,3 %) | 148 (93,1 %) |
+| Fausses alertes sur les saines | 6 (3,8 %) | 4 (2,5 %) |
+| Malades dites saines (272) | 62 (22,8 %) | 111 (40,8 %) |
+| « Je ne sais pas » (saines / Bercak-Hitam / Bercak-Kuning) | 3 / 82 / 0 | 7 / 24 / 2 |
+| Bercak-Kuning signalée malade (27) | 27 (100 %) [87,5 ; 100] | 16 (59,3 %) [40,7 ; 75,5] |
+| Bercak-Kuning reconnue inconnue | 0 (0 %) [0 ; 12,5] | 7 (25,9 %) [13,2 ; 44,7] |
+| Bercak-Kuning dite cercosporiose noire | 0 | 0 |
+| Temps par photo (même processeur) | 0,77 s | 0,06 s |
+
+Réponses détaillées, v2 ConvNeXt : Bercak-Hitam → saine 62, cercosporiose noire 69, fusariose 32, je ne sais pas 82 ; Bercak-Kuning → fusariose 27 ; Sehat → saine 150, fusariose 5, cercosporiose noire 1, je ne sais pas 3. B0 : Bercak-Hitam → saine 102, cercosporiose noire 41, malade non identifiée 72, fusariose 6, je ne sais pas 24 ; Bercak-Kuning → fusariose 11, saine 9, malade non identifiée 5, je ne sais pas 2 ; Sehat → saine 148, malade non identifiée 4, je ne sais pas 7.
+
+**Jeux indicatifs** :
+
+| Mesure | v2 ConvNeXt | B0 |
+| --- | --- | --- |
+| ROAMER Black-sigatoka (143), dites malades | 15 (10,5 %) | 17 (11,9 %) |
+| ROAMER, dites cercosporiose noire | 6 (4,2 %) | 9 (6,3 %) |
+| panama wilt (25 malades), dites malades | 14 (56 %) | 18 (72 %) |
+| panama wilt, dites fusariose | 12 (48 %) | 8 (32 %) |
+| panama wilt (25 saines), fausses alertes | 4 (16 %) | 0 |
+
+**Lecture** :
+- **Le module généralise mal à khadavy** : F1 0,62, loin des 0,98 du Bangladesh. Les feuilles saines sont bien reconnues (94 %), mais seules 28 % des Bercak-Hitam sont nommées cercosporiose noire ; 23 % sont dites saines et un tiers reçoit « je ne sais pas ».
+- **Cause probable, à écrire comme hypothèse** : les Bercak-Hitam montrent surtout de petites taches noires éparses sur une feuille verte (planches de la section 1), sans les stries et nécroses de la cercosporiose avancée des jeux d'entraînement. Il peut s'agir d'un stade précoce, ou d'une autre maladie à taches noires (le sens de la classe n'est pas confirmé, section 2). Les images sont aussi déformées en 640 × 640.
+- **Bercak-Kuning** : toujours signalée malade par la v2, mais toujours nommée fusariose (feuilles jaunies) ; jamais reconnue comme inconnue.
+- **v2 contre B0** : la v2 fait mieux sur le score principal et rate beaucoup moins de malades (23 % contre 41 % dites saines) ; le B0 fait un peu moins de fausses alertes et reconnaît plus souvent l'inconnu. Ces écarts confirment le choix de l'amendement 1, sans l'avoir décidé.
+- **ROAMER** (feuilles entières vues d'en dessous) : presque tout est dit sain par les deux modèles. Le module ne lit pas ce type de photo.
+- **Fusariose hors de Tanzanie** (panama wilt, 25 photos) : la v2 en nomme 12, le B0 8 ; effectif très petit, plantes et feuilles mêlées.
+- Après cette mesure, le module maladies n'a plus de jeu vierge.

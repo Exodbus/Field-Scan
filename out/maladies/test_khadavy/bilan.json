@@ -1,0 +1,411 @@
+{
+ "v2_convnext": {
+  "secondes_par_photo": 0.768,
+  "khadavy": {
+   "f1_macro_connues": 0.6234,
+   "f1_macro_ic95": [
+    0.5771,
+    0.6679
+   ],
+   "f1_saine": 0.8086,
+   "f1_cercosporiose_noire": 0.4381,
+   "sigatoka_nommee": {
+    "k": 69,
+    "n": 245,
+    "part": 0.282,
+    "ic95": [
+     0.229,
+     0.341
+    ]
+   },
+   "saines_bien_classees": {
+    "k": 150,
+    "n": 159,
+    "part": 0.943,
+    "ic95": [
+     0.896,
+     0.97
+    ]
+   },
+   "fausses_alertes": {
+    "k": 6,
+    "n": 159,
+    "part": 0.038,
+    "ic95": [
+     0.017,
+     0.08
+    ]
+   },
+   "malades_dites_saines": {
+    "k": 62,
+    "n": 272,
+    "part": 0.228,
+    "ic95": [
+     0.182,
+     0.281
+    ]
+   },
+   "malades_dites_malades": {
+    "k": 128,
+    "n": 272,
+    "part": 0.471,
+    "ic95": [
+     0.412,
+     0.53
+    ]
+   },
+   "je_ne_sais_pas": {
+    "saine": {
+     "k": 3,
+     "n": 159,
+     "part": 0.019,
+     "ic95": [
+      0.006,
+      0.054
+     ]
+    },
+    "cercosporiose_noire": {
+     "k": 82,
+     "n": 245,
+     "part": 0.335,
+     "ic95": [
+      0.279,
+      0.396
+     ]
+    },
+    "inconnue": {
+     "k": 0,
+     "n": 27,
+     "part": 0.0,
+     "ic95": [
+      0.0,
+      0.125
+     ]
+    }
+   },
+   "kuning_signalee_malade": {
+    "k": 27,
+    "n": 27,
+    "part": 1.0,
+    "ic95": [
+     0.875,
+     1.0
+    ]
+   },
+   "kuning_reconnue_inconnue": {
+    "k": 0,
+    "n": 27,
+    "part": 0.0,
+    "ic95": [
+     0.0,
+     0.125
+    ]
+   },
+   "kuning_dite_cercosporiose_noire": {
+    "k": 0,
+    "n": 27,
+    "part": 0.0,
+    "ic95": [
+     0.0,
+     0.125
+    ]
+   },
+   "matrice": {
+    "cercosporiose_noire": {
+     "saine": 62,
+     "cercosporiose_noire": 69,
+     "fusariose": 32,
+     "malade_non_identifiee": 0,
+     "je_ne_sais_pas": 82
+    },
+    "inconnue": {
+     "saine": 0,
+     "cercosporiose_noire": 0,
+     "fusariose": 27,
+     "malade_non_identifiee": 0,
+     "je_ne_sais_pas": 0
+    },
+    "saine": {
+     "saine": 150,
+     "cercosporiose_noire": 1,
+     "fusariose": 5,
+     "malade_non_identifiee": 0,
+     "je_ne_sais_pas": 3
+    }
+   }
+  },
+  "indicatifs": {
+   "roamer_dite_malade": {
+    "k": 15,
+    "n": 143,
+    "part": 0.105,
+    "ic95": [
+     0.065,
+     0.166
+    ]
+   },
+   "roamer_dite_cercosporiose_noire": {
+    "k": 6,
+    "n": 143,
+    "part": 0.042,
+    "ic95": [
+     0.019,
+     0.089
+    ]
+   },
+   "roamer_reponses": {
+    "saine": 113,
+    "je_ne_sais_pas": 15,
+    "fusariose": 9,
+    "cercosporiose_noire": 6
+   },
+   "panama_malades_dites_malades": {
+    "k": 14,
+    "n": 25,
+    "part": 0.56,
+    "ic95": [
+     0.371,
+     0.733
+    ]
+   },
+   "panama_malades_dites_fusariose": {
+    "k": 12,
+    "n": 25,
+    "part": 0.48,
+    "ic95": [
+     0.3,
+     0.665
+    ]
+   },
+   "panama_saines_fausses_alertes": {
+    "k": 4,
+    "n": 25,
+    "part": 0.16,
+    "ic95": [
+     0.064,
+     0.347
+    ]
+   },
+   "panama_matrice": {
+    "diseased": {
+     "cercosporiose_noire": 2,
+     "fusariose": 12,
+     "je_ne_sais_pas": 10,
+     "saine": 1
+    },
+    "healthy": {
+     "cercosporiose_noire": 0,
+     "fusariose": 4,
+     "je_ne_sais_pas": 3,
+     "saine": 18
+    }
+   }
+  }
+ },
+ "b0": {
+  "secondes_par_photo": 0.058,
+  "khadavy": {
+   "f1_macro_connues": 0.5052,
+   "f1_macro_ic95": [
+    0.4587,
+    0.5512
+   ],
+   "f1_saine": 0.7237,
+   "f1_cercosporiose_noire": 0.2867,
+   "sigatoka_nommee": {
+    "k": 41,
+    "n": 245,
+    "part": 0.167,
+    "ic95": [
+     0.126,
+     0.219
+    ]
+   },
+   "saines_bien_classees": {
+    "k": 148,
+    "n": 159,
+    "part": 0.931,
+    "ic95": [
+     0.88,
+     0.961
+    ]
+   },
+   "fausses_alertes": {
+    "k": 4,
+    "n": 159,
+    "part": 0.025,
+    "ic95": [
+     0.01,
+     0.063
+    ]
+   },
+   "malades_dites_saines": {
+    "k": 111,
+    "n": 272,
+    "part": 0.408,
+    "ic95": [
+     0.351,
+     0.467
+    ]
+   },
+   "malades_dites_malades": {
+    "k": 135,
+    "n": 272,
+    "part": 0.496,
+    "ic95": [
+     0.437,
+     0.555
+    ]
+   },
+   "je_ne_sais_pas": {
+    "saine": {
+     "k": 7,
+     "n": 159,
+     "part": 0.044,
+     "ic95": [
+      0.021,
+      0.088
+     ]
+    },
+    "cercosporiose_noire": {
+     "k": 24,
+     "n": 245,
+     "part": 0.098,
+     "ic95": [
+      0.067,
+      0.142
+     ]
+    },
+    "inconnue": {
+     "k": 2,
+     "n": 27,
+     "part": 0.074,
+     "ic95": [
+      0.021,
+      0.234
+     ]
+    }
+   },
+   "kuning_signalee_malade": {
+    "k": 16,
+    "n": 27,
+    "part": 0.593,
+    "ic95": [
+     0.407,
+     0.755
+    ]
+   },
+   "kuning_reconnue_inconnue": {
+    "k": 7,
+    "n": 27,
+    "part": 0.259,
+    "ic95": [
+     0.132,
+     0.447
+    ]
+   },
+   "kuning_dite_cercosporiose_noire": {
+    "k": 0,
+    "n": 27,
+    "part": 0.0,
+    "ic95": [
+     0.0,
+     0.125
+    ]
+   },
+   "matrice": {
+    "cercosporiose_noire": {
+     "saine": 102,
+     "cercosporiose_noire": 41,
+     "fusariose": 6,
+     "malade_non_identifiee": 72,
+     "je_ne_sais_pas": 24
+    },
+    "inconnue": {
+     "saine": 9,
+     "cercosporiose_noire": 0,
+     "fusariose": 11,
+     "malade_non_identifiee": 5,
+     "je_ne_sais_pas": 2
+    },
+    "saine": {
+     "saine": 148,
+     "cercosporiose_noire": 0,
+     "fusariose": 0,
+     "malade_non_identifiee": 4,
+     "je_ne_sais_pas": 7
+    }
+   }
+  },
+  "indicatifs": {
+   "roamer_dite_malade": {
+    "k": 17,
+    "n": 143,
+    "part": 0.119,
+    "ic95": [
+     0.076,
+     0.182
+    ]
+   },
+   "roamer_dite_cercosporiose_noire": {
+    "k": 9,
+    "n": 143,
+    "part": 0.063,
+    "ic95": [
+     0.033,
+     0.115
+    ]
+   },
+   "roamer_reponses": {
+    "saine": 112,
+    "je_ne_sais_pas": 14,
+    "cercosporiose_noire": 9,
+    "malade_non_identifiee": 5,
+    "fusariose": 3
+   },
+   "panama_malades_dites_malades": {
+    "k": 18,
+    "n": 25,
+    "part": 0.72,
+    "ic95": [
+     0.524,
+     0.857
+    ]
+   },
+   "panama_malades_dites_fusariose": {
+    "k": 8,
+    "n": 25,
+    "part": 0.32,
+    "ic95": [
+     0.172,
+     0.516
+    ]
+   },
+   "panama_saines_fausses_alertes": {
+    "k": 0,
+    "n": 25,
+    "part": 0.0,
+    "ic95": [
+     0.0,
+     0.133
+    ]
+   },
+   "panama_matrice": {
+    "diseased": {
+     "cercosporiose_noire": 3,
+     "fusariose": 8,
+     "je_ne_sais_pas": 2,
+     "malade_non_identifiee": 7,
+     "saine": 5
+    },
+    "healthy": {
+     "cercosporiose_noire": 0,
+     "fusariose": 0,
+     "je_ne_sais_pas": 2,
+     "malade_non_identifiee": 0,
+     "saine": 23
+    }
+   }
+  }
+ }
+}
