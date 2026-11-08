@@ -4,6 +4,22 @@
 
 Ce protocole remplace `docs/protocole_maladies_v3.md` (v3 sur EfficientNet-B0, écrit le 6 novembre, jamais validé ni lancé) : le modèle de la chaîne est désormais la v2 ConvNeXt (`docs/protocole_maladies_test_khadavy.md`, amendement 1).
 
+**Amendement 1 du 8 novembre 2026 (avant tout entraînement ; aucun modèle n'a vu les ajouts ni le test)** :
+
+- **Nom** : le modèle de ce protocole s'appelle **v5**. « v3 » et « v4 » désignent déjà deux modèles du binôme : sa v3 (v2 + Tanzanie 2022-2023 apprise, non retenue) et sa v4 (non retenue). Dans la suite du texte, « v3 » se lit « v5 ».
+- **Exécutant** : Corentin entraîne la v5 sur Kaggle, avec le carnet `notebooks/entrainer_maladies_v5_kaggle.ipynb`, écrit avant l'entraînement et testé en local sur un petit échantillon.
+- **Données d'entraînement** : l'archive `data/feuilles_pret_perou.zip` (Tanzanie 2021 et Pérou, 16 963 images retenues, tiges exclues), mêmes sources que la v2 du binôme mais préparée par Corentin (397 tiges exclues contre 398 ; doublons repérés par une autre méthode), plus `data/feuilles_v3_ajouts.zip`. La Cordana du Pérou (`test_perou`) n'est jamais lue.
+- **Validation** : la campagne tanzanienne 2022-2023 disponible en local, **3 001 images** tirées (1 000 saines, 1 000 cercosporioses, 1 001 fusarioses), au lieu des 11 766 de la validation du binôme, qui ne sont pas en local. Les seuils de la v5 y sont réglés par les règles de la v2 (section 4) ; le choix entre un réseau et la moyenne des trois, et entre 1 et 4 vues, suit aussi les règles du carnet de la v2 (coût le plus bas en validation).
+- **Adoption (section 5)** : la v2 et la v5 sont mesurées par Corentin, en local, par le même code, sur ces 3 001 images et sur BananaLSD (897 images de l'archive), chacune avec ses propres seuils (`seuils.json` de la v2, seuils de la v5 réglés en validation).
+- **Préparation des images** : chaque image passe par la préparation de la v2 (`classifieur.preparer` : recadrage carré au centre en 224 px, réenregistrement en JPEG qualité 95), à l'entraînement comme à l'évaluation.
+- **Test banana-buddy : jeu déjà consulté, à écrire tel quel.** Réponse du binôme (8 novembre 2026) :
+    - le **6 novembre**, sa v2 et sa v4 ont été notées sur banana-buddy (dossiers Healthy, Healthy Leaf, Leafspot, Leafspot Leaf), résultats vus. Ce jeu n'est donc pas vierge pour l'équipe, ni pour la v2 ;
+    - dans son « étape 1 » en cours, seule la v2 a été lancée sur 450 photos des dossiers « … Leaf » ; **aucun résultat affiché** ; banana-buddy a été retiré de ses juges et ces réponses sont supprimées sans être lues ;
+    - son audit trouve 705 copies tanzaniennes dans Healthy Leaf, 817 dans Leafspot Leaf, 624 dans Panama Leaf, ce qui concorde avec les photos `Image_N` exclues ici (707, 817, 625). Ces copies sont souvent tournées : la sélection de la section 7 compare toujours sous les 8 symétries.
+
+  Conséquences : la v5 n'a jamais vu banana-buddy, et aucune décision du protocole ne dépend du test (l'adoption se fait sur les validations, section 5). Le test reste donc mesuré une fois et rapporté, mais comme un **jeu consulté** par l'équipe, pas comme un test vierge. La comparaison v2 / v5 sur ce jeu est indicative.
+- **Versions du binôme** : sa version en 384 px, partie de la v2, s'appellera **v6**. Elle ne se compare à la v5 que sur des jeux qu'aucune des deux n'a appris (validation tanzanienne 2022-2023, BananaLSD) ; khadavy, appris par la v5, ne peut pas les départager.
+
 **Date limite** : si la v3 n'est pas entraînée et mesurée sur la validation le **11 novembre 2026 à 23 h 59**, elle est abandonnée et la v2 reste dans la chaîne. Le test (section 7) n'est alors pas lancé.
 
 ## 0. Pourquoi une v3
