@@ -60,6 +60,19 @@ khadavy : une image par photo distincte (431, liste `data/test_khadavy/liste.csv
 - **Contrôle de fuite avant l'archive** : khadavy et TDTU contre la validation tanzanienne 2022-2023 et contre le test banana-buddy (section 7). Toute image d'entraînement identique ou presque à une image de validation ou de test est retirée de l'**entraînement**.
 - Effectifs réels notés ici après la préparation.
 
+**Préparation faite le 8 novembre 2026, sans modèle** (`scripts/preparer_ajouts_v3.py`, sorties dans `data/feuilles_v3_ajouts/` : `images/`, `images.csv`, `exclusions.csv` ; archive `data/feuilles_v3_ajouts.zip`, 42,5 Mo, avec `ajouts_v3/images_ajouts.csv`, nom distinct pour ne pas masquer l'`images.csv` du carnet) :
+
+| Jeu | saine | black_sigatoka | autre_maladie | Total |
+| --- | --- | --- | --- | --- |
+| khadavy | 159 | 245 | 27 | 431 |
+| TDTU | 577 | 404 | 655 | 1 636 |
+| **Total** | **736** | **649** | **682** | **2 067** |
+
+- TDTU : 2 295 photos distinctes ; **172 groupes aux étiquettes contradictoires exclus** et 487 photos exclues par la correspondance de la section 2 (deux maladies différentes, Aphids, Other, sans annotation). Écart avec les effectifs prévus (409 black_sigatoka, 677 autre_maladie) : les photos distinctes sont ici des groupes de quasi-doublons, plus larges que les groupes de noms du 6 novembre, d'où un peu plus de groupes contradictoires exclus.
+- **Contrôle de fuite** contre 5 768 images (validation tanzanienne 2022-2023 locale, BananaLSD, test banana-buddy figé), sous les 8 symétries : **aucun ajout retiré**.
+- **SHA-256 de `images.csv` : `a673630c9b30c90064a996943bba64eb7f828661d58dea87ef8bd92d6417c83a`.**
+- Pour le binôme : ajouter le dossier `ajouts_v3/` à côté de ses données (les chemins de la colonne `image` commencent par `ajouts_v3/`) et concaténer `images_ajouts.csv` à son `images.csv`, jeux `khadavy` et `tdtu` en entraînement.
+
 ## 4. Recette (par le binôme, carnet `maladies_v2_kaggle.ipynb` adapté)
 
 Recette de la v2 inchangée : ConvNeXt-Tiny ImageNet, 224 px, 6 époques, dernière époque gardée, lots de 32, taux 1e-4, recompression JPEG au hasard, lissage 0,1, mêmes augmentations, **3 réseaux** (3 graines), Pérou tiré 3 fois plus souvent.
@@ -138,7 +151,7 @@ Aucun réglage après le test. Le résultat est écrit ici tel quel.
 
 1. Validation de ce protocole par les deux étudiants ; commit (avec accord).
 2. Sélection et liste figée du test banana-buddy (section 7) ; empreinte notée ici. **Fait le 8 novembre 2026.**
-3. Préparation de `feuilles_v3_ajouts.zip` et contrôle de fuite (section 3).
+3. Préparation de `feuilles_v3_ajouts.zip` et contrôle de fuite (section 3). **Fait le 8 novembre 2026.**
 4. Entraînement de la v3 sur Kaggle (binôme) ; seuils réglés sur la validation.
 5. Adoption (section 5), écrite ici.
 6. Test unique (section 7), v2 et v3.
