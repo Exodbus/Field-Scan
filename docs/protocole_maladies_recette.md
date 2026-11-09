@@ -65,6 +65,22 @@ Le lancement complet en file d'attente sur Kaggle est retiré avant d'avoir dém
 
 **Précision (vers 15 h 45, avant tout résultat)** : l'envoi des données vers Colab a échoué (morceaux de 100 Mo refusés sans message d'erreur). La session Colab est arrêtée sans avoir rien calculé. Kaggle accepte en fait deux carnets GPU à la fois. R0 et R3 tournent donc dans `affilecorentin/entrainer-maladies-recette-a`, R1 et R2 dans `affilecorentin/entrainer-maladies-recette-b`. La suite (graines 1 et 2, étape finale) se fera de même sur Kaggle.
 
-## 6. Résultats
+**Précision 2 (vers 17 h 20, avant tout résultat de R1 et R2)** : R0 et R3 ont tourné sur Kaggle. Le carnet R1 + R2 est ensuite resté plus d'une heure en file d'attente, à cause d'un incident Kaggle (bandeau : « an issue preventing notebooks from starting »). Il est supprimé avec l'accord de Corentin. R1 et R2 tournent sur Colab (GPU T4 gratuit, Colab CLI), avec le même carnet et les mêmes données, envoyées par morceaux de 40 Mo.
 
-(à remplir)
+## 6. Résultats (9 novembre 2026, vers 18 h 50)
+
+**Calculs** : R0 et R3 sur Kaggle (`entrainer-maladies-recette-a`), R1 et R2 sur Colab (T4 gratuit, environ 3 min 20 par époque). Choix appliqué en local (`ETAPE=choix`), sortie dans `out/maladies/recette/recette/bilan_choix.json`.
+
+| Variante | AUC sur TDTU (choix) | Coût en validation (garde-fou : ≤ R0 + 10 = 62) |
+| --- | --- | --- |
+| R0 (témoin : recette de la v2) | 0,8972 | 52 |
+| R1 (+ EMA, 10 époques) | 0,8743 | 45 |
+| R2 (+ CutMix) | 0,8938 | 55 |
+| R3 (+ AugMix) | **0,8987** | **32** |
+
+**Aucune variante n'est retenue.** La meilleure, R3, ne dépasse le témoin que de 0,0015 sur TDTU, alors qu'il fallait au moins 0,01. Selon la section 3, la piste s'arrête : pas de graines 1 et 2, pas de modèle final, pas de mesure sur BananaLSD.
+
+Lecture, sans effet sur la décision :
+- Avec un seul réseau par variante, des écarts de 0,02 sur TDTU peuvent venir de la seule graine. Ni la moyenne glissante des poids, ni CutMix, ni AugMix ne montrent de gain hors domaine qui dépasse ce bruit.
+- R3 a le coût le plus bas en validation (32 contre 52). C'est un meilleur réglage dans le domaine tanzanien, pas un gain hors domaine.
+- **La recette n'est pas le frein** pour passer à un autre pays, du moins selon TDTU. Ce qui a vraiment changé quelque chose hors domaine, c'est le réseau de départ (DINOv2-FT). Ses défauts sont ailleurs : maladies inconnues et vue de loin.

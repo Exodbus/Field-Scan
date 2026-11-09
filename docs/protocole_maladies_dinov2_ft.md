@@ -67,4 +67,15 @@ Rapporté sans effet sur la décision : matrices de confusion, maladies inconnue
 Lecture, sans effet sur la décision :
 - C'est **le meilleur modèle mesuré en gros plan hors domaine**. Sur BananaLSD, il nomme 457 Sigatoka sur 473 (contre 445 pour la v2 et 452 pour la soupe) et classe bien 88 saines sur 90, avec un seul réseau et une seule vue.
 - Mais il aggrave les deux faiblesses connues. Il dit Sigatoka pour 85 % des maladies inconnues (v2 : 69 %) et n'en signale que 22 comme non identifiées (v2 : 69). Et il sépare moins bien les feuilles malades et saines vues de loin.
-- Le compromis est donc le même que pour la v8 et la soupe, en plus marqué. Plus un modèle reconnaît bien les maladies connues hors domaine, plus il range les maladies inconnues dans la Sigatoka.
+- **Défaut à écrire, même si la règle l'accepte** : en validation, DINOv2-FT rate 9 malades sur 2 001, contre 4 pour la v2. C'est la mesure que le tuteur surveille le plus.
+- **Ce que deviennent les maladies inconnues** (BananaLSD, 334, ajouté le 9 novembre après une remarque du binôme, sans effet sur les décisions). Une inconnue dite Sigatoka déclenche quand même une alerte dans la chaîne. Une inconnue dite saine ou « je ne sais pas » n'en déclenche pas :
+
+  | Modèle | Saine | Sigatoka | Fusariose | Je ne sais pas | **Alerte** |
+  | --- | --- | --- | --- | --- | --- |
+  | v2 | 0 | 230 | 35 | 69 | **265 (79 %)** |
+  | v8 | 0 | 288 | 28 | 18 | **316 (95 %)** |
+  | soupe | 0 | 273 | 28 | 33 | **301 (90 %)** |
+  | DINOv2-FT | 1 | 284 | 27 | 22 | **311 (93 %)** |
+
+  Vue du côté des alertes, les modèles qui nomment le plus souvent Sigatoka sont aussi ceux qui laissent le moins de maladies inconnues sans alerte. La garde « inconnues dites Sigatoka » mesure le mauvais nom, pas l'absence d'alerte. Les deux comptent : un nom faux oriente vers un mauvais traitement, une absence d'alerte laisse la maladie sans visite. Ce point rejoint le choix, encore ouvert, de déclencher ou non une alerte quand la réponse est « je ne sais pas » mais que la probabilité de maladie est forte.
+- Sur ces quatre modèles proches (même apprentissage, même validation), on observe une **tendance** : mieux reconnaître les maladies connues hors domaine va avec plus d'inconnues dites Sigatoka et une vue de loin moins bonne. C'est une observation sur 4 modèles, pas une loi.

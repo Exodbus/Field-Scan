@@ -59,6 +59,31 @@ Toute intégration dans `fieldscan/` reste soumise à l'accord de Corentin.
 
 La condition « au moins 90 % de loin » s'applique donc au seul **téléphone ROAMER bunchy top + saines (278)**. L'Éthiopie et la Sigatoka noire du téléphone sont **rapportées à titre indicatif**, comme cas intermédiaires. Le reste du protocole est inchangé.
 
-## 5. Résultats
+**Amendement 2 (9 novembre 2026, vers 17 h, avant tout résultat ; seul le lieu du calcul change)** : le carnet Kaggle attendait un GPU libre. Avec l'accord de Corentin (téléchargement de DINOv2 sur son PC), les mêmes calculs tournent sur le processeur local, avec `scripts/calculer_deux_branches_local.py` : mêmes listes, même préparation, mêmes poids, mêmes sorties.
 
-(à remplir)
+## 5. Résultats (9 novembre 2026, vers 17 h 25, mesure unique)
+
+**Calculs** : processeur local (amendement 2). Contrôle d'équivalence avec Kaggle, sur 8 photos de validation : caractéristiques DINOv2 identiques (cosinus 1,0 ; écart maximal 0,014, dû aux 16 bits de Kaggle) ; probabilités de DINOv2-FT identiques à 10⁻⁴ près. Mesure : `scripts/mesurer_deux_branches.py`, sortie dans `out/maladies/deux_branches/bilan_deux_branches.json`.
+
+### Partie A : aiguilleur, réussi
+
+| Jeu | Attendu | Résultat | Verdict |
+| --- | --- | --- | --- |
+| Validation tanzanienne (3 001) | ≥ 95 % « proche » | 99,5 % | OK |
+| BananaLSD (897) | ≥ 95 % « proche » | 99,7 % | OK |
+| Téléphone ROAMER, plantes entières (278) | ≥ 90 % « loin » | 98,9 % | OK |
+| *Indicatif* : robot `val_loin` (1 305) | | 100 % « loin » | |
+| *Indicatif* : téléphone ROAMER, Sigatoka noire, feuilles entières (143) | | 83 % « loin » | |
+| *Indicatif* : Éthiopie, feuilles entières (1 289) | | 15 % « loin » | |
+
+**L'aiguilleur réussit.** Il sépare bien les gros plans des plantes entières, y compris sur un autre appareil que le robot. En revanche, il envoie la plupart des **feuilles entières cadrées serré** (Éthiopie) vers « proche ». C'est justement le cas où l'ancien classifieur échouait (essai éthiopien). Il est à écrire comme une limite : l'aiguilleur reconnaît une plante entière, pas une feuille entière.
+
+### Partie B : désaccord, échec au contrôle
+
+Sur TDTU, parmi les photos que DINOv2-FT nomme, le désaccord avec la v2 retire le nom à **14,5 %** des maladies inconnues (`autre_maladie`, 380 nommées) contre **33,8 %** des Sigatoka noires (213). C'est l'inverse de l'hypothèse : les deux réseaux se contredisent plus souvent sur une maladie connue vue dans un autre pays que sur une maladie inconnue. **La partie B s'arrête là**, sans mesure sur BananaLSD. C'est la quatrième méthode qui échoue sur les maladies inconnues, après la classe « autre », le détecteur sur la v2 et le détecteur sur DINOv2.
+
+### Conséquences
+
+- Selon la règle, **la branche « loin » est proposée pour la chaîne**. L'aiguilleur DINOv2 envoie les photos de plantes entières vers la v2, avec le message « photo prise de loin : à confirmer par un gros plan de la zone malade ». L'intégration dans `fieldscan/` reste soumise à l'accord de Corentin. Elle demande les poids DINOv2 sur la machine qui fait tourner la chaîne, et environ 0,15 s de plus par photo.
+- La branche « proche » reste celle de la chaîne : la v2 aujourd'hui, la soupe si Corentin l'adopte après twakihasan.
+- Les maladies inconnues restent un défaut ouvert. Côté alerte, il se réduit en déclenchant une alerte sur « je ne sais pas » quand la probabilité de maladie est forte. C'est un choix de produit, à trancher.
