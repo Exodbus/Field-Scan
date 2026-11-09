@@ -55,6 +55,16 @@ Toutes ont la préparation de la v2 (224 px, JPEG 95), ConvNeXt-Tiny ImageNet, A
 2. Carnet Kaggle `notebooks/entrainer_maladies_recette_kaggle.py` (GPU, un seul lancement ; une relance seulement pour une panne technique, notée ici) : les 4 variantes, le choix, le modèle final, les seuils et les probabilités.
 3. Mesure unique : `scripts/mesurer_recette.py`, dont les résultats et la décision sont écrits en section 6.
 
+**Amendement 1 (9 novembre 2026, vers 15 h 05, avant tout résultat ; seuls le lieu et le découpage du calcul changent, aucune règle ne change).** Kaggle n'accepte qu'un carnet GPU à la fois : le carnet complet attendait que DINOv2-FT ait fini. À la demande de Corentin (« chaque gain de temps est important »), le calcul est réparti entre Kaggle et Colab (GPU T4 gratuit, Colab CLI, solde de 0 unité de calcul), avec les mêmes données, variantes, graines et règle. Le carnet accepte des étapes (`ETAPE`), essayées en local de bout en bout :
+1. variantes R0 et R3 sur Kaggle, R1 et R2 sur Colab ;
+2. choix en local, par la règle de la section 3 appliquée aux 4 scores (`ETAPE=choix`) ;
+3. graine 1 sur une plateforme, graine 2 sur l'autre ;
+4. étape finale (seuils et probabilités) sur une seule machine, à partir des 3 réseaux.
+
+Le lancement complet en file d'attente sur Kaggle est retiré avant d'avoir démarré (carnet supprimé avec l'accord de Corentin).
+
+**Précision (vers 15 h 45, avant tout résultat)** : l'envoi des données vers Colab a échoué (morceaux de 100 Mo refusés sans message d'erreur). La session Colab est arrêtée sans avoir rien calculé. Kaggle accepte en fait deux carnets GPU à la fois. R0 et R3 tournent donc dans `affilecorentin/entrainer-maladies-recette-a`, R1 et R2 dans `affilecorentin/entrainer-maladies-recette-b`. La suite (graines 1 et 2, étape finale) se fera de même sur Kaggle.
+
 ## 6. Résultats
 
 (à remplir)

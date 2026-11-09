@@ -31,14 +31,44 @@ TAILLE = 224
 appareil = "cuda" if torch.cuda.is_available() else "cpu"
 MIXTE = appareil == "cuda"
 print("Calcul sur :", appareil, torch.cuda.get_device_name(0) if appareil == "cuda" else "", flush=True)
-SORTIE = Path("out/maladies/recette_essai_local") if ESSAI_LOCAL else Path("/kaggle/working/recette")
+SORTIE = Path("out/maladies/recette_essai_local") if ESSAI_LOCAL else Path(os.environ.get("SORTIE", "/kaggle/working/recette"))
 SORTIE.mkdir(parents=True, exist_ok=True)
+# Amendement 1 (protocole, section 5) : calcul réparti entre Kaggle et Colab, mêmes variantes, mêmes graines, même règle.
+#   ETAPE=complet (par défaut) : tout le carnet, comme commité avant l'entraînement ;
+#   ETAPE=variantes, VARIANTES_ACTIVES=R0,R3 : ces variantes (graine 0), réseaux et scores de choix écrits ;
+#   ETAPE=choix : rassemble les choix_*.csv de SORTIE et applique la règle de la section 3 (sans données ni GPU) ;
+#   ETAPE=graine, RETENUE=R2, GRAINE=1 : un réseau de la variante retenue ;
+#   ETAPE=final, RETENUE=R2 : charge reseau_<RETENUE>_g0/1/2.pt de SORTIE, puis seuils et probabilités.
+ETAPE = os.environ.get("ETAPE", "complet")
+ACTIVES = os.environ.get("VARIANTES_ACTIVES", ",".join(VARIANTES)).split(",")
+RETENUE_IMPOSEE, GRAINE_ETAPE = os.environ.get("RETENUE"), int(os.environ.get("GRAINE", "0"))
+print("étape :", ETAPE, "| variantes :", ACTIVES, "| retenue :", RETENUE_IMPOSEE, "| graine :", GRAINE_ETAPE, flush=True)
+
+
+def appliquer_regle(choix):
+    """Section 3 du protocole : parmi R1-R3 sous le garde-fou de validation, la meilleure AUC TDTU si elle dépasse R0 de 0,01."""
+    ref = choix.loc["R0"]
+    eligibles = choix.drop("R0")
+    eligibles = eligibles[eligibles.cout_validation <= ref.cout_validation + GARDE_COUT]
+    if len(eligibles) and eligibles.auc_tdtu.max() >= ref.auc_tdtu + GAIN_MIN:
+        return eligibles.auc_tdtu.idxmax()
+    return None
+
+
+if ETAPE == "choix":
+    choix = pd.concat([pd.read_csv(f) for f in sorted(SORTIE.glob("choix_*.csv"))]).set_index("variante")
+    assert sorted(choix.index) == sorted(VARIANTES), choix.index.tolist()
+    retenue = appliquer_regle(choix)
+    print(choix.to_string(), "\nvariante retenue :", retenue, flush=True)
+    (SORTIE / "bilan_choix.json").write_text(json.dumps(dict(retenue=retenue, choix=choix.reset_index().to_dict("records")),
+                                                        ensure_ascii=False, indent=1, default=float), encoding="utf-8")
+    sys.exit(0)
 
 # 2. Données
 if ESSAI_LOCAL:
     INDEX, FEUILLES, AJOUTS = Path("data/feuilles/index.csv"), Path("data/roamer_val_loin_feuilles/feuilles.csv"), Path("data/feuilles_v3_ajouts/images.csv")
 else:
-    ENTREE = Path("/kaggle/input")
+    ENTREE = Path(os.environ.get("ENTREE", "/kaggle/input"))
     INDEX, FEUILLES = sorted(ENTREE.rglob("index.csv"))[0], sorted(ENTREE.rglob("feuilles.csv"))[0]
     AJOUTS = sorted(ENTREE.rglob("images_ajouts.csv"))[0]
 VERS = {"saine": "saine", "cercosporiose_noire": "black_sigatoka", "fusariose": "fusarium"}
@@ -199,34 +229,51 @@ def entrainer(variante, graine):
     return final.eval()
 
 
-# 5. Les 4 variantes (graine 0) et le choix sur TDTU
-malade_tdtu = tdtu.classe_vraie.ne("saine").to_numpy()
-choix, reseaux0 = [], {}
-for nom in VARIANTES:
-    m = entrainer(nom, 0)
-    reseaux0[nom] = m
-    cout = int(tableau_seuils(probas([m], validation, False), V_VAL).cout.min())
-    a_tdtu = auc(1 - probas([m], tdtu, False)[:, 0], malade_tdtu)
-    choix.append(dict(variante=nom, auc_tdtu=round(a_tdtu, 4), cout_validation=cout))
-    print(f"{nom} : AUC TDTU {a_tdtu:.4f}, coût validation {cout}", flush=True)
-choix = pd.DataFrame(choix).set_index("variante")
-ref = choix.loc["R0"]
-eligibles = choix.drop("R0")
-eligibles = eligibles[eligibles.cout_validation <= ref.cout_validation + GARDE_COUT]
-retenue = None
-if len(eligibles) and eligibles.auc_tdtu.max() >= ref.auc_tdtu + GAIN_MIN:
-    retenue = eligibles.auc_tdtu.idxmax()
-if ESSAI_LOCAL and retenue is None:
-    retenue = "R3"   # essai local seulement : pour parcourir aussi la suite du carnet
-choix.to_csv(SORTIE / "choix_variantes.csv")
-print("variante retenue :", retenue, flush=True)
-if retenue is None:
-    (SORTIE / "bilan_choix.json").write_text(json.dumps(dict(retenue=None, raison="aucune variante ne dépasse R0 de 0,01 sur TDTU avec le garde-fou"),
-                                                        ensure_ascii=False, indent=1), encoding="utf-8")
-    sys.exit(0)
+def enregistrer(m, nom):
+    torch.save({n: (t.half() if t.is_floating_point() else t) for n, t in m.state_dict().items()}, SORTIE / nom)
 
-# 6. Modèle final : graines 1 et 2, puis règles de la v2 sur la validation
-reseaux = [reseaux0[retenue]] + [entrainer(retenue, g) for g in (1, 2)]
+
+def charger(nom):
+    m = models.convnext_tiny(weights=None)
+    m.classifier[2] = torch.nn.Linear(m.classifier[2].in_features, len(CLASSES))
+    w = torch.load(SORTIE / nom, map_location="cpu", weights_only=True)
+    m.load_state_dict({k: v.float() if v.is_floating_point() else v for k, v in w.items()})
+    return m.to(appareil).to(memory_format=torch.channels_last).eval()
+
+
+# 5. Les variantes (graine 0) et le choix sur TDTU
+if ETAPE in ("complet", "variantes"):
+    malade_tdtu = tdtu.classe_vraie.ne("saine").to_numpy()
+    choix, reseaux0 = [], {}
+    for nom in [v for v in VARIANTES if v in ACTIVES]:
+        m = entrainer(nom, 0)
+        reseaux0[nom] = m
+        enregistrer(m, f"reseau_{nom}_g0.pt")
+        cout = int(tableau_seuils(probas([m], validation, False), V_VAL).cout.min())
+        a_tdtu = auc(1 - probas([m], tdtu, False)[:, 0], malade_tdtu)
+        choix.append(dict(variante=nom, auc_tdtu=round(a_tdtu, 4), cout_validation=cout))
+        print(f"{nom} : AUC TDTU {a_tdtu:.4f}, coût validation {cout}", flush=True)
+    choix = pd.DataFrame(choix).set_index("variante")
+    choix.to_csv(SORTIE / f"choix_{'_'.join(choix.index)}.csv")
+    if ETAPE == "variantes":
+        sys.exit(0)
+    retenue = appliquer_regle(choix)
+    if ESSAI_LOCAL and retenue is None:
+        retenue = "R3"   # essai local seulement : pour parcourir aussi la suite du carnet
+    print("variante retenue :", retenue, flush=True)
+    if retenue is None:
+        (SORTIE / "bilan_choix.json").write_text(json.dumps(dict(retenue=None, raison="aucune variante ne dépasse R0 de 0,01 sur TDTU avec le garde-fou"),
+                                                            ensure_ascii=False, indent=1), encoding="utf-8")
+        sys.exit(0)
+    reseaux = [reseaux0[retenue]] + [entrainer(retenue, g) for g in (1, 2)]
+elif ETAPE == "graine":
+    enregistrer(entrainer(RETENUE_IMPOSEE, GRAINE_ETAPE), f"reseau_{RETENUE_IMPOSEE}_g{GRAINE_ETAPE}.pt")
+    sys.exit(0)
+else:   # final
+    retenue = RETENUE_IMPOSEE
+    reseaux = [charger(f"reseau_{retenue}_g{g}.pt") for g in (0, 1, 2)]
+
+# 6. Modèle final : règles de la v2 sur la validation
 for k, m in enumerate(reseaux, 1):
     torch.save({n: (t.half() if t.is_floating_point() else t) for n, t in m.state_dict().items()}, SORTIE / f"maladies_r_convnext_tiny_{k}.pt")
 p_seul, p_moy = probas(reseaux[:1], validation, True), probas(reseaux, validation, True)
@@ -267,7 +314,7 @@ for nom, df in (("validation", validation), ("bananalsd", bananalsd), ("val_loin
     p = pv if nom == "validation" else probas(reseaux, df, QUATRE_VUES)
     df.drop(columns="fichier").assign(**{f"p_{c}": p[:, i].round(6) for i, c in enumerate(CLASSES)}, reponse=decider(p)).to_csv(
         SORTIE / f"predictions_convnext_r_{nom}.csv", index=False)
-(SORTIE / "bilan_choix.json").write_text(json.dumps(dict(retenue=retenue, choix=choix.reset_index().to_dict("records"),
+(SORTIE / f"bilan_{ETAPE}.json").write_text(json.dumps(dict(retenue=retenue, etape=ETAPE, choix=choix.reset_index().to_dict("records") if ETAPE == "complet" else None,
                                                          cout_un_reseau=cout_seul, cout_moyenne=cout_moy,
                                                          versions=dict(torch=torch.__version__, gpu=torch.cuda.get_device_name(0) if MIXTE else "processeur")),
                                                     ensure_ascii=False, indent=1, default=float), encoding="utf-8")

@@ -46,6 +46,25 @@ Rapporté sans effet sur la décision : matrices de confusion, maladies inconnue
 2. Entraînement Kaggle (un seul), puis récupération des sorties : poids, seuils, probabilités.
 3. Mesure unique : `scripts/mesurer_dinov2_ft.py`, dont les résultats et la décision sont écrits en section 5.
 
-## 5. Résultats
+## 5. Résultats (9 novembre 2026, vers 15 h 35, mesure unique)
 
-(à remplir)
+**Entraînement** : Kaggle `affilecorentin/entrainer-maladies-dinov2-ft` (version 1, GPU T4, environ 1 h 30), un seul, sans relance. Pertes d'apprentissage de 0,39 (tête seule) à 0,30 (fin). Les règles de la v2 retiennent **un seul réseau et une seule vue** : coût en validation 55 pour un réseau, 56 pour la moyenne des trois. Seuils : alerte 0,35, nom 0,50, confiance 0,861. Le coût en validation par époque varie beaucoup (de 39 à 129). Sorties : `out/maladies/dinov2_ft/` ; mesure : `scripts/mesurer_dinov2_ft.py`, `out/maladies/dinov2_ft/bilan_dinov2_ft.json`.
+
+| Condition | v2 | DINOv2-FT | Verdict |
+| --- | --- | --- | --- |
+| Validation : malades dites saines (≤ v2 + 0,5 point) | 4 / 2 001 | 9 | OK |
+| Validation : fausses alertes (≤ v2 + 1 point) | 7 / 1 000 | 6 | OK |
+| Validation : maladie nommée juste (≥ 95 %) | 97,6 % | 97,3 % | OK |
+| BananaLSD : Sigatoka nommée (≥ v2 − 2 points) | 445 / 473 | **457** | OK |
+| BananaLSD : saines bien classées (≥ v2 − 2 points) | 86 / 90 | **88** | OK |
+| BananaLSD : inconnues dites saines (≤ v2 + 1 point) | 0 / 334 | 1 | OK |
+| AUC de loin (≥ v2 − 0,02) | 0,672 | 0,626 | **échec** |
+| Garde : inconnues dites Sigatoka (≤ 246 / 334) | 230 | 284 | **échec** |
+| Gain : rappel équilibré BananaLSD (≥ v2 + 1 point) | 0,948 | **0,972** | OK |
+
+**DINOv2-FT n'est pas adoptable** : il échoue sur la vue de loin et sur la garde des maladies inconnues. Selon le départage, la soupe reste le candidat retenu.
+
+Lecture, sans effet sur la décision :
+- C'est **le meilleur modèle mesuré en gros plan hors domaine**. Sur BananaLSD, il nomme 457 Sigatoka sur 473 (contre 445 pour la v2 et 452 pour la soupe) et classe bien 88 saines sur 90, avec un seul réseau et une seule vue.
+- Mais il aggrave les deux faiblesses connues. Il dit Sigatoka pour 85 % des maladies inconnues (v2 : 69 %) et n'en signale que 22 comme non identifiées (v2 : 69). Et il sépare moins bien les feuilles malades et saines vues de loin.
+- Le compromis est donc le même que pour la v8 et la soupe, en plus marqué. Plus un modèle reconnaît bien les maladies connues hors domaine, plus il range les maladies inconnues dans la Sigatoka.
