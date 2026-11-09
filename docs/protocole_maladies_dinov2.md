@@ -62,6 +62,36 @@ Jamais lus : twakihasan, banana-buddy, la Cordana du Pérou, khadavy.
 2. Carnet Kaggle d'extraction, puis contrôle : la sonde ConvNeXt doit lire les mêmes photos, dans le même ordre, que les fichiers GPU de la nuit.
 3. Mesure unique : `scripts/mesurer_dinov2.py`, dont les résultats sont écrits en section 6.
 
-## 6. Résultats
+## 6. Résultats (9 novembre 2026, vers 14 h 45, mesure unique)
 
-(à remplir)
+**Calculs** : carnet Kaggle `affilecorentin/extraire-dinov2` (version 1, GPU, 11 minutes). Aucune valeur non finie dans les caractéristiques. Contrôles passés : les photos de validation et de BananaLSD sont dans le même ordre que les fichiers GPU de la nuit, et le tirage d'ajustement est identique à celui du protocole « mélange + nouveauté ». Mesure : `scripts/mesurer_dinov2.py`, sortie dans `out/maladies/dinov2/bilan_dinov2.json`.
+
+### D1 : détecteur de nouveauté
+
+| Espace | AUC TDTU, variante c | variante d |
+| --- | --- | --- |
+| v2 (protocole précédent) | 0,517 | 0,515 |
+| ConvNeXt ImageNet (figé) | 0,505 | 0,494 |
+| **DINOv2 (figé)** | **0,576** | 0,570 |
+
+**Échec du diagnostic** : l'AUC exigée était d'au moins 0,65. DINOv2 sépare un peu mieux que le hasard les maladies inconnues de TDTU des Sigatoka, mais pas assez pour un détecteur. Comme prévu, rien n'a été mesuré sur BananaLSD pour D1.
+
+### D2 : sondes linéaires
+
+| Mesure | v2 (fine-tunée, repère) | Sonde DINOv2 | Sonde ConvNeXt ImageNet |
+| --- | --- | --- | --- |
+| Validation : malades dites saines | 4 / 2 001 | 8 | 35 |
+| Validation : fausses alertes | 7 / 1 000 | 3 | 27 |
+| Validation : rappel équilibré | 0,941 | **0,894** | 0,809 |
+| BananaLSD : Sigatoka nommée | 445 / 473 | 399 | 303 |
+| BananaLSD : saines bien classées | 86 / 90 | 76 | 82 |
+| BananaLSD : rappel équilibré | 0,948 | **0,844** | 0,776 |
+| BananaLSD : inconnues dites Sigatoka | 230 / 334 | 262 | 188 |
+
+Règle : BananaLSD, DINOv2 0,844 contre ConvNeXt 0,776, soit +6,8 points pour +3 exigés : **OK**. Validation : 0,894 contre 0,809, soit +8,5 points : **OK**. **Un fine-tuning complet de DINOv2 est proposé.** Il fera l'objet d'un protocole séparé, écrit et commité avant l'entraînement.
+
+Lecture :
+- Figé, DINOv2 donne de bien meilleures caractéristiques que le point de départ de la v2. Une simple couche dessus atteint 0,894 de rappel équilibré en validation, contre 0,809 pour ConvNeXt.
+- Une sonde figée reste loin de la v2 fine-tunée (0,894 contre 0,941 ; 0,844 contre 0,948 sur BananaLSD). Le diagnostic dit que DINOv2 est un meilleur point de départ ; il ne dit pas qu'un DINOv2 fine-tuné battra la v2.
+- Les deux sondes collent presque parfaitement à leur apprentissage (perte finale 0,0025 et 0,0046). La pénalité, fixée sans réglage, est faible.
+- La sonde DINOv2 range aussi beaucoup de maladies inconnues dans la Sigatoka (262 / 334). Les caractéristiques générales ne règlent pas, à elles seules, le défaut des maladies inconnues.
