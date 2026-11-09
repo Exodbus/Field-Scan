@@ -34,7 +34,7 @@ def jeux():
     ajust = ent.groupby(["source", "classe"], group_keys=False).apply(lambda g: g.sample(min(500, len(g)), random_state=2026))
     aj = pd.read_csv(RACINE / "data/feuilles_v3_ajouts/images.csv")
     tdtu = aj[aj.jeu.eq("tdtu") & aj.classe.isin(["autre_maladie", "black_sigatoka"])].copy()
-    tdtu["fichier"] = "data/feuilles_v3_ajouts/" + tdtu.image
+    tdtu["fichier"] = ["data/feuilles_v3_ajouts/" + i.removeprefix("ajouts_v3/") for i in tdtu.image]
     val = idx[idx.ensemble.eq("validation")]
     bl = idx[idx.ensemble.eq("test") & idx.source.eq("bananalsd")]
     return {"ajustement": ajust, "tdtu": tdtu, "validation": val, "bananalsd": bl}

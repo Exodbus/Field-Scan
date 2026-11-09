@@ -76,8 +76,50 @@ Les autres conditions de non-régression (malades dites saines, fausses alertes,
 2. Calculs sans lecture de score : `scripts/extraire_caracteristiques_v2.py` (caractéristiques et logits) et `scripts/predire_soupe_v2_v8.py` (probabilités de la soupe). Ces deux scripts n'affichent aucun score.
 3. Mesure unique : `scripts/mesurer_melange_nouveaute.py`, dont les résultats et la décision sont écrits en section 5.
 
+**Amendement 1 (9 novembre 2026, vers 12 h 55, avant tout résultat ; seul le lieu du calcul change, aucune règle ne change).** À la demande de Corentin, les calculs de l'étape 2 passent du processeur local à un GPU Kaggle. Le calcul local a été arrêté avant d'avoir écrit le moindre fichier. Le carnet `notebooks/predire_melange_nouveaute_kaggle.py` (Kaggle `affilecorentin/predire-melange-nouveaute`) fait les mêmes calculs que les deux scripts, avec les mêmes listes, le même ordre, la même préparation et le même tirage d'ajustement. Le contrôle de la préparation est conservé : le carnet calcule la v2 sur les 8 premières photos de chaque jeu, et la comparaison avec les fichiers GPU de la nuit (écart ≤ 10⁻³) se fait en local avant la mesure. Correction technique du script local : chemin des images TDTU (préfixe `ajouts_v3/` retiré).
+
 Si un candidat est adopté avant la note commune sur twakihasan, il sera proposé au binôme comme cinquième finaliste. Sinon, les finalistes restent v2, v2_384, v6 et v8.
 
-## 5. Résultats
+## 5. Résultats (9 novembre 2026, vers 13 h 10, mesure unique)
 
-(à remplir)
+**Calculs** : carnet Kaggle `affilecorentin/predire-melange-nouveaute` (version 1, GPU). Contrôle de la préparation : la v2 recalculée sur les 8 premières photos de chaque jeu redonne exactement les probabilités de la nuit (écart 0). La soupe est calculée sur les mêmes photos, dans le même ordre. Mesure : `scripts/mesurer_melange_nouveaute.py`, sortie dans `out/maladies/melange/bilan_melange_nouveaute.json`.
+
+### Partie A
+
+Seuils réglés sur la validation : mélange (alerte 0,50, nom 0,50, confiance 0,655), soupe (alerte 0,55, nom 0,50, confiance 0,680).
+
+| Condition | v2 | A1 mélange | A2 soupe |
+| --- | --- | --- | --- |
+| Validation : malades dites saines (≤ v2 + 0,5 point) | 4 / 2 001 (0,2 %) | 6 (0,3 %) | 4 (0,2 %) |
+| Validation : fausses alertes (≤ v2 + 1 point) | 7 / 1 000 (0,7 %) | 1 (0,1 %) | 9 (0,9 %) |
+| Validation : maladie nommée juste (≥ 95 %) | 97,6 % | 97,6 % | 97,3 % |
+| BananaLSD : Sigatoka nommée (≥ v2 − 2 points) | 445 / 473 (94,1 %) | 444 (93,9 %) | 452 (95,6 %) |
+| BananaLSD : saines bien classées (≥ v2 − 2 points) | 86 / 90 | 87 | 86 |
+| BananaLSD : inconnues dites saines (≤ v2 + 1 point) | 0 / 334 | 0 | 0 |
+| AUC de loin, `val_loin` (≥ v2 − 0,02) | 0,672 | 0,662 | 0,655 |
+| **Gain : BananaLSD, Sigatoka nommée ≥ 450 / 473** | — | **échec** (444) | **OK** (452) |
+
+**Selon la règle, le mélange n'est pas adoptable, la soupe l'est, et c'est elle qui est retenue.**
+
+Rapporté sans effet sur la décision, et à écrire avec le résultat :
+- Le gain est petit : 7 Sigatoka de plus sur 473. En paires, la soupe a raison et la v2 tort pour 9 photos, et l'inverse pour 2 (test de McNemar exact, calculé après la mesure, à titre indicatif : p ≈ 0,07).
+- **La soupe aggrave le défaut des maladies inconnues** : sur BananaLSD, elle en dit 273 / 334 Sigatoka (81,7 %), contre 230 (68,9 %) pour la v2, et elle n'en signale que 33 comme non identifiées ou « je ne sais pas », contre 69 pour la v2. Le mélange fait de même, à un degré moindre (259 et 47). C'est le défaut déjà connu de la v8, transmis aux deux combinaisons.
+- La règle a été écrite en connaissant les résultats séparés de la v2 et de la v8 : le gain n'est pas une découverte, il retrouve le petit avantage de la v8 en gros plan, sans perdre autant de loin.
+
+### Partie B
+
+AUC sur TDTU (`autre_maladie` contre `black_sigatoka`) : a 0,477 ; b 0,394 ; c 0,517 ; d 0,515. **Aucune variante ne sépare les maladies inconnues des Sigatoka mieux que le hasard.** La règle retient la variante c (Mahalanobis), avec un seuil de 17 326 (quantile 98 % de la validation).
+
+| Condition | v2 | v2 + détecteur | Verdict |
+| --- | --- | --- | --- |
+| Validation : malades qui reçoivent un nom (≥ v2 − 2 points) | 1 894 / 2 001 (94,7 %) | 1 853 (92,6 %) | **échec** |
+| Validation : maladie nommée juste (≥ 95 %) | 97,6 % | 97,6 % | OK |
+| BananaLSD : Sigatoka nommée (≥ v2 − 2 points) | 94,1 % | 93,2 % | OK |
+| **Gain : BananaLSD, inconnues nommées (≤ v2 − 10 points)** | 265 / 334 (79,3 %) | 263 (78,7 %) | **échec** |
+
+**Le détecteur n'est pas adopté.** Dans l'espace des caractéristiques de la v2, les maladies inconnues ne sont pas plus loin des classes apprises que les maladies connues prises dans un autre pays. La v2 ne « voit » pas qu'une maladie est nouvelle : elle la projette sur la classe connue qui lui ressemble le plus. Avec la classe « autre » (v5, v7) qui a échoué, c'est la deuxième méthode qui ne règle pas ce défaut. Il est à écrire comme une limite.
+
+### Conséquences
+
+- Selon la règle, **la soupe v2 + v8 remplace la v2** comme modèle de gros plan. Elle a le même coût de calcul que la v2 : 3 réseaux, 4 vues. Son intégration dans la chaîne (`fieldscan/`) reste soumise à l'accord de Corentin, comme toute modification de l'existant. Elle est proposée au binôme comme **cinquième finaliste** de la note commune sur twakihasan, avec sa réserve sur les maladies inconnues.
+- La recommandation de l'auteur est de **présenter la soupe et la v2 côte à côte sur twakihasan** avant de changer la chaîne. Le gain mesuré ici est petit et porte sur un seul jeu, BananaLSD, déjà consulté plusieurs fois. Le recul sur les maladies inconnues, lui, est net.
