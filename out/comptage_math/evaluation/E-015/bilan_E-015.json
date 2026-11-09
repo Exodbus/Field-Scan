@@ -1,0 +1,289 @@
+{
+  "identifiant": "E-015",
+  "images": 359,
+  "photos": 64,
+  "blocs": 9,
+  "composition_blocs": {
+    "B0": [
+      "bv_dji_0543",
+      "bv_dji_0544",
+      "bv_dji_0545",
+      "bv_dji_0546",
+      "bv_dji_0547",
+      "bv_dji_0548",
+      "bv_dji_0549"
+    ],
+    "B1": [
+      "bv_dji_0550",
+      "bv_dji_0551",
+      "bv_dji_0552",
+      "bv_dji_0553",
+      "bv_dji_0554",
+      "bv_dji_0555",
+      "bv_dji_0556"
+    ],
+    "B2": [
+      "bv_dji_0557",
+      "bv_dji_0564",
+      "bv_dji_0565",
+      "bv_dji_0567",
+      "bv_dji_0568",
+      "bv_dji_0569",
+      "bv_dji_0571"
+    ],
+    "B3": [
+      "bv_dji_0574",
+      "bv_dji_0576",
+      "bv_dji_0580",
+      "bv_dji_0581",
+      "bv_dji_0582",
+      "bv_dji_0612",
+      "bv_dji_0614"
+    ],
+    "B4": [
+      "bv_dji_0615",
+      "bv_dji_0618",
+      "bv_dji_0619",
+      "bv_dji_0620",
+      "bv_dji_0628",
+      "bv_dji_0630",
+      "bv_dji_0633"
+    ],
+    "B5": [
+      "bv_dji_0635",
+      "bv_dji_0643",
+      "bv_dji_0644",
+      "bv_dji_0645",
+      "bv_dji_0646",
+      "bv_dji_0647",
+      "bv_dji_0648"
+    ],
+    "B6": [
+      "bv_dji_0649",
+      "bv_dji_0650",
+      "bv_dji_0651",
+      "bv_dji_0652",
+      "bv_dji_0653",
+      "bv_dji_0654",
+      "bv_dji_0655"
+    ],
+    "B7": [
+      "bv_dji_0656",
+      "bv_dji_0657",
+      "bv_dji_0658",
+      "bv_dji_0659",
+      "bv_dji_0660",
+      "bv_dji_0661",
+      "bv_dji_0666"
+    ],
+    "B8": [
+      "bv_dji_0667",
+      "bv_dji_0668",
+      "bv_dji_0677",
+      "bv_dji_0678",
+      "bv_dji_0679",
+      "bv_dji_0680",
+      "bv_dji_0681",
+      "bv_dji_0682"
+    ]
+  },
+  "T3_choix": {
+    "sigma": 0.35,
+    "distance": 1.25,
+    "seuil": 0.16876235716044902,
+    "f1": 0.567,
+    "au_bord": []
+  },
+  "au_seuil": {
+    "baseline_T3": {
+      "vp": 6204,
+      "fp": 7029,
+      "fn": 2445,
+      "detections": 13233,
+      "meres": 8649,
+      "precision": 0.4688,
+      "rappel": 0.7173,
+      "f1": 0.567,
+      "erreur_comptage_relative": 0.53,
+      "seuil": 0.16876235716044902,
+      "ic95_bloc": [
+        0.5369,
+        0.5931
+      ],
+      "ic95_photo": [
+        0.5507,
+        0.5827
+      ]
+    },
+    "vote": {
+      "vp": 5563,
+      "fp": 3261,
+      "fn": 3086,
+      "detections": 8824,
+      "meres": 8649,
+      "precision": 0.6304,
+      "rappel": 0.6432,
+      "f1": 0.6368,
+      "erreur_comptage_relative": 0.0202,
+      "seuil": 2.2381924,
+      "ic95_bloc": [
+        0.6158,
+        0.6562
+      ],
+      "ic95_photo": [
+        0.6243,
+        0.649
+      ]
+    },
+    "A_prime": {
+      "vp": 5968,
+      "fp": 7453,
+      "fn": 2681,
+      "detections": 13421,
+      "meres": 8649,
+      "precision": 0.4447,
+      "rappel": 0.69,
+      "f1": 0.5408,
+      "erreur_comptage_relative": 0.5517,
+      "seuil": 1.0951967999999999,
+      "ic95_bloc": [
+        0.5261,
+        0.5544
+      ],
+      "ic95_photo": [
+        0.5287,
+        0.552
+      ]
+    },
+    "vote_d3_E013": {
+      "vp": 5936,
+      "fp": 3638,
+      "fn": 2713,
+      "detections": 9574,
+      "meres": 8649,
+      "precision": 0.62,
+      "rappel": 0.6863,
+      "f1": 0.6515,
+      "erreur_comptage_relative": 0.1069,
+      "seuil": 1.86258375,
+      "ic95_bloc": [
+        0.6223,
+        0.6774
+      ],
+      "ic95_photo": [
+        0.6353,
+        0.6667
+      ]
+    }
+  },
+  "T3_vote_moins_baseline": {
+    "ic95_bloc": [
+      0.0374,
+      0.0977
+    ],
+    "ic95_photo": [
+      0.0516,
+      0.0874
+    ],
+    "difference": 0.0697
+  },
+  "T3_passe": true,
+  "T5_f1_k_Nref": {
+    "baseline_T3": 0.4742,
+    "vote": 0.6361,
+    "A_prime": 0.4967,
+    "vote_d3_E013": 0.6456
+  },
+  "T5_erreur_comptage_au_seuil": {
+    "baseline_T3": 0.53,
+    "vote": 0.0202,
+    "A_prime": 0.5517,
+    "vote_d3_E013": 0.1069
+  },
+  "T5_vote_moins_baseline_k_Nref": {
+    "ic95_bloc": [
+      0.1464,
+      0.1773
+    ],
+    "ic95_photo": [
+      0.1408,
+      0.1822
+    ],
+    "difference": 0.162
+  },
+  "T5_E013_moins_vote_k_Nref": {
+    "ic95_bloc": [
+      0.0009,
+      0.0177
+    ],
+    "ic95_photo": [
+      0.0024,
+      0.017
+    ],
+    "difference": 0.0095
+  },
+  "T5_passe": true,
+  "T6": {
+    "vote": {
+      "f1_hors_pli": 0.6317,
+      "f1_plis": [
+        0.5913,
+        0.6548,
+        0.6304,
+        0.6467
+      ],
+      "moyenne_plis": 0.6308,
+      "f1_reglage_complet": 0.6368,
+      "optimisme": 0.0051
+    },
+    "baseline_T3": {
+      "f1_hors_pli": 0.567,
+      "f1_plis": [
+        0.5157,
+        0.5995,
+        0.5881,
+        0.5588
+      ],
+      "moyenne_plis": 0.5655,
+      "f1_reglage_complet": 0.567,
+      "optimisme": -0.0
+    },
+    "vote_d3_E013": {
+      "f1_hors_pli": 0.6473,
+      "f1_plis": [
+        0.5879,
+        0.6746,
+        0.6586,
+        0.662
+      ],
+      "moyenne_plis": 0.6458,
+      "f1_reglage_complet": 0.6515,
+      "optimisme": 0.0042
+    },
+    "A_prime": {
+      "f1_hors_pli": 0.5378,
+      "f1_plis": [
+        0.5173,
+        0.5558,
+        0.5493,
+        0.5258
+      ],
+      "moyenne_plis": 0.5371,
+      "f1_reglage_complet": 0.5408,
+      "optimisme": 0.003
+    }
+  },
+  "T6_passe_i": true,
+  "T6_decote_vote": false,
+  "info_T3_dev_transfert": {
+    "vp": 7342,
+    "fp": 11979,
+    "fn": 3862,
+    "detections": 19321,
+    "meres": 11204,
+    "precision": 0.38,
+    "rappel": 0.6553,
+    "f1": 0.481,
+    "erreur_comptage_relative": 0.7245
+  }
+}

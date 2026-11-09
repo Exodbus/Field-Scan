@@ -7,10 +7,10 @@ Chaîne d'analyse d'une bananeraie à partir d'images aériennes et de photos de
 | Vigueur | Sentinel-2 ; drone RGB | NDVI, NDRE (satellite) ; ExG lissé (drone) ; zones et parcelles faibles par z-score robuste | alertes identiques aux scripts d'analyse validés |
 | Stress hydrique | Sentinel-2 | résidu du NDMI par rapport à la droite NDMI ~ NDVI du site | idem |
 | Suivi temporel | Sentinel-2, deux dates ou plus | évolution corrigée de la variation commune au site | idem |
-| Maladies | photos de feuilles | EfficientNet-B0 (ONNX), 4 vues, décision en deux étapes avec rejet de l'inconnu | 87 à 93 % de bonnes réponses sur un autre pays, 0 fausse alerte sur feuilles saines ; rejet des maladies inconnues 11 à 31 % |
+| Maladies | photos de feuilles | v2 : 3 ConvNeXt-Tiny (PyTorch), 4 vues, décision en deux étapes (alerte, nom de la maladie) avec « je ne sais pas » (`docs/protocole_maladies_*.md`) | validation : 0,2 % de malades ratées, 0,7 % de fausses alertes ; Bangladesh (BananaLSD) : 94 % des Sigatoka nommées, 96 % des saines bien classées ; maladies inconnues dites Sigatoka dans 69 % des cas |
 | Comptage des pieds | orthomosaïque de drone | détecteur de centres de couronnes (carte de chaleur, ResNet-18, 5 cm, ONNX), palmiers et cocotiers appris comme exemples négatifs | F1 0,79 en validation (MM1-MM2, pieds mères) ; 14 fausses détections sur 873 images de palmiers ; **faible sur jeunes plants et bananiers cachés** (F1 0,19 sur le site de test) |
 
-Temps sur processeur : environ **35 ms par photo de feuille** (4 vues) et **2 à 4 s par hectare** de drone pour le comptage.
+Temps sur processeur : environ **0,7 s par photo de feuille** (3 réseaux × 4 vues ; 35 ms avec l'ancien B0) et **2 à 4 s par hectare** de drone pour le comptage.
 
 ## Installation
 
@@ -30,7 +30,8 @@ pip install -r requirements.txt
 
 | Fichier | Module | Où le trouver |
 | --- | --- | --- |
-| `modeles/maladies/maladies_v2.onnx` | maladies | dans le dépôt (16 Mo) |
+| `modeles/maladies_binome/maladies_v2/poids/` (3 fichiers `*_convnext_tiny_*.pt` et `seuils.json`) | maladies (retenu) | hors du dépôt (170 Mo) : archive `maladies_v2.zip` du binôme, dossier `poids/` à copier ici ; un autre dossier du même format (soupe v2 + v8...) se branche par `config.yaml` |
+| `modeles/maladies/maladies_v2.onnx` | maladies (ancien B0, comparaison) | dans le dépôt (16 Mo) |
 | `modeles/maladies/entrainement_maladies.json` | maladies | dans le dépôt : classes, vues, normalisation, seuil de rejet |
 | `modeles/maladies/rejet.npz` | maladies (analyses) | dans le dépôt |
 | `modeles/centres_5cm_v2.onnx` et `modeles/centres_5cm_v2.json` | comptage (retenu) | dans le dépôt (45 Mo) : détecteur de centres v2, seuil, résolution, normalisation et règle de choix ; les deux fichiers doivent porter le même nom |
@@ -105,15 +106,16 @@ Tous les seuils sont dans `config.yaml` (valeurs par défaut dans `fieldscan/con
 - **Comptage indicatif** : fiable sur des bananiers adultes bien visibles (plantation, agroforesterie) ; il oublie la plupart des jeunes plants et des bananiers cachés sous d'autres arbres (rappel 0,11 sur le site de test). C'est le prix de l'apprentissage des palmiers comme exemples négatifs (fausses détections sur palmiers : 6 876 → 14 sur 873 images). Ses alertes de densité sont en confiance faible.
 - **Rejets** : le comptage ne distingue pas pieds mères et rejets ; les rejets au pied des bananiers ne sont pas comptés (choix de périmètre).
 - **Borne basse de la fourchette** : mesurée sur Count banana plants, dont les images sont d'autres découpes des photos d'entraînement (Plants-bana) ; elle est optimiste et seulement indicative.
-- **Maladies inconnues** : bien signalées comme malades, mais rarement reconnues comme inconnues (11 à 31 % de rejet) ; les maladies à taches sont souvent rangées dans la cercosporiose.
-- **Prise de vue** : le classifieur est fiable sur des gros plans de la zone malade ; il échoue sur des feuilles entières photographiées de loin (essai éthiopien).
+- **Maladies inconnues** : détectées comme malades, mais la v2 leur donne souvent le nom d'une maladie connue (Cordana et Pestalotiopsis dites Sigatoka dans 69 % des cas au Bangladesh). Trois méthodes ont échoué à corriger ce défaut (classe « autre maladie », détecteurs de nouveauté sur la v2 et sur DINOv2).
+- **Prise de vue** : le classifieur est fiable sur des gros plans de la zone malade ; il sépare mal les feuilles malades et saines vues de loin (AUC 0,67 sur les feuilles du robot ROAMER), et aucune version apprise sur des vues de loin n'a mieux fait hors de ce robot.
 - **Stress hydrique** : la bande B11 (20 m) est plus floue que le NDVI (10 m) ; aux bords nets d'une zone peu vigoureuse, de petites zones de stress peuvent apparaître.
 - **Nuages** : une parcelle couverte à plus de 50 % est non exploitable à cette date.
 
 ## Reproduire l'entraînement
 
 - Données de feuilles : `scripts/verifier_zips.py`, `scripts/reperer_tiges.py`, `scripts/preparer_feuilles.py` (exclusion des tiges, doublons, fuites).
-- Classifieur : `notebooks/entrainer_maladies_kaggle.ipynb` (ou la version Colab) ; deux exécutions complètes ont donné des résultats identiques.
+- Classifieur v2 (retenu) : carnet du binôme `maladies_v2_kaggle.ipynb` (archive `maladies_v2.zip`) ; essais suivants, chacun avec son protocole : `notebooks/entrainer_maladies_v*_kaggle.py`, `notebooks/entrainer_maladies_dinov2_kaggle.py`.
+- Ancien classifieur B0 : `notebooks/entrainer_maladies_kaggle.ipynb` (ou la version Colab) ; deux exécutions complètes ont donné des résultats identiques.
 - Comptage : `scripts/prepare_reforestree.py`, `scripts/preparer_roboflow_deepforest.py` (`--boite-cible 60 --format jpg`), `scripts/preparer_multiple_tree.py`, `scripts/preparer_validation_points.py`, puis `notebooks/entrainer_centres_v2_kaggle.ipynb` (règle de choix de l'époque et du seuil écrite dans `modeles/centres_5cm_v2.json`). Vérification des fuites : `scripts/verifier_sources_communes.py`.
 
 ## Structure

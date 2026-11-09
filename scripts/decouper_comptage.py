@@ -78,6 +78,15 @@ PARTIES_V4 = {**PARTIES,
               "btd": "test"}                          # banana_tree_detection : site indépendant, plantation espacée
 SOURCES_V4 = {"plantas_platano.zip": "plantas_platano", "platano_lasuiza.zip": "platano_lasuiza",
               "banana_tree_detection.zip": "banana_tree_detection"}
+# v5 (docs/protocole_comptage_v5.md) : banavista (sessions de vol) et banano_dense (test neuf)
+PARTIES_V5 = {**PARTIES_V4,
+              "bv_session_a": "train",                # DJI_0542 à 0682 : bandes de plantation et pépinière
+              "bv_b_train": "train",                  # session B, lignes DJI_0757 à 0841
+              "bv_b_tampon": "exclu",                 # session B, DJI_0842 à 0861 : bande tampon
+              "bv_b_val": "val",                      # session B, DJI_0862 à 0945 : validation dense
+              "bv_ortho": "exclu",                    # orthophotos : photos d'origine inconnues
+              "banano": "test"}                       # banano_dense : orthomosaïque entière, test neuf
+SOURCES_V5 = {**SOURCES_V4, "banavista.zip": "banavista", "banano_dense.zip": "banano_dense"}
 SITES_RT = {"Flora Pluas": "rt_flora_pluas", "Nestor Macias": "rt_nestor_macias", "Leonor Aspiazu": "rt_leonor_aspiazu",
             "Manuel Macias": "rt_manuel_macias", "Carlos Vera Guevara": "rt_carlos_vera_guevara",
             "Carlos Vera Arteaga": "rt_carlos_vera_arteaga"}
@@ -114,6 +123,22 @@ def groupe_v4(source, o):
         return "lasuiza" if o.startswith("tile_") else None
     if source == "banana_tree_detection":
         return "btd" if o.startswith("uav20221018") else None
+    if source == "banavista":
+        m = re.match(r"^dji_(\d+)", o)
+        if not m:
+            return "bv_ortho"
+        n = int(m.group(1))
+        if 542 <= n <= 682:
+            return "bv_session_a"
+        if 757 <= n <= 841:
+            return "bv_b_train"
+        if 842 <= n <= 861:
+            return "bv_b_tampon"
+        if 862 <= n <= 945:
+            return "bv_b_val"
+        return None
+    if source == "banano_dense":
+        return "banano" if o.startswith("tile_") else None
     return None
 
 
@@ -156,16 +181,16 @@ def lire_coco(chemin_zip):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--version", choices=["v3", "v4"], default="v3", help="découpage du protocole v3 ou v4")
+    ap.add_argument("--version", choices=["v3", "v4", "v5"], default="v3", help="découpage du protocole v3, v4 ou v5")
     ap.add_argument("--out", default=None, help="défaut : data/drone/decoupage_comptage (v3) ou ..._v4")
     ap.add_argument("--sites", default="data/drone/reforestree/prepare/resume_sites.csv",
                     help="liste des sites ReforesTree (colonne site)")
     ap.add_argument("--points-jeunes", default="data/drone/jeunes_bananiers/points_jeunes_bananiers.geojson",
                     help="points manuels des jeunes bananiers (GeoJSON versionné, repère local de cadres.json)")
     args = ap.parse_args(argv)
-    out = Path(args.out or ("data/drone/decoupage_comptage" + ("_v4" if args.version == "v4" else "")))
+    out = Path(args.out or ("data/drone/decoupage_comptage" + ("" if args.version == "v3" else f"_{args.version}")))
     out.mkdir(parents=True, exist_ok=True)
-    parties = PARTIES_V4 if args.version == "v4" else PARTIES
+    parties = {"v3": PARTIES, "v4": PARTIES_V4, "v5": PARTIES_V5}[args.version]
     rapport, erreurs = [], []
 
     # 1. Bananiers : plants_bana_originaux, une ligne par image d'origine (les copies augmentées sont retirées)
@@ -249,12 +274,12 @@ def main(argv=None):
 
     # 3 bis (v4). Plantations ajoutées : une copie par image (MD5 et nom d'origine) ; images à cadres dessinés retirées
     nouveaux = []
-    if args.version == "v4":
-        for nom_zip, source in SOURCES_V4.items():
+    if args.version in ("v4", "v5"):
+        for nom_zip, source in (SOURCES_V5 if args.version == "v5" else SOURCES_V4).items():
             t = lire_coco(RACINE / nom_zip)
             avant = len(t)
             zz = zipfile.ZipFile(RACINE / nom_zip)
-            t["cadres_dessines"] = t.image.map(lambda n: cadres_dessines(zz.read(n)))
+            t["cadres_dessines"] = t.image.map(lambda n: cadres_dessines(zz.read(n)) if source in SOURCES_V4.values() else False)
             n_cadres = int(t.cadres_dessines.sum())
             t = t[~t.cadres_dessines].drop(columns="cadres_dessines")
             t = t.sort_values("image").drop_duplicates("empreinte")
@@ -263,8 +288,11 @@ def main(argv=None):
             t["groupe"] = [groupe_v4(source, o) for o in t.origine]
             t["source"] = source
             t["annotations"] = f"{source} (Roboflow, " + ("points" if source == "plantas_platano" else "boîtes") + ")"
-            # photo d'origine = nom d'origine (tuiles d'orthomosaïque nommées par leur position)
-            t["photo"] = t.origine if source != "platano_lasuiza" else "lasuiza_" + t.origine
+            # photo d'origine = nom d'origine (tuiles d'orthomosaïque nommées par leur position) ; préfixe pour les
+            # sources dont les noms peuvent coïncider avec ceux d'autres jeux (DJI_0544 de banavista ≠ dji_0544 de Plants-bana)
+            prefixe = {"platano_lasuiza": "lasuiza_", "banavista": "bv_", "banano_dense": "banano_"}.get(source, "")
+            t["photo"] = prefixe + t.origine
+            t["origine"] = prefixe + t.origine
             rapport.append(f"{source} : {avant} images, {n_cadres} à cadres dessinés retirées, {len(t)} gardées "
                            f"(copies retirées) ; groupes {dict(t.groupe.value_counts())}")
             nouveaux.append(t)
