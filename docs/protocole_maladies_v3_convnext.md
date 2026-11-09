@@ -174,4 +174,52 @@ Aucun réglage après le test. Le résultat est écrit ici tel quel.
 
 ## 9. Résultats
 
-À remplir.
+**Entraînement (8 novembre 2026, Kaggle `affilecorentin/entrainer-maladies-v5`, GPU T4, un seul)** : terminé ; perte de 0,47 à 0,39 sur les 3 réseaux ; règles de la v2 sur la validation : moyenne des 3 réseaux (coût 71 contre 91 pour un seul), 1 vue ; seuils : alerte 0,50, nom 0,72, confiance 0,566. Sorties `modeles/maladies_v5_kaggle/v5/` (SHA-256 des poids 100fc2e2…, 5dcfbe6a…, e8fe3229… ; `seuils.json` 4eb97c8d…).
+
+**Adoption (section 5, 9 novembre 2026)** : prédictions de la v2 et de la v5 calculées dans le même carnet GPU (`affilecorentin/predictions-adoption-v5-v7`, chaque modèle à ses propres seuils), règle appliquée par `scripts/mesurer_adoption_v5.py` (`out/maladies/kaggle_adoption_v5/bilan_adoption_v5.json`) :
+
+| Condition | v2 | v5 | Verdict |
+| --- | --- | --- | --- |
+| Validation : malades dites saines (≤ v2 + 0,5 point) | 4 / 2 001 (0,20 %) | 7 / 2 001 (0,35 %) | OK |
+| Validation : fausses alertes (≤ v2 + 1 point) | 7 / 1 000 (0,7 %) | 30 / 1 000 (3,0 %) | **échec** |
+| Validation : maladie nommée juste (≥ 95 %) | 97,6 % | 95,7 % | OK |
+| BananaLSD : Sigatoka nommée (≥ v2 − 2 points) | 445 / 473 (94,1 %) | 433 / 473 (91,5 %) | **échec** |
+| BananaLSD : saines bien classées (≥ v2 − 2 points) | 86 / 90 (95,6 %) | 82 / 90 (91,1 %) | **échec** |
+| BananaLSD : inconnues dites saines (≤ v2 + 1 point) | 0 / 334 | 1 / 334 | OK |
+
+**La v5 n'est pas adoptée** : la v2 reste dans la chaîne.
+
+Rapporté sans effet sur la décision : inconnues de BananaLSD (Cordana, Pestalotiopsis) dites Sigatoka 296 / 334 (88,6 %) contre 230 / 334 (68,9 %) pour la v2 ; dites « malade, non identifiée » ou « je ne sais pas » 30 / 334 (9,0 %) contre 69 / 334 (20,7 %). **La classe « autre maladie », apprise sur un seul flétrissement (TDTU) et 27 Sigatoka jaunes, ne généralise pas aux maladies jamais vues** ; elle les range encore plus souvent dans la Sigatoka.
+
+**Test banana-buddy (section 7, 9 novembre 2026 vers 3 h, mesure unique, jeu déjà consulté, sans effet)** : 1 870 photos de la liste figée (empreintes vérifiées dans le carnet `affilecorentin/predictions-adoption-v5-v7`, version 2) ; fichier `out/maladies/kaggle_adoption_finale/indicatif_auc_loin_et_banana_buddy.json`.
+
+| Mesure | v2 | v5 |
+| --- | --- | --- |
+| Malades (fusariose et taches) dites saines | 0,8 % | 0,1 % |
+| Fausses alertes sur les saines (712) | 3,9 % | 1,4 % |
+| Saines bien classées | 90,9 % | 94,9 % |
+| **Fusariose (Panama, 608) nommée** | **72,9 %** | **7,9 %** |
+| Fusariose dite malade (n'importe quel nom) | 74,7 % | 85,7 % |
+| Maladie à taches (550) dite malade | 81,5 % | 92,0 % |
+| Maladie à taches dite cercosporiose noire | 63,5 % | 80,7 % |
+
+Première mesure de la fusariose hors de Tanzanie (Sri Lanka probable) : la v2 en nomme 73 %. La v5 la range presque toujours dans « autre maladie » (« malade, non identifiée »), ce qui confirme que sa classe « autre » absorbe les maladies connues vues sous un autre style de photo.
+
+**Alerte de fuite du 9 novembre 2026 (matin), vérifiée le même jour : aucune copie trouvée dans la liste figée.** Le binôme a signalé que les dossiers « … Leaf » de banana-buddy sont à 70-87 % des copies tournées de la Tanzanie 2023 (705 / 1 004 Healthy Leaf, 817 / 999 Leafspot Leaf, 624 / 748 Panama Leaf). Un premier erratum, écrit le matin sans vérification, retirait le chiffre de fusariose ci-dessus ; il est annulé :
+
+- les nombres du binôme correspondent aux photos nommées `Image_N` (format tanzanien) de ces dossiers : 707 / 1 003, 817 / 999 et 619 / 748. La règle de la section 7 les a **exclues de la liste figée** (2 145 exclusions « nom tanzanien », `data/test_banana_buddy/exclusions.csv`). Son décompte porte sur tout banana-buddy, pas sur la liste ;
+- correspondance des noms : la « Tanzanie 2023 » du binôme (Harvard Dataverse, apprentissage de la v2) est notre « Tanzanie 2021 » ; sa « Tanzanie 2025 » (Zenodo, sa validation, 11 766 photos) est notre « Tanzanie 2022-2023 » (3 001 sur place et 8 765 non téléchargées) ;
+- contrôle direct, indicatif (`out/maladies/controle_banana_buddy/`) : 60 photos « Healthy Leaf » et 30 « Healthy » de la liste, comparées sous les 8 orientations aux 6 628 photos saines de Tanzanie présentes sur place (2021 complète et HEALTHY-1 de 2022) : aucune copie (similarité maximale 0,92 ; les paires les plus proches sont des feuilles différentes).
+
+Écart de scores de la v2 entre dossiers, sur les réponses déjà mesurées ci-dessus (aucune nouvelle mesure) :
+
+| Dossier | Photos | v2 : bonne réponse |
+| --- | --- | --- |
+| Panama Leaf | 62 | 100 % fusariose |
+| Panama | 546 | 69,8 % fusariose |
+| Leafspot Leaf | 179 | 87,7 % cercosporiose noire |
+| Leafspot | 371 | 51,8 % cercosporiose noire |
+| Healthy Leaf | 293 | 94,9 % saines |
+| Healthy | 419 | 88,1 % saines |
+
+Les dossiers « Leaf » sont des **gros plans**, comme l'apprentissage ; les autres sont des **vues larges** (colonne `vue` de la liste) : la prise de vue suffit à expliquer une bonne part de l'écart. **Le chiffre de fusariose nommée (72,9 %) est maintenu**, avec une réserve : la liste n'a pas été comparée aux 8 765 photos de Tanzanie 2022-2023 non téléchargées (validation du binôme, que la v2 n'apprend pas). Le binôme peut faire ce contrôle sur la liste exacte.
