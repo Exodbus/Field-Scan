@@ -1,6 +1,16 @@
-"""Module maladies : photos de feuilles, classifieur ONNX (processeur), décision en deux étapes.
+"""Module maladies : photos de feuilles, classifieur (processeur), décision en deux étapes.
 
-Modèle et réglages : le fichier ONNX (config « maladies.modele ») et, à côté, entrainement_maladies.json
+Deux sortes de modèles, selon « maladies.modele » dans la config :
+
+1. Un **dossier** de réseaux ConvNeXt-Tiny PyTorch avec leur seuils.json (v2 du binôme, soupe v2 + v8...) :
+   moyenne des réseaux, chacun sur 4 vues (identité, deux miroirs, quart de tour), préparation de la v2
+   (rotation EXIF, recadrage carré au centre à 224 pixels, JPEG qualité 95). Décision de la v2 (seuils.json) :
+     malade si P(cercosporiose) + P(fusariose) >= seuil_alerte ;
+     maladie nommée si elle fait au moins seuil_nom de P(malade), sinon « malade, non identifiée » ;
+     « je ne sais pas » si la plus forte probabilité est sous seuil_confiance.
+   Ce sont les mêmes calculs que modeles/maladies_binome/maladies_v2/classifieur.py.
+
+2. Un **fichier ONNX** (ancien classifieur EfficientNet-B0) et, à côté, entrainement_maladies.json
 (classes, vues, normalisation, méthode et seuil de rejet réglés sur la validation). Préparation identique
 à la validation : rotation EXIF, petit côté ramené à 256 pixels, redimensionnement à 224, centre 224 x 224,
 moyenne des sorties sur les vues (identité, miroirs, rotation de 180°).
@@ -31,18 +41,83 @@ VUES = {"identite": lambda x: x, "miroir_horizontal": lambda x: x[..., ::-1], "m
         "rotation_180": lambda x: x[..., ::-1, ::-1]}
 
 
+CLASSES_CONVNEXT = ["saine", "cercosporiose_noire", "fusariose"]   # ordre des sorties : saine, black_sigatoka, fusarium
+
+
+def charger_convnext(dossier):
+    """Dossier de réseaux ConvNeXt-Tiny (*.pt, poids 16 ou 32 bits) et leur seuils.json."""
+    import torch
+    from torchvision import models
+    seuils = json.loads((dossier / "seuils.json").read_text(encoding="utf-8"))
+    reseaux = []
+    for chemin in sorted(dossier.glob("*_convnext_tiny_*.pt")):
+        r = models.convnext_tiny(weights=None)
+        r.classifier[2] = torch.nn.Linear(r.classifier[2].in_features, 3)
+        poids = torch.load(chemin, map_location="cpu", weights_only=True)
+        r.load_state_dict({k: v.float() if v.is_floating_point() else v for k, v in poids.items()})
+        reseaux.append(r.eval())
+    if not reseaux:
+        raise RuntimeError(f"aucun réseau *_convnext_tiny_*.pt dans {dossier}")
+    return dict(type="convnext", reseaux=reseaux, classes=CLASSES_CONVNEXT,
+                vues=["identite", "miroir_horizontal", "miroir_vertical", "quart_de_tour"] if seuils.get("quatre_vues", True) else ["identite"],
+                methode="proba_max", seuil=float(seuils["seuil_confiance"]), seuil_alerte=float(seuils["seuil_alerte"]),
+                seuil_nom=float(seuils["seuil_nom"]), nom=seuils.get("modele", dossier.name), source_reglages=str(dossier / "seuils.json"))
+
+
+def preparer_convnext(chemin):
+    """Préparation de la v2 (classifieur.preparer) : photo remise droite, côté le plus court à 224 pixels, recadrage
+    carré au centre, réenregistrée en JPEG qualité 95 ; puis normalisation ImageNet."""
+    import io
+    with Image.open(chemin) as im:
+        im.draft("RGB", (448, 448))
+        im = ImageOps.exif_transpose(im).convert("RGB")
+        petite = ImageOps.fit(im, (224, 224), method=Image.BILINEAR)
+    tampon = io.BytesIO()
+    petite.save(tampon, format="JPEG", quality=95)
+    a = np.asarray(Image.open(tampon).convert("RGB"), dtype="float32") / 255.0
+    a = (a - np.array([0.485, 0.456, 0.406], "float32")) / np.array([0.229, 0.224, 0.225], "float32")
+    return a.transpose(2, 0, 1)
+
+
+def predire_convnext(chemins, m, lot=16):
+    """Probabilités (n, 3) : moyenne des vues, puis des réseaux (comme classifieur.probabilites)."""
+    import torch
+    vues = {"identite": lambda x: x, "miroir_horizontal": lambda x: x.flip(3), "miroir_vertical": lambda x: x.flip(2),
+            "quart_de_tour": lambda x: x.rot90(1, (2, 3))}
+    sorties = []
+    with torch.no_grad():
+        for i in range(0, len(chemins), lot):
+            x = torch.from_numpy(np.stack([preparer_convnext(c) for c in chemins[i:i + lot]]))
+            p = torch.stack([sum(torch.softmax(r(vues[v](x)), 1) for v in m["vues"]) / len(m["vues"]) for r in m["reseaux"]]).mean(0)
+            sorties.append(p.numpy())
+    return np.concatenate(sorties) if sorties else np.zeros((0, 3), "float32")
+
+
+def decider_convnext(P, m):
+    """Décision de la v2 ; renvoie les mêmes sorties que decider()."""
+    p_malade = P[:, 1:].sum(1)
+    part = P[:, 1:].max(1) / np.maximum(p_malade, 1e-9)
+    maladie = np.array(CLASSES_CONVNEXT)[1 + P[:, 1:].argmax(1)]
+    reponse = np.where(p_malade < m["seuil_alerte"], "saine", np.where(part >= m["seuil_nom"], maladie, "malade_non_identifiee")).astype(object)
+    confiance = P.max(1)
+    reponse[confiance < m["seuil"]] = "je_ne_sais_pas"
+    return reponse.astype(str), p_malade, confiance, P
+
+
 def charger_modele(reglages):
-    import onnxruntime as ort
     chemin = Path(reglages["maladies"]["modele"])
     if not chemin.exists():
         raise RuntimeError(f"modèle introuvable : {chemin}")
+    if chemin.is_dir():
+        return charger_convnext(chemin)
+    import onnxruntime as ort
     infos_path = chemin.parent / "entrainement_maladies.json"
     infos = json.loads(infos_path.read_text(encoding="utf-8")) if infos_path.exists() else {}
     rejet = infos.get("rejet", {})
     methode = rejet.get("methode", reglages["maladies"]["methode_rejet"])
     if methode not in ("proba_max", "energie"):
         raise RuntimeError(f"méthode de rejet « {methode} » non prise en charge à l'inférence")
-    return dict(session=ort.InferenceSession(str(chemin), providers=["CPUExecutionProvider"]),
+    return dict(type="onnx", session=ort.InferenceSession(str(chemin), providers=["CPUExecutionProvider"]),
                 classes=infos.get("classes", ["cercosporiose_noire", "fusariose", "saine"]),
                 vues=infos.get("vues", list(VUES)),
                 moyenne=np.array(infos.get("normalisation", {}).get("moyenne", [0.485, 0.456, 0.406]), "float32"),
@@ -110,10 +185,16 @@ def executer(ctx):
     m = charger_modele(ctx.reglages)
     photos = ctx.inventaire.photos
     chemins = [p.chemin for p in photos]
-    ctx.journal.info(f"  Maladies : modèle {Path(reg['modele']).name}, {len(m['vues'])} vue(s), rejet {m['methode']} "
-                     f"au seuil {m['seuil']:.4f} (réglages : {m['source_reglages']})")
-    L = predire(chemins, m)
-    reponse, p_malade, confiance, P = decider(L, m, reg["seuil_malade"])
+    if m["type"] == "convnext":
+        ctx.journal.info(f"  Maladies : modèle {m['nom']} ({len(m['reseaux'])} réseau(x) ConvNeXt-Tiny), {len(m['vues'])} vue(s), "
+                         f"alerte à {m['seuil_alerte']:.2f}, nom à {m['seuil_nom']:.2f}, « je ne sais pas » sous {m['seuil']:.4f} "
+                         f"(réglages : {m['source_reglages']})")
+        reponse, p_malade, confiance, P = decider_convnext(predire_convnext(chemins, m), m)
+    else:
+        ctx.journal.info(f"  Maladies : modèle {Path(reg['modele']).name}, {len(m['vues'])} vue(s), rejet {m['methode']} "
+                         f"au seuil {m['seuil']:.4f} (réglages : {m['source_reglages']})")
+        L = predire(chemins, m)
+        reponse, p_malade, confiance, P = decider(L, m, reg["seuil_malade"])
 
     tab = pd.DataFrame(dict(fichier=chemins, lat=[p.lat for p in photos], lon=[p.lon for p in photos],
                             reponse=reponse, libelle=[LIBELLES[r] for r in reponse], p_malade=p_malade.round(3),
@@ -147,6 +228,7 @@ def executer(ctx):
     pp = pd.DataFrame(par).set_index("parcelle_id") if par else pd.DataFrame()
     resume = dict(reponses=tab.reponse.value_counts().to_dict(), photos_localisees=int(tab.lat.notna().sum()),
                   photos_dans_parcelles=int(tab.parcelle_id.notna().sum()), methode_rejet=m["methode"], seuil_rejet=m["seuil"],
+                  modele=m.get("nom", Path(reg["modele"]).name), seuil_alerte=m.get("seuil_alerte", reg["seuil_malade"]),
                   photos=tab[["fichier", "reponse", "libelle", "p_malade", "confiance", "parcelle_id", "preuve"]].to_dict("records"))
     ctx.journal.info(f"  Maladies : {len(tab)} photo(s) ; réponses {resume['reponses']} ; {resume['photos_dans_parcelles']} rattachée(s) à une parcelle")
     return Resultat(par_parcelle=pp, alertes=alertes, couches=[str(ctx.sortie / "maladies_photos.csv")], resume=resume)

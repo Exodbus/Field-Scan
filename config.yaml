@@ -4,8 +4,14 @@ entrees:
 nuages:
   seuil_masque_pct: 50.0
 maladies:
-  modele: modeles/maladies/maladies_v2.onnx
-  seuil_rejet: 0.7076      # probabilité maximale, 95 % des feuilles connues de la validation acceptées
+  # v2 du binôme (3 ConvNeXt-Tiny, 4 vues), modèle retenu par les protocoles docs/protocole_maladies_*.md ; dossier de
+  # poids + seuils.json, hors du dépôt (archive maladies_v2.zip du binôme, dossier poids/). Seuils lus dans seuils.json.
+  modele: modeles/maladies_binome/maladies_v2/poids
+  # Soupe v2 + v8 (adoptable selon docs/protocole_maladies_melange_nouveaute.md, non retenue en attendant twakihasan) :
+  # modele: modeles/maladies_soupe_v2_v8/poids
+  # Ancien classifieur EfficientNet-B0 (ONNX, dans le dépôt) :
+  # modele: modeles/maladies/maladies_v2.onnx
+  seuil_rejet: 0.7076      # B0 seulement : probabilité maximale, 95 % des feuilles connues de la validation acceptées
 comptage:
   modele: modeles/centres_5cm_v4.onnx   # détecteur de centres v4 (adopté par la règle du protocole docs/protocole_comptage_v4.md) ; seuil (0,40) et résolution lus dans centres_5cm_v4.json
   coefficient_bas: 0.82    # plus petit rapport réel / détecté en validation : MM1-MM2 mères seules (69 / 84)
