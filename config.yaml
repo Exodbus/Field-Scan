@@ -4,11 +4,30 @@ entrees:
 nuages:
   seuil_masque_pct: 50.0
 maladies:
-  # v2 du binôme (3 ConvNeXt-Tiny, 4 vues), modèle retenu par les protocoles docs/protocole_maladies_*.md ; dossier de
-  # poids + seuils.json, hors du dépôt (archive maladies_v2.zip du binôme, dossier poids/). Seuils lus dans seuils.json.
-  modele: modeles/maladies_binome/maladies_v2/poids
-  # Soupe v2 + v8 (adoptable selon docs/protocole_maladies_melange_nouveaute.md, non retenue en attendant twakihasan) :
-  # modele: modeles/maladies_soupe_v2_v8/poids
+  # Module à deux branches (docs/protocole_maladies_cinq_classes.md, sections 4 et 6 ; docs/protocole_maladies_deux_branches.md).
+  # Branche « proche » (gros plans) : v10b du binôme (3 ConvNeXt-Tiny aux poids DINOv3, lus en 384 px, 4 vues, 4 classes
+  # dont « autre », règle B et règle de sa v11, seuils dans seuils.json). Intégrée par décision de Corentin le 11/11 ;
+  # garde-fou et mesures : docs/protocole_maladies_v10b.md. Poids hors du dépôt (166 Mo).
+  modele: modeles/maladies_binome/v10b
+  # Ancienne branche « proche » : soupe v2 + v8 (modele: modeles/maladies_soupe_v2_v8/poids ; température proche 0.61).
+  # Branche « loin » (plantes entières) : v2 du binôme, réponse suivie de « à confirmer par un gros plan ».
+  modele_loin: modeles/maladies_binome/maladies_v2/poids
+  # Aiguilleur loin / près : DINOv2 ViT-B/14 figé + régression logistique (scripts/ajuster_aiguilleur.py). Sans cette
+  # ligne, une seule branche (« modele »).
+  aiguilleur: modeles/maladies_aiguilleur/aiguilleur.npz
+  # Branche « proche » : « je ne sais pas » avec P(malade) >= seuil d'alerte -> « malade, non identifiée » (alerte).
+  # Adopté par l'amendement 2 du protocole « cinq classes » : en validation, malades sans alerte 112 -> 9 / 2 001,
+  # saines en alerte 9 -> 15 / 1 000.
+  jnsp_alerte: true
+  # Même règle pour la branche « loin » (amendement 3, décidé sur les photos du robot de dev_loin) : malades sans alerte
+  # 418 -> 39 / 874, mais saines en alerte 98 -> 345 / 438. De loin, le doute devient « à confirmer par un gros plan »
+  # (alerte de confiance faible dans le bulletin). Mettre false pour revenir à la règle de la v2.
+  jnsp_alerte_loin: true
+  # Températures des probabilités affichées, réglées sur la validation (scripts/regler_temperature.py) ; décisions inchangées.
+  temperature:
+    proche: 0.79   # v10b (scripts/regler_temperature.py sur out/maladies/v10b/predictions_v10b_validation.csv)
+    loin: 0.59
+  # Ancienne branche unique : v2 du binôme (modele: modeles/maladies_binome/maladies_v2/poids, sans aiguilleur).
   # Ancien classifieur EfficientNet-B0 (ONNX, dans le dépôt) :
   # modele: modeles/maladies/maladies_v2.onnx
   seuil_rejet: 0.7076      # B0 seulement : probabilité maximale, 95 % des feuilles connues de la validation acceptées

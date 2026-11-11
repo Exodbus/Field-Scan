@@ -51,6 +51,23 @@ def _vignette(rgb, valide, transform, geom, points, chemin, titre):
     fig.tight_layout(); fig.savefig(chemin); plt.close(fig)
 
 
+ESPACEMENT_PLAUSIBLE_M = (1.3, 4.5)   # bananeraies : 2 à 3,5 m entre pieds voisins (même bornes que la chaîne du binôme)
+
+
+def _espacement_median(points, n_min=10):
+    """Distance médiane (m) de chaque pied détecté à son plus proche voisin ; NaN sous n_min pieds.
+
+    Contrôle d'échelle sans référence : si la taille de pixel déclarée de l'orthomosaïque est fausse, le détecteur
+    (réglé à 5 cm par pixel) voit des couronnes trop petites ou trop grandes, et l'espacement mesuré sort des valeurs
+    plausibles d'une bananeraie. C'est un avertissement, pas une correction."""
+    if len(points) < n_min:
+        return np.nan
+    from scipy.spatial import cKDTree
+    xy = np.array([(p.x, p.y) for p in points])
+    d, _ = cKDTree(xy).query(xy, k=2)
+    return round(float(np.median(d[:, 1])), 2)
+
+
 def executer(ctx):
     reg = ctx.reglages["comptage"]
     chemin_modele = Path(reg["modele"])
@@ -107,12 +124,14 @@ def executer(ctx):
             pts = [Point(t.c + x * res, t.f - y * res) for x, y in zip(cx, cy)]
             dedans = [(p, s) for p, s in zip(pts, scores[garde]) if geom.contains(p)]
             surface_couverte = couverture * geom.area / 1e4
+            espacement = _espacement_median([p for p, _ in dedans])
             chemin_v = ctx.sortie / "preuves" / f"comptage_{pid}.png"
             _vignette(rgb, valide, t, geom, [p for p, _ in dedans], chemin_v,
                       f"{pid} : {len(dedans)} pieds détectés (couverture {couverture:.0%})")
             meilleurs[pid] = dict(parcelle_id=pid, n_pieds=len(dedans), couverture=round(couverture, 3),
                                   surface_couverte_ha=round(surface_couverte, 3),
                                   densite_ha=round(len(dedans) / surface_couverte, 1) if surface_couverte > 0 else np.nan,
+                                  espacement_median_m=espacement,
                                   ortho=Path(o.chemin).name, preuve=f"preuves/{chemin_v.name}",
                                   points=[(p, float(s)) for p, s in dedans])
     if not meilleurs:
@@ -129,6 +148,11 @@ def executer(ctx):
     tab["n_pieds_estimes_haut"] = (tab.n_pieds * haut).round().astype(int)
     tab["densite_estimee_bas_ha"] = (tab.densite_ha * bas).round(1)
     tab["densite_estimee_haut_ha"] = (tab.densite_ha * haut).round(1)
+    lo, hi = ESPACEMENT_PLAUSIBLE_M
+    tab["echelle_douteuse"] = tab.espacement_median_m.notna() & ~tab.espacement_median_m.between(lo, hi)
+    for pid, r in tab[tab.echelle_douteuse].iterrows():
+        ctx.journal.avertir(f"Comptage, parcelle {pid} : pieds espacés de {r.espacement_median_m:.2f} m en médiane (plausible : "
+                            f"{lo} à {hi} m) ; la taille de pixel de {r.ortho} est peut-être fausse, comptage peu fiable")
     tab.to_csv(ctx.sortie / "comptage_parcelles.csv")
 
     # Densité faible : comparaison aux autres parcelles bien couvertes du site
@@ -153,7 +177,7 @@ def executer(ctx):
     ctx.journal.infos["comptage_secondes_par_ha"] = sec_ha
     return Resultat(par_parcelle=tab[["n_pieds", "n_pieds_estimes_bas", "n_pieds_estimes_haut", "densite_ha",
                                       "densite_estimee_bas_ha", "densite_estimee_haut_ha", "couverture",
-                                      "surface_couverte_ha", "ortho"]], alertes=alertes,
+                                      "surface_couverte_ha", "espacement_median_m", "echelle_douteuse", "ortho"]], alertes=alertes,
                     couches=[str(ctx.sortie / "pieds.geojson")],
                     resume=dict(secondes_par_ha=sec_ha, pieds=len(pieds), coefficient_bas=bas, coefficient_haut=haut,
                                 pieds_estimes_bas=int(tab.n_pieds_estimes_bas.sum()),

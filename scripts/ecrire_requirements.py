@@ -15,7 +15,7 @@ PAQUETS = [
     ("rasterio", "lecture des images géoréférencées"), ("geopandas", "parcelles, GeoJSON"), ("shapely", "géométries"),
     ("pyproj", "systèmes de coordonnées"), ("Pillow", "photos"), ("PyYAML", "config.yaml"), ("matplotlib", "vignettes, cartes"),
     ("onnxruntime", "module maladies (processeur)"), ("torch", "module comptage"), ("torchvision", "module comptage"),
-    ("deepforest", "module comptage"), ("scikit-learn", "scripts d'évaluation"),
+    ("deepforest", "module comptage"), ("timm", "module maladies (v10b, DINOv3)"), ("scikit-learn", "scripts d'évaluation"),
 ]
 
 

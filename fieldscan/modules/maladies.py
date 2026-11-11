@@ -2,13 +2,26 @@
 
 Deux sortes de modèles, selon « maladies.modele » dans la config :
 
-1. Un **dossier** de réseaux ConvNeXt-Tiny PyTorch avec leur seuils.json (v2 du binôme, soupe v2 + v8...) :
-   moyenne des réseaux, chacun sur 4 vues (identité, deux miroirs, quart de tour), préparation de la v2
-   (rotation EXIF, recadrage carré au centre à 224 pixels, JPEG qualité 95). Décision de la v2 (seuils.json) :
-     malade si P(cercosporiose) + P(fusariose) >= seuil_alerte ;
+1. Un **dossier** de réseaux PyTorch avec leur seuils.json : ConvNeXt-Tiny (v2 du binôme, soupe v2 + v8, C5) ou ViT
+   DINOv2 / DINOv3 (DINOv2-FT, D5, E5), selon « reseau » ; 3 classes (saine, cercosporiose noire, fusariose) ou 5
+   (plus Cordana et Pestalotiopsis), selon « classes ». Moyenne des réseaux, chacun sur 1 ou 4 vues (identité, deux
+   miroirs, quart de tour), préparation de la v2 (rotation EXIF, recadrage carré au centre à 224 pixels, JPEG qualité 95).
+   Décision de la v2 (seuils.json) :
+     malade si 1 - P(saine) >= seuil_alerte ;
      maladie nommée si elle fait au moins seuil_nom de P(malade), sinon « malade, non identifiée » ;
      « je ne sais pas » si la plus forte probabilité est sous seuil_confiance.
    Ce sont les mêmes calculs que modeles/maladies_binome/maladies_v2/classifieur.py.
+
+   **Deux branches** (si « maladies.aiguilleur » est donné ; docs/protocole_maladies_deux_branches.md et
+   docs/protocole_maladies_cinq_classes.md) : un aiguilleur (DINOv2 figé + régression logistique) repère les photos
+   prises de loin (plante entière). Elles passent par « maladies.modele_loin » (la v2), et leur alerte porte le message
+   « à confirmer par un gros plan de la zone malade ». Les autres passent par « maladies.modele ».
+   Branche « proche » : une photo « je ne sais pas » dont P(malade) atteint le seuil d'alerte devient « malade, non
+   identifiée » (alerte) si « maladies.jnsp_alerte » est vrai (amendement 2 du protocole « cinq classes ») ; de même
+   pour la branche « loin » avec « maladies.jnsp_alerte_loin » (amendement 3). Une alerte de la branche « loin » a une
+   confiance « faible » dans le bulletin (pénalité réduite).
+   Probabilités affichées : mise à l'échelle de température (« maladies.temperature », réglée sur la validation) ; les
+   décisions restent prises sur les probabilités brutes.
 
 2. Un **fichier ONNX** (ancien classifieur EfficientNet-B0) et, à côté, entrainement_maladies.json
 (classes, vues, normalisation, méthode et seuil de rejet réglés sur la validation). Préparation identique
@@ -36,72 +49,172 @@ from fieldscan.modules import Resultat
 
 LIBELLES = {"saine": "feuille saine", "cercosporiose_noire": "cercosporiose noire (Sigatoka)",
             "fusariose": "fusariose ou autre flétrissement vasculaire (à confirmer par un examen du pseudo-tronc)",
-            "malade_non_identifiee": "feuille malade, maladie non identifiée", "je_ne_sais_pas": "je ne sais pas"}
+            "malade_non_identifiee": "feuille malade, maladie non identifiée", "je_ne_sais_pas": "je ne sais pas",
+            "cordana": "cordana (taches foliaires à Cordana musae)",
+            "pestalotiopsis": "pestalotiopsis (taches foliaires à Pestalotiopsis)",
+            "autre_maladie": "feuille malade, autre maladie (ni cercosporiose noire ni fusariose)",
+            "a_verifier": "à vérifier : le modèle ne sait pas dire si la feuille est saine"}
 VUES = {"identite": lambda x: x, "miroir_horizontal": lambda x: x[..., ::-1], "miroir_vertical": lambda x: x[..., ::-1, :],
         "rotation_180": lambda x: x[..., ::-1, ::-1]}
 
 
 CLASSES_CONVNEXT = ["saine", "cercosporiose_noire", "fusariose"]   # ordre des sorties : saine, black_sigatoka, fusarium
+NOMS_CHAINE = {"saine": "saine", "black_sigatoka": "cercosporiose_noire", "fusarium": "fusariose", "cordana": "cordana",
+               "pestalotiopsis": "pestalotiopsis", "autre": "autre_maladie", "other": "autre_maladie"}
+MESSAGE_LOIN = "photo prise de loin : à confirmer par un gros plan de la zone malade"
+IMAGENET = ([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+
+
+def _vit(reseau, n_classes):
+    """DINOv2 ViT-B/14 (torch.hub) ou DINOv3 ViT-B/16 (timm) + tête linéaire sur [jeton de classe, moyenne des jetons
+    d'image], comme dans les carnets d'entraînement (notebooks/entrainer_maladies_*_kaggle.py)."""
+    import torch
+    if reseau in ("dinov2", "dinov2l"):
+        dos = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14" if reseau == "dinov2" else "dinov2_vitl14", trust_repo=True)
+    else:
+        import timm
+        dos = timm.create_model("vit_base_patch16_dinov3.lvd1689m", pretrained=False, num_classes=0, dynamic_img_size=True)
+
+    class Vit(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.dino, self.tete = dos, torch.nn.Linear(2 * getattr(dos, "embed_dim", 768), n_classes)
+
+        def forward(self, x):
+            f = self.dino.forward_features(x)
+            c, t = (f["x_norm_clstoken"], f["x_norm_patchtokens"]) if isinstance(f, dict) else (f[:, 0], f[:, self.dino.num_prefix_tokens:])
+            return self.tete(torch.cat([c, t.mean(1)], 1))
+    return Vit()
 
 
 def charger_convnext(dossier):
-    """Dossier de réseaux ConvNeXt-Tiny (*.pt, poids 16 ou 32 bits) et leur seuils.json."""
+    """Dossier de réseaux (*.pt, poids 16 ou 32 bits) et leur seuils.json : ConvNeXt-Tiny (v2, soupe, C5) ou ViT DINOv2 /
+    DINOv3 (DINOv2-FT, D5, E5), selon « reseau » dans seuils.json ; 3 ou 5 classes selon « classes »."""
     import torch
     from torchvision import models
     seuils = json.loads((dossier / "seuils.json").read_text(encoding="utf-8"))
+    # Format du binôme (v10b) : une liste « membres » (un seul pris en charge ici), réseau « timm:<nom> », taille de
+    # lecture, taille d'apprentissage, normalisation ; docs/protocole_maladies_v10b.md
+    membres = seuils.get("membres") or [{}]
+    if len(membres) != 1:
+        raise RuntimeError(f"{dossier} : {len(membres)} familles de réseaux, une seule prise en charge")
+    mb = membres[0]
+    reseau = mb.get("reseau", seuils.get("reseau", "convnext"))
+    classes = [NOMS_CHAINE[c] for c in seuils.get("classes", ["saine", "black_sigatoka", "fusarium"])]
+    fichiers = sorted(dossier.glob(mb.get("motif", "*.pt")))[:seuils.get("nb_reseaux", 99)]
     reseaux = []
-    for chemin in sorted(dossier.glob("*_convnext_tiny_*.pt")):
-        r = models.convnext_tiny(weights=None)
-        r.classifier[2] = torch.nn.Linear(r.classifier[2].in_features, 3)
+    for chemin in fichiers:
+        if reseau == "convnext":
+            r = models.convnext_tiny(weights=None)
+            r.classifier[2] = torch.nn.Linear(r.classifier[2].in_features, len(classes))
+        elif reseau.startswith("timm:"):   # v10b du binôme : ConvNeXt-Tiny aux poids DINOv3 (timm >= 1.0.20)
+            import timm
+            try:   # comme le classifieur du binôme : img_size pour les ViT, ignoré par les ConvNeXt
+                r = timm.create_model(reseau.split(":", 1)[1], pretrained=False, num_classes=len(classes),
+                                      img_size=mb.get("taille_apprentissage", mb.get("taille", 224)), dynamic_img_size=True)
+            except TypeError:
+                r = timm.create_model(reseau.split(":", 1)[1], pretrained=False, num_classes=len(classes))
+        else:
+            r = _vit(reseau, len(classes))
         poids = torch.load(chemin, map_location="cpu", weights_only=True)
         r.load_state_dict({k: v.float() if v.is_floating_point() else v for k, v in poids.items()})
         reseaux.append(r.eval())
     if not reseaux:
-        raise RuntimeError(f"aucun réseau *_convnext_tiny_*.pt dans {dossier}")
-    return dict(type="convnext", reseaux=reseaux, classes=CLASSES_CONVNEXT,
+        raise RuntimeError(f"aucun réseau *.pt dans {dossier}")
+    norm = seuils.get("normalisation", {"moyenne": mb.get("moyenne", IMAGENET[0]), "ecart_type": mb.get("ecart", IMAGENET[1])})
+    return dict(type="convnext", reseau=reseau, reseaux=reseaux, classes=classes,
                 vues=["identite", "miroir_horizontal", "miroir_vertical", "quart_de_tour"] if seuils.get("quatre_vues", True) else ["identite"],
+                moyenne=np.array(norm.get("moyenne", IMAGENET[0]), "float32"), ecart=np.array(norm.get("ecart_type", IMAGENET[1]), "float32"),
                 methode="proba_max", seuil=float(seuils["seuil_confiance"]), seuil_alerte=float(seuils["seuil_alerte"]),
-                seuil_nom=float(seuils["seuil_nom"]), nom=seuils.get("modele", dossier.name), source_reglages=str(dossier / "seuils.json"))
+                seuil_nom=float(seuils["seuil_nom"]), nom=seuils.get("modele", dossier.name), source_reglages=str(dossier / "seuils.json"),
+                taille=int(mb.get("taille", 224)), lecture=mb.get("lecture"),
+                # v10b : « autre » n'est jamais nommée (classe fourre-tout) -> « malade, non identifiée »
+                nommer_autre=False,
+                # règle B : « saine » seulement si P(saine) >= seuil_confiance ; tout doute restant -> « à vérifier » (alerte)
+                regle_b=bool(seuils.get("regle_b", False)),
+                # règle de la v11 : un doute avec 1 - P(saine) >= ce seuil -> « malade, non identifiée »
+                seuil_inconnu_malade=seuils.get("seuil_inconnu_malade"))
 
 
-def preparer_convnext(chemin):
-    """Préparation de la v2 (classifieur.preparer) : photo remise droite, côté le plus court à 224 pixels, recadrage
-    carré au centre, réenregistrée en JPEG qualité 95 ; puis normalisation ImageNet."""
+def preparer_convnext(chemin, moyenne=IMAGENET[0], ecart=IMAGENET[1], taille=224, lecture=None):
+    """Préparation de la v2 (classifieur.preparer) : photo remise droite, côté le plus court à `taille` pixels (224 ; 384
+    pour la v10b), recadrage carré au centre, réenregistrée en JPEG qualité 95 ; puis normalisation (ImageNet par défaut)."""
     import io
     with Image.open(chemin) as im:
-        im.draft("RGB", (448, 448))
+        im.draft("RGB", (lecture or 2 * taille, lecture or 2 * taille))   # v10b : JPEG lu en au moins 896 px
         im = ImageOps.exif_transpose(im).convert("RGB")
-        petite = ImageOps.fit(im, (224, 224), method=Image.BILINEAR)
+        petite = ImageOps.fit(im, (taille, taille), method=Image.BILINEAR)
     tampon = io.BytesIO()
     petite.save(tampon, format="JPEG", quality=95)
     a = np.asarray(Image.open(tampon).convert("RGB"), dtype="float32") / 255.0
-    a = (a - np.array([0.485, 0.456, 0.406], "float32")) / np.array([0.229, 0.224, 0.225], "float32")
+    a = (a - np.asarray(moyenne, "float32")) / np.asarray(ecart, "float32")
     return a.transpose(2, 0, 1)
 
 
 def predire_convnext(chemins, m, lot=16):
-    """Probabilités (n, 3) : moyenne des vues, puis des réseaux (comme classifieur.probabilites)."""
+    """Probabilités (n, nombre de classes) : moyenne des vues, puis des réseaux (comme classifieur.probabilites)."""
     import torch
     vues = {"identite": lambda x: x, "miroir_horizontal": lambda x: x.flip(3), "miroir_vertical": lambda x: x.flip(2),
             "quart_de_tour": lambda x: x.rot90(1, (2, 3))}
     sorties = []
     with torch.no_grad():
         for i in range(0, len(chemins), lot):
-            x = torch.from_numpy(np.stack([preparer_convnext(c) for c in chemins[i:i + lot]]))
+            x = torch.from_numpy(np.stack([preparer_convnext(c, m["moyenne"], m["ecart"], m.get("taille", 224), m.get("lecture")) for c in chemins[i:i + lot]]))
             p = torch.stack([sum(torch.softmax(r(vues[v](x)), 1) for v in m["vues"]) / len(m["vues"]) for r in m["reseaux"]]).mean(0)
             sorties.append(p.numpy())
-    return np.concatenate(sorties) if sorties else np.zeros((0, 3), "float32")
+    return np.concatenate(sorties) if sorties else np.zeros((0, len(m["classes"])), "float32")
 
 
 def decider_convnext(P, m):
-    """Décision de la v2 ; renvoie les mêmes sorties que decider()."""
-    p_malade = P[:, 1:].sum(1)
+    """Décision de la v2, pour 3 ou 5 classes (la première est « saine ») ; renvoie les mêmes sorties que decider()."""
+    p_malade = 1 - P[:, 0]
     part = P[:, 1:].max(1) / np.maximum(p_malade, 1e-9)
-    maladie = np.array(CLASSES_CONVNEXT)[1 + P[:, 1:].argmax(1)]
-    reponse = np.where(p_malade < m["seuil_alerte"], "saine", np.where(part >= m["seuil_nom"], maladie, "malade_non_identifiee")).astype(object)
+    maladie = np.array(m["classes"])[1 + P[:, 1:].argmax(1)]
+    nommable = (part >= m["seuil_nom"]) & ((maladie != "autre_maladie") | m.get("nommer_autre", True))
+    reponse = np.where(p_malade < m["seuil_alerte"], "saine", np.where(nommable, maladie, "malade_non_identifiee")).astype(object)
     confiance = P.max(1)
     reponse[confiance < m["seuil"]] = "je_ne_sais_pas"
+    if m.get("jnsp_alerte"):   # amendement 2 du protocole « cinq classes » : sûr que c'est malade, pas de quelle maladie
+        reponse[(confiance < m["seuil"]) & (p_malade >= m["seuil_alerte"])] = "malade_non_identifiee"
+    if m.get("regle_b"):   # v10b, règle B : une feuille n'est dite saine que si P(saine) atteint le seuil de confiance
+        reponse[(reponse == "saine") & (P[:, 0] < m["seuil"])] = "je_ne_sais_pas"
+    if m.get("seuil_inconnu_malade") is not None:   # v10b, règle de la v11 : doute probablement malade -> non identifiée
+        reponse[(reponse == "je_ne_sais_pas") & (p_malade >= float(m["seuil_inconnu_malade"]))] = "malade_non_identifiee"
+    if m.get("regle_b"):   # le doute qui reste donne une alerte, comme dans la chaîne du binôme (« inconnu » -> alerte)
+        reponse[reponse == "je_ne_sais_pas"] = "a_verifier"
     return reponse.astype(str), p_malade, confiance, P
+
+
+def charger_aiguilleur(chemin):
+    """Aiguilleur « loin / près » (docs/protocole_maladies_deux_branches.md, partie A ; scripts/ajuster_aiguilleur.py)."""
+    import torch
+    a = {k: v for k, v in np.load(chemin).items()}
+    a["dino"] = torch.hub.load("facebookresearch/dinov2", "dinov2_vitb14", trust_repo=True).eval()
+    return a
+
+
+def p_loin(chemins, a, lot=16):
+    """P(photo prise de loin) : caractéristiques DINOv2 figées (vue d'origine, préparation de la v2), puis logistique."""
+    import torch
+    car = []
+    with torch.no_grad():
+        for i in range(0, len(chemins), lot):
+            x = torch.from_numpy(np.stack([preparer_convnext(c) for c in chemins[i:i + lot]]))
+            f = a["dino"].forward_features(x)
+            car.append(torch.cat([f["x_norm_clstoken"], f["x_norm_patchtokens"].mean(1)], 1).double().numpy())
+    if not car:
+        return np.zeros(0)
+    z = ((np.concatenate(car) - a["moyenne"]) / a["ecart"]) @ a["poids"].T + a["biais"]
+    z -= z.max(1, keepdims=True)
+    return np.exp(z[:, 1]) / np.exp(z).sum(1)
+
+
+def calibrer(P, t):
+    """Probabilités affichées : mise à l'échelle de température (t réglé sur la validation) ; décisions inchangées."""
+    if not t or t == 1:
+        return P
+    q = np.power(np.clip(P, 1e-12, 1), 1 / t)
+    return q / q.sum(1, keepdims=True)
 
 
 def charger_modele(reglages):
@@ -185,21 +298,47 @@ def executer(ctx):
     m = charger_modele(ctx.reglages)
     photos = ctx.inventaire.photos
     chemins = [p.chemin for p in photos]
+    temp = reg.get("temperature", {}) or {}
     if m["type"] == "convnext":
-        ctx.journal.info(f"  Maladies : modèle {m['nom']} ({len(m['reseaux'])} réseau(x) ConvNeXt-Tiny), {len(m['vues'])} vue(s), "
-                         f"alerte à {m['seuil_alerte']:.2f}, nom à {m['seuil_nom']:.2f}, « je ne sais pas » sous {m['seuil']:.4f} "
-                         f"(réglages : {m['source_reglages']})")
+        ctx.journal.info(f"  Maladies : modèle {m['nom']} ({len(m['reseaux'])} réseau(x) {m['reseau']}, {len(m['classes'])} classes), "
+                         f"{len(m['vues'])} vue(s), alerte à {m['seuil_alerte']:.2f}, nom à {m['seuil_nom']:.2f}, "
+                         f"« je ne sais pas » sous {m['seuil']:.4f} (réglages : {m['source_reglages']})")
+        m["jnsp_alerte"] = bool(reg.get("jnsp_alerte", False))
         reponse, p_malade, confiance, P = decider_convnext(predire_convnext(chemins, m), m)
+        P_aff = calibrer(P, temp.get("proche"))
     else:
         ctx.journal.info(f"  Maladies : modèle {Path(reg['modele']).name}, {len(m['vues'])} vue(s), rejet {m['methode']} "
                          f"au seuil {m['seuil']:.4f} (réglages : {m['source_reglages']})")
         L = predire(chemins, m)
         reponse, p_malade, confiance, P = decider(L, m, reg["seuil_malade"])
-
+        P_aff = P
+    classes = list(m["classes"])
+    probas = {c: P_aff[:, k].copy() for k, c in enumerate(classes)}
+    branche, pl = np.full(len(chemins), "unique", dtype=object), np.full(len(chemins), np.nan)
+    if reg.get("aiguilleur") and m["type"] == "convnext" and len(chemins):
+        # Architecture à deux branches (docs/protocole_maladies_cinq_classes.md, section 4) : les photos prises de loin
+        # (plante entière) passent par le modèle « loin » (la v2), avec un message « à confirmer par un gros plan ».
+        pl = p_loin(chemins, charger_aiguilleur(Path(reg["aiguilleur"])))
+        loin = pl >= 0.5
+        branche = np.where(loin, "loin", "proche").astype(object)
+        ctx.journal.info(f"  Maladies : aiguilleur loin / près ({reg['aiguilleur']}) : {int(loin.sum())} photo(s) prise(s) de loin")
+        if loin.any():
+            mf = charger_convnext(Path(reg["modele_loin"]))
+            mf["jnsp_alerte"] = bool(reg.get("jnsp_alerte_loin", False))   # amendement 3 du protocole « cinq classes »
+            idx = np.flatnonzero(loin)
+            rf, pmf, cf, Pf = decider_convnext(predire_convnext([chemins[i] for i in idx], mf), mf)
+            reponse, p_malade, confiance = reponse.astype(object), p_malade.astype(float), confiance.astype(float)
+            reponse[idx], p_malade[idx], confiance[idx] = rf, pmf, cf
+            Pf_aff = calibrer(Pf, temp.get("loin"))
+            for c in set(classes) | set(mf["classes"]):
+                probas.setdefault(c, np.full(len(chemins), np.nan))
+                probas[c][idx] = Pf_aff[:, mf["classes"].index(c)] if c in mf["classes"] else np.nan
+            reponse = reponse.astype(str)
+    p_malade_aff = 1 - probas["saine"]
     tab = pd.DataFrame(dict(fichier=chemins, lat=[p.lat for p in photos], lon=[p.lon for p in photos],
-                            reponse=reponse, libelle=[LIBELLES[r] for r in reponse], p_malade=p_malade.round(3),
-                            confiance=confiance.round(3),
-                            **{f"p_{c}": P[:, k].round(3) for k, c in enumerate(m["classes"])}))
+                            reponse=reponse, libelle=[LIBELLES[r] for r in reponse], p_malade=np.round(p_malade, 3),
+                            p_malade_affichee=np.round(p_malade_aff, 3), confiance=np.round(confiance, 3),
+                            branche=branche, p_loin=np.round(pl, 3), **{f"p_{c}": np.round(v, 3) for c, v in probas.items()}))
     tab["date"] = [_date_photo(c) for c in chemins]
     loc = tab.dropna(subset=["lat", "lon"])
     tab["parcelle_id"] = None
@@ -211,14 +350,17 @@ def executer(ctx):
     tab["preuve"] = [_preuve(c, ctx.sortie, f"photo_{k:04d}.jpg") for k, c in enumerate(chemins, start=1)]
     tab.to_csv(ctx.sortie / "maladies_photos.csv", index=False)
 
-    malades = {"cercosporiose_noire", "fusariose", "malade_non_identifiee"}
+    malades = {"cercosporiose_noire", "fusariose", "malade_non_identifiee", "cordana", "pestalotiopsis", "autre_maladie",
+               "a_verifier"}
     alertes = []
     for r in tab[tab.parcelle_id.notna() & tab.reponse.isin(malades)].itertuples():
         # Gravité forte même si la maladie n'est pas identifiée : ne pas savoir laquelle ne rend pas la situation moins urgente
         alertes.append(dict(parcelle_id=r.parcelle_id, module="maladies", type="feuille_malade", indice=r.reponse,
                             date=r.date, gravite="forte", valeur=r.p_malade, z=None,
-                            confiance="normale", message=f"Photo {Path(r.fichier).name} : {r.libelle} "
-                            f"(P(malade) = {r.p_malade:.2f}, confiance {r.confiance:.2f})",
+                            # loin, ou doute de la règle B (« à vérifier ») : pénalité réduite, à confirmer
+                            confiance="faible" if r.branche == "loin" or r.reponse == "a_verifier" else "normale",
+                            message=f"Photo {Path(r.fichier).name} : {r.libelle} (P(malade) = {r.p_malade_affichee:.2f}, "
+                            f"confiance {r.confiance:.2f})" + (f" ; {MESSAGE_LOIN}" if r.branche == "loin" else ""),
                             source=Path(r.fichier).name, carte=None, preuve=r.preuve, geometry=Point(r.lon, r.lat)))
     par = []
     for pid, g in tab[tab.parcelle_id.notna()].groupby("parcelle_id"):
@@ -229,6 +371,8 @@ def executer(ctx):
     resume = dict(reponses=tab.reponse.value_counts().to_dict(), photos_localisees=int(tab.lat.notna().sum()),
                   photos_dans_parcelles=int(tab.parcelle_id.notna().sum()), methode_rejet=m["methode"], seuil_rejet=m["seuil"],
                   modele=m.get("nom", Path(reg["modele"]).name), seuil_alerte=m.get("seuil_alerte", reg["seuil_malade"]),
-                  photos=tab[["fichier", "reponse", "libelle", "p_malade", "confiance", "parcelle_id", "preuve"]].to_dict("records"))
+                  photos_loin=int((tab.branche == "loin").sum()),
+                  photos=tab[["fichier", "reponse", "libelle", "p_malade", "p_malade_affichee", "confiance", "branche",
+                              "parcelle_id", "preuve"]].to_dict("records"))
     ctx.journal.info(f"  Maladies : {len(tab)} photo(s) ; réponses {resume['reponses']} ; {resume['photos_dans_parcelles']} rattachée(s) à une parcelle")
     return Resultat(par_parcelle=pp, alertes=alertes, couches=[str(ctx.sortie / "maladies_photos.csv")], resume=resume)

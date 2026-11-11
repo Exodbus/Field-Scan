@@ -13,3 +13,4 @@ onnxruntime==1.31.1  # module maladies (processeur)
 torch==2.14.1  # module comptage
 torchvision==0.29.1  # module comptage
 deepforest==2.1.0  # module comptage
+timm==1.0.30  # module maladies (v10b, DINOv3)
