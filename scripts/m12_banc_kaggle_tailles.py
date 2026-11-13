@@ -1,0 +1,134 @@
+# Field Scan, nuit du 12/11, agent M-banc : v10b lue en 224 px et en taille adaptée min(384, 2 x côté court),
+# tailles) par la v10b, sur les SEULS jeux de réglage (validation, tdtu, psfd, ethiopie) ; aucun juge n'est lu.
+# Préparation identique à fieldscan/modules/maladies.py (preparer_convnext) : EXIF, carré au centre au petit côté,
+# BILINEAR, JPEG 95, normalisation ImageNet ; 4 vues ; moyenne des 3 réseaux. Calcul en demi-précision (autocast).
+# Morceaux : g x g rectangles de même forme que la photo, côté 0,6 (2x2) ou 0,42 (3x3) de chaque dimension, posés
+# régulièrement d'un bord à l'autre ; chaque morceau est préparé comme une photo entière.
+# Sorties (probabilités seules) : morceaux_<jeu>.npz (g2 : toutes les photos ; g3, e384 : échantillon), p512_<jeu>.csv.
+import io, json, subprocess, sys, time
+from pathlib import Path
+subprocess.run([sys.executable, "-m", "pip", "install", "-q", "timm>=1.0.20"], check=True)
+import numpy as np, pandas as pd, torch, timm
+from PIL import Image, ImageOps
+from torch.utils.data import DataLoader, Dataset
+
+ECHANTILLON = json.loads('''{"validation": [4, 7, 11, 20, 34, 35, 65, 68, 75, 85, 89, 92, 93, 95, 103, 106, 110, 126, 128, 139, 160, 165, 171, 190, 194, 208, 210, 216, 218, 221, 237, 238, 242, 255, 257, 282, 284, 289, 292, 293, 310, 328, 336, 354, 363, 371, 374, 378, 385, 395, 407, 414, 418, 425, 434, 438, 441, 456, 464, 465, 476, 480, 481, 496, 509, 518, 522, 524, 533, 534, 536, 541, 551, 557, 597, 611, 613, 619, 626, 652, 657, 667, 682, 683, 694, 700, 702, 704, 705, 710, 716, 730, 733, 741, 745, 758, 775, 777, 778, 781, 792, 798, 800, 810, 812, 818, 821, 826, 828, 842, 843, 851, 856, 861, 866, 868, 877, 889, 893, 894, 906, 907, 921, 926, 941, 945, 952, 955, 958, 960, 964, 966, 968, 970, 980, 986, 989, 997, 1006, 1010, 1017, 1019, 1041, 1044, 1065, 1069, 1070, 1075, 1095, 1105, 1123, 1131, 1137, 1139, 1143, 1150, 1157, 1158, 1181, 1186, 1195, 1196, 1204, 1208, 1212, 1218, 1233, 1234, 1237, 1268, 1273, 1274, 1281, 1294, 1296, 1311, 1325, 1327, 1329, 1333, 1340, 1344, 1348, 1352, 1355, 1363, 1369, 1379, 1389, 1407, 1408, 1410, 1414, 1415, 1431, 1453, 1466, 1481, 1492, 1507, 1514, 1521, 1523, 1526, 1543, 1555, 1563, 1567, 1573, 1580, 1587, 1590, 1591, 1592, 1597, 1602, 1619, 1620, 1625, 1626, 1640, 1656, 1663, 1664, 1666, 1670, 1672, 1675, 1678, 1679, 1685, 1689, 1696, 1703, 1708, 1709, 1724, 1727, 1728, 1742, 1747, 1755, 1764, 1771, 1783, 1794, 1833, 1841, 1842, 1851, 1857, 1867, 1875, 1884, 1886, 1890, 1893, 1904, 1910, 1919, 1944, 1946, 1967, 1973, 1974, 1978, 1981, 1984, 1999, 2002, 2014, 2019, 2031, 2034, 2050, 2051, 2055, 2062, 2065, 2112, 2125, 2126, 2131, 2136, 2140, 2149, 2153, 2160, 2165, 2166, 2170, 2174, 2196, 2198, 2199, 2200, 2212, 2213, 2214, 2216, 2222, 2247, 2255, 2282, 2288, 2302, 2314, 2319, 2330, 2341, 2357, 2366, 2377, 2397, 2401, 2412, 2414, 2423, 2443, 2449, 2470, 2476, 2491, 2506, 2521, 2523, 2529, 2530, 2536, 2546, 2551, 2555, 2558, 2560, 2565, 2568, 2589, 2601, 2611, 2625, 2626, 2627, 2634, 2635, 2644, 2651, 2654, 2664, 2667, 2701, 2702, 2704, 2705, 2710, 2719, 2731, 2744, 2746, 2752, 2760, 2763, 2768, 2769, 2774, 2776, 2778, 2785, 2801, 2808, 2816, 2823, 2824, 2825, 2832, 2833, 2835, 2868, 2869, 2872, 2875, 2879, 2882, 2884, 2891, 2904, 2908, 2917, 2920, 2931, 2935, 2943, 2947, 2957, 2962, 2967, 2972, 2976, 2987, 2990, 3000], "tdtu": [5, 7, 9, 13, 18, 26, 31, 32, 42, 44, 45, 46, 48, 50, 56, 57, 59, 65, 68, 69, 70, 76, 81, 82, 92, 93, 94, 97, 104, 105, 108, 110, 117, 119, 120, 121, 122, 123, 129, 130, 136, 139, 141, 142, 143, 150, 154, 157, 160, 163, 164, 168, 170, 173, 176, 182, 187, 190, 192, 193, 207, 212, 214, 223, 229, 235, 236, 238, 249, 251, 258, 261, 264, 268, 269, 270, 278, 286, 287, 289, 290, 292, 294, 298, 299, 301, 305, 311, 314, 315, 322, 329, 340, 344, 345, 346, 361, 364, 366, 367, 368, 374, 383, 384, 385, 393, 395, 412, 418, 420, 423, 425, 427, 429, 430, 436, 437, 438, 440, 441, 442, 444, 445, 450, 451, 454, 456, 460, 466, 474, 475, 476, 478, 479, 490, 491, 497, 499, 501, 502, 510, 516, 524, 532, 540, 541, 544, 546, 555, 556, 557, 558, 559, 561, 572, 578, 584, 587, 592, 603, 605, 613, 618, 620, 623, 624, 625, 631, 643, 644, 649, 652, 654, 655, 657, 660, 667, 680, 682, 684, 691, 695, 701, 705, 716, 721, 727, 728, 729, 731, 739, 742, 743, 748, 754, 757, 759, 761, 767, 775, 781, 782, 786, 790, 797, 802, 804, 806, 810, 811, 812, 815, 816, 824, 827, 834, 840, 845, 846, 847, 850, 862, 866, 871, 878, 879, 880, 884, 889, 902, 908, 923, 924, 926, 927, 929, 930, 931, 934, 939, 944, 947, 960, 962, 964, 967, 970, 989, 991, 995, 1002, 1003, 1004, 1005, 1009, 1017, 1024, 1025, 1029, 1031, 1058, 1059, 1060, 1061, 1065, 1067, 1070, 1074, 1077, 1085, 1089, 1092, 1093, 1094, 1096, 1097, 1105, 1109, 1122, 1131, 1133, 1135, 1141, 1142, 1143, 1144, 1146, 1148, 1151, 1156, 1162, 1163, 1170, 1171, 1172, 1173, 1174, 1175, 1177, 1182, 1183, 1184, 1185, 1186, 1206, 1209, 1212, 1213, 1214, 1215, 1216, 1224, 1232, 1238, 1253, 1263, 1267, 1288, 1289, 1290, 1298, 1301, 1303, 1308, 1312, 1320, 1324, 1325, 1334, 1342, 1343, 1348, 1349, 1350, 1353, 1355, 1357, 1358, 1366, 1371, 1374, 1375, 1382, 1383, 1390, 1391, 1392, 1393, 1400, 1403, 1407, 1408, 1409, 1442, 1451, 1459, 1460, 1461, 1464, 1469, 1472, 1483, 1484, 1495, 1496, 1508, 1509, 1510, 1511, 1515, 1516, 1527, 1528, 1531, 1534, 1540, 1547, 1550, 1553, 1554, 1559, 1562, 1565, 1566, 1571, 1575, 1576, 1584, 1589, 1590, 1591, 1596, 1598, 1601, 1604, 1607, 1609, 1621, 1622, 1627], "psfd": [1, 3, 5, 7, 8, 9, 10, 13, 17, 19, 22, 25, 26, 27, 28, 30, 32, 41, 43, 44, 45, 47, 49, 51, 53, 57, 60, 62, 63, 64, 65, 67, 68, 69, 70, 71, 73, 76, 77, 79, 82, 83, 85, 86, 89, 90, 94, 96, 97, 98, 99, 101, 102, 103, 104, 106, 107, 108, 109, 110, 113, 114, 115, 117, 121, 122, 126, 128, 130, 132, 133, 134, 135, 136, 137, 142, 146, 147, 149, 152, 154, 156, 159, 161, 162, 163, 164, 167, 168, 169, 170, 175, 177, 178, 182, 185, 188, 190, 191, 194, 197, 198, 200, 202, 203, 205, 209, 213, 216, 217, 218, 219, 220, 221, 222, 223, 228, 229, 231, 234, 235, 237, 238, 239, 242, 244, 246, 247, 250, 251, 252, 253, 254, 255, 256, 257, 259, 261, 262, 264, 265, 267, 269, 270, 271, 272, 279, 283, 284, 287, 290, 291, 293, 294, 296, 298, 299, 301, 302, 303, 305, 306, 316, 317, 319, 320, 321, 322, 323, 324, 326, 327, 330, 332, 334, 339, 340, 342, 345, 346, 347, 348, 350, 351, 352, 353, 354, 357, 359, 361, 364, 365, 367, 368, 370, 371, 372, 376, 377, 378, 379, 380, 382, 384, 385, 386, 387, 390, 391, 395, 396, 399, 400, 401, 403, 404, 410, 413, 415, 416, 419, 420, 422, 423, 424, 425, 427, 428, 429, 431, 432, 433, 436, 437, 438, 439, 440, 442, 445, 446, 447, 450, 451, 452, 453, 456, 458, 460, 461, 464, 465, 467, 469, 470, 471, 475, 476, 478, 480, 483, 486, 489, 492, 494, 495, 496, 499, 502, 506, 510, 512, 513, 514, 515, 518, 519, 520, 522, 523, 525, 526, 527, 529, 532, 533, 535, 536, 538, 540, 541, 553, 554, 555, 558, 561, 563, 565, 566, 567, 568, 572, 576, 577, 579, 580, 583, 584, 588, 589, 590, 593, 596, 598, 599, 601, 602, 603, 607, 608, 609, 610, 611, 613, 616, 617, 618, 619, 621, 624, 625, 626, 628, 629, 630, 634, 635, 636, 637, 638, 639, 640, 641, 643, 644, 645, 646, 647, 648, 649, 650, 652, 653, 654, 657, 659, 660, 661, 663, 664, 665, 666, 667, 669, 670, 671, 673, 674, 676, 679, 680, 681, 683, 684, 689, 693, 694, 696, 697, 703, 704, 706, 709, 715, 716, 717, 719, 720, 721, 722, 725, 726, 727, 728, 729, 730, 731, 732, 733, 735, 736], "ethiopie": [11, 12, 16, 17, 18, 19, 25, 27, 28, 32, 35, 36, 38, 45, 47, 51, 53, 56, 57, 61, 64, 69, 70, 75, 76, 77, 80, 87, 92, 93, 96, 98, 103, 108, 114, 126, 128, 130, 134, 137, 138, 140, 143, 146, 147, 149, 150, 157, 164, 172, 173, 177, 182, 184, 186, 188, 191, 197, 199, 200, 203, 208, 209, 213, 216, 219, 222, 224, 227, 230, 231, 232, 238, 242, 244, 247, 250, 253, 254, 263, 266, 267, 276, 278, 280, 284, 286, 289, 296, 301, 303, 306, 307, 311, 316, 317, 320, 321, 324, 340, 343, 347, 349, 350, 354, 357, 360, 361, 363, 368, 372, 374, 376, 381, 388, 392, 394, 395, 399, 400, 402, 411, 412, 415, 421, 423, 425, 426, 428, 431, 434, 436, 437, 446, 447, 457, 458, 461, 468, 469, 472, 473, 476, 478, 480, 481, 484, 485, 487, 496, 497, 509, 511, 512, 515, 517, 518, 521, 528, 529, 531, 538, 539, 540, 541, 543, 544, 546, 555, 557, 560, 564, 569, 570, 572, 579, 588, 590, 592, 596, 597, 599, 615, 617, 619, 625, 631, 632, 633, 642, 644, 645, 646, 650, 651, 652, 653, 656, 674, 675, 676, 678, 679, 681, 683, 684, 694, 695, 696, 699, 702, 706, 707, 713, 715, 723, 730, 731, 736, 739, 743, 745, 748, 750, 754, 757, 761, 766, 769, 776, 777, 780, 794, 799, 801, 803, 804, 805, 808, 810, 812, 817, 823, 824, 827, 828, 832, 833, 839, 840, 841, 843, 851, 855, 858, 859, 863, 868, 869, 870, 873, 878, 879, 880, 881, 882, 883, 888, 890, 898, 899, 900, 903, 904, 905, 906, 909, 910, 911, 917, 923, 928, 931, 933, 934, 936, 940, 943, 946, 949, 951, 953, 955, 960, 961, 964, 970, 973, 979, 980, 989, 991, 996, 998, 1003, 1006, 1007, 1009, 1010, 1012, 1015, 1018, 1019, 1020, 1022, 1026, 1031, 1032, 1034, 1035, 1037, 1039, 1043, 1045, 1046, 1049, 1050, 1052, 1054, 1060, 1061, 1063, 1064, 1067, 1071, 1073, 1075, 1077, 1078, 1084, 1086, 1103, 1107, 1109, 1111, 1113, 1114, 1115, 1120, 1121, 1122, 1124, 1133, 1135, 1143, 1147, 1148, 1150, 1153, 1155, 1159, 1160, 1162, 1166, 1167, 1169, 1170, 1173, 1184, 1190, 1191, 1195, 1199, 1201, 1202, 1203, 1209, 1212, 1214, 1215, 1217, 1220, 1226, 1227, 1230, 1233, 1234, 1235, 1236, 1237, 1257, 1259, 1265, 1268, 1269, 1271, 1279, 1280, 1285, 1286]}''')   # graine 2026, 400 indices par jeu (ordre des fichiers predictions_v10b_<jeu>.csv)
+REGLAGE = ["validation", "tdtu", "psfd", "ethiopie"]
+E = Path("/kaggle/input")
+POIDS = sorted(E.rglob("maladies_v10b_*.pt"))
+L = pd.read_csv(next(E.rglob("listes_v10b.csv")))
+INDEX, AJOUTS, NUIT = sorted(E.rglob("index.csv"))[0], sorted(E.rglob("images_ajouts.csv"))[0], sorted(E.rglob("nuit.csv"))[0]
+nuit = pd.read_csv(NUIT)
+BASE_NUIT = NUIT.parent
+if not (BASE_NUIT / nuit.image.iloc[0]).exists():
+    trouve = next(E.rglob(Path(nuit.image.iloc[0]).name))
+    BASE_NUIT = trouve.parents[len(Path(nuit.image.iloc[0]).parts) - 1]
+
+
+def fichier(c):
+    if c.startswith("data/feuilles/"):
+        return INDEX.parent / c.removeprefix("data/feuilles/")
+    if c.startswith("data/feuilles_v3_ajouts/"):
+        return AJOUTS.parent / c.removeprefix("data/feuilles_v3_ajouts/")
+    return BASE_NUIT / c
+
+
+MOY, ECT = np.array([0.485, 0.456, 0.406], "float32"), np.array([0.229, 0.224, 0.225], "float32")
+
+
+def preparer(im, taille):
+    petite = ImageOps.fit(im, (taille, taille), method=Image.BILINEAR)
+    t = io.BytesIO(); petite.save(t, format="JPEG", quality=95)
+    a = np.asarray(Image.open(t).convert("RGB"), dtype="float32") / 255.0
+    return ((a - MOY) / ECT).transpose(2, 0, 1)
+
+
+def ouvrir(chemin, lecture=896):
+    with Image.open(chemin) as im:
+        im.draft("RGB", (lecture, lecture))
+        return ImageOps.exif_transpose(im).convert("RGB")
+
+
+def morceaux(im, g):
+    part = {2: 0.6, 3: 0.42}[g]
+    w, h = im.size
+    mw, mh = max(1, round(part * w)), max(1, round(part * h))
+    return [im.crop((round(ix * (w - mw) / (g - 1)), round(iy * (h - mh) / (g - 1)),
+                     round(ix * (w - mw) / (g - 1)) + mw, round(iy * (h - mh) / (g - 1)) + mh))
+            for iy in range(g) for ix in range(g)]
+
+
+class Lot(Dataset):
+    """Chaque élément : pile des entrées d'une photo selon le mode (« e384 », « e512 », « g2 », « g3 »)."""
+    def __init__(self, f, mode): self.f, self.mode = list(f), mode
+    def __len__(self): return len(self.f)
+    def __getitem__(self, i):
+        im = ouvrir(self.f[i])
+        if self.mode == "e384":
+            return torch.from_numpy(preparer(im, 384)[None])
+        if self.mode == "e512":
+            return torch.from_numpy(preparer(im, 512)[None])
+        return torch.from_numpy(np.stack([preparer(m, 384) for m in morceaux(im, int(self.mode[1]))]))
+
+
+reseaux = []
+for p in POIDS:
+    r = timm.create_model("convnext_tiny.dinov3_lvd1689m", pretrained=False, num_classes=4)
+    w = torch.load(p, map_location="cpu", weights_only=True)
+    r.load_state_dict({k: v.float() if v.is_floating_point() else v for k, v in w.items()})
+    reseaux.append(r.cuda().eval())
+VUES = [lambda x: x, lambda x: x.flip(3), lambda x: x.flip(2), lambda x: x.rot90(1, (2, 3))]
+
+
+def lire(f, mode, lot):
+    sorties = []
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16):
+        for x in DataLoader(Lot(f, mode), batch_size=lot, num_workers=4):
+            b, k = x.shape[:2]
+            x = x.flatten(0, 1).cuda()
+            p = torch.stack([sum(torch.softmax(r(v(x)).float(), 1) for v in VUES) / len(VUES) for r in reseaux]).mean(0)
+            sorties.append(p.reshape(b, k, 4).cpu().numpy())
+    return np.concatenate(sorties)
+
+
+SORTIE = Path("/kaggle/working"); t0 = time.time()
+# (recommandation 2 de M-analyste, out/maladies/analyse/rapport_cycle2.md) ; jeux de réglage seulement.
+
+
+class Taille(Dataset):
+    def __init__(self, f, adaptee): self.f, self.adaptee = list(f), adaptee
+    def __len__(self): return len(self.f)
+    def __getitem__(self, i):
+        im = ouvrir(self.f[i])
+        t = min(384, 2 * min(im.size)) if self.adaptee else 224
+        return torch.from_numpy(preparer(im, t))
+
+
+def lire_tailles(f, adaptee):
+    sorties = []
+    with torch.no_grad(), torch.autocast("cuda", dtype=torch.float16):
+        for i in range(len(f)):   # tailles variables : une photo à la fois si adaptée, sinon par lots
+            pass
+        if not adaptee:
+            for x in DataLoader(Taille(f, False), batch_size=32, num_workers=4):
+                x = x.cuda()
+                sorties.append(torch.stack([sum(torch.softmax(r(v(x)).float(), 1) for v in VUES) / len(VUES) for r in reseaux]).mean(0).cpu().numpy())
+        else:
+            for x in DataLoader(Taille(f, True), batch_size=1, num_workers=4):
+                x = x.cuda()
+                sorties.append(torch.stack([sum(torch.softmax(r(v(x)).float(), 1) for v in VUES) / len(VUES) for r in reseaux]).mean(0).cpu().numpy())
+    return np.concatenate(sorties)
+
+
+for j in REGLAGE:
+    g = L[L.jeu == j].reset_index(drop=True)
+    f = [str(fichier(c)) for c in g.chemin]
+    assert all(Path(x).exists() for x in f), j
+    for nom, adaptee in (("p224", False), ("padapt", True)):
+        P = lire_tailles(f, adaptee)
+        d = g[["chemin", "jeu", "classe_vraie"]].copy()
+        for k, c in enumerate(["p_saine", "p_black_sigatoka", "p_fusarium", "p_autre"]):
+            d[c] = P[:, k].round(6)
+        d.to_csv(SORTIE / f"{nom}_{j}.csv", index=False)
+        print(f"{j} {nom} fait, {(time.time() - t0) / 60:.1f} min", flush=True)
+print("fini", flush=True)

@@ -209,6 +209,100 @@ def p_loin(chemins, a, lot=16):
     return np.exp(z[:, 1]) / np.exp(z).sum(1)
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# F1 « trois morceaux 2 x 2 » (adopté par Corentin le 13/11/2026 ; docs/nuit_2026-11-12/recap.md, section 2 ;
+# définition : scripts/m12_banc_finalistes.py, CANDIDATS["F1_trois_morceaux2x2"]). Lecteur proche = moyenne géométrique
+# à poids égaux de la v10b (lue entière et en 4 morceaux), de la soupe v2 + v8 et de la v2, décidée avec les seuils de
+# la v10b sauf la confiance (0,70) ; photo « loin » : réponse de la v2 si elle alerte, sinon celle du lecteur proche.
+# Les fonctions ci-dessous sont des copies exactes de celles du script de référence.
+# ---------------------------------------------------------------------------------------------------------------------
+MALADES = {"cercosporiose_noire", "fusariose", "malade_non_identifiee", "cordana", "pestalotiopsis", "autre_maladie",
+           "a_verifier"}
+
+
+def morceaux_2x2(chemin):
+    """Quatre morceaux de 60 % de côté, aux quatre coins de la photo remise droite (JPEG lu en au moins 896 px)."""
+    import io
+    with Image.open(chemin) as im:
+        im.draft("RGB", (896, 896))
+        im = ImageOps.exif_transpose(im).convert("RGB")
+    w, h = im.size
+    mw, mh = max(1, round(0.6 * w)), max(1, round(0.6 * h))
+    sortie = []
+    for iy in range(2):
+        for ix in range(2):
+            x0, y0 = round(ix * (w - mw)), round(iy * (h - mh))
+            t = io.BytesIO()
+            im.crop((x0, y0, x0 + mw, y0 + mh)).save(t, format="PNG")
+            t.seek(0)
+            sortie.append(t)
+    return sortie
+
+
+def lecture_morceaux(P10, G2):
+    """P(malade) = moyenne de celle de la photo entière et de la moyenne des 2 plus fortes P(malade) des 4 morceaux ;
+    P(saine) remplacée, les maladies gardant leurs proportions."""
+    pm = ((1 - P10[:, 0]) + np.sort(1 - G2[:, :, 0], 1)[:, -2:].mean(1)) / 2
+    reste = np.clip(1 - P10[:, 0], 1e-9, None)
+    Q = P10 * (pm / reste)[:, None]
+    Q[:, 0] = 1 - pm
+    return Q
+
+
+def melange_geometrique(P10, Pso, Pv2):
+    """Moyenne géométrique à poids égaux sur saine / cercosporiose / fusariose ; « autre » de la v10b gardée (poids 1/3)."""
+    w = 1 / 3
+    lg = w * (np.log(np.clip(P10[:, :3], 1e-9, 1)) + np.log(np.clip(Pso, 1e-9, 1)) + np.log(np.clip(Pv2, 1e-9, 1)))
+    q = np.hstack([np.exp(lg), w * P10[:, 3:]])
+    return q / q.sum(1, keepdims=True)
+
+
+def decider_melange(P10, Pso, Pv2, pl, G2, m_proche, m_loin, loin_ou_proche=True):
+    """Décision F1 sur des probabilités déjà calculées. G2 : (n, 4, classes) ou None (sans lecture 2 x 2).
+    Renvoie (reponse, p_malade, confiance, P du lecteur proche, masque des photos décidées par la v2)."""
+    P10l = P10 if G2 is None else lecture_morceaux(P10, G2)
+    rp, pmp, cp, Pp = decider_convnext(melange_geometrique(P10l, Pso, Pv2), m_proche)
+    rl, pml, cl, _ = decider_convnext(Pv2, m_loin)
+    loin = pl >= 0.5
+    par_v2 = loin & (np.isin(rl, list(MALADES)) if loin_ou_proche else True)
+    return np.where(par_v2, rl, rp), np.where(par_v2, pml, pmp), np.where(par_v2, cl, cp), Pp, par_v2
+
+
+def _executer_melange(ctx, reg, m, chemins, temp):
+    """Chaîne F1 complète : aiguilleur, trois lecteurs, morceaux 2 x 2 de la v10b, décision. Lit les morceaux sur toutes
+    les photos dont la réponse vient du lecteur proche (environ 10 s de plus par photo sur le processeur)."""
+    import time
+    n = len(chemins)
+    ms, mv2 = (charger_convnext(Path(d)) for d in reg["melange_proche"])
+    m_proche = {**m, "seuil": float(reg["seuil_confiance_melange"]), "jnsp_alerte": bool(reg.get("jnsp_alerte", False))}
+    m_loin = {**mv2, "jnsp_alerte": bool(reg.get("jnsp_alerte_loin", False))}
+    ctx.journal.info(f"  Maladies : F1, mélange géométrique {m['nom']} + {ms['nom']} + {mv2['nom']}, confiance sous "
+                     f"{m_proche['seuil']:.2f}, morceaux 2 x 2 : {'oui' if reg.get('morceaux_2x2') else 'non'}")
+    pl = p_loin(chemins, charger_aiguilleur(Path(reg["aiguilleur"]))) if reg.get("aiguilleur") else np.zeros(n)
+    P10, Pso, Pv2 = predire_convnext(chemins, m), predire_convnext(chemins, ms), predire_convnext(chemins, mv2)
+    G2 = None
+    if reg.get("morceaux_2x2"):
+        rl = decider_convnext(Pv2, m_loin)[0]
+        besoin = ~((pl >= 0.5) & np.isin(rl, list(MALADES))) if reg.get("loin_ou_proche", True) else (pl < 0.5)
+        G2 = np.tile(np.eye(P10.shape[1])[0], (n, 4, 1))   # « saine » pour les photos dont la v2 décide seule (non lu)
+        idx, t0 = np.flatnonzero(besoin), time.time()
+        for k in range(0, len(idx), 8):
+            lot = idx[k:k + 8]
+            G2[lot] = predire_convnext([t for i in lot for t in morceaux_2x2(chemins[i])], m).reshape(len(lot), 4, -1)
+        ctx.journal.info(f"  Maladies : morceaux 2 x 2 lus sur {len(idx)} photo(s) en {time.time() - t0:.0f} s")
+    reponse, p_malade, confiance, Pp, par_v2 = decider_melange(P10, Pso, Pv2, pl, G2, m_proche, m_loin,
+                                                               reg.get("loin_ou_proche", True))
+    # Probabilités affichées : celles du mélange (température « melange » si elle est réglée un jour), ou celles de la v2
+    # pour les photos qu'elle décide (température « loin »)
+    Pp_aff, Pv2_aff = calibrer(Pp, temp.get("melange")), calibrer(Pv2, temp.get("loin"))
+    probas = {c: np.where(par_v2, np.nan, Pp_aff[:, k]) for k, c in enumerate(m["classes"])}
+    for k, c in enumerate(mv2["classes"]):
+        probas[c] = np.where(par_v2, Pv2_aff[:, k], probas[c])
+    branche = np.where(pl >= 0.5, "loin", "proche").astype(object) if reg.get("aiguilleur") else np.full(n, "unique", dtype=object)
+    ctx.journal.info(f"  Maladies : {int((pl >= 0.5).sum())} photo(s) prise(s) de loin, dont {int(par_v2.sum())} décidée(s) par la v2")
+    return reponse.astype(str), p_malade.astype(float), confiance.astype(float), probas, branche, pl
+
+
 def calibrer(P, t):
     """Probabilités affichées : mise à l'échelle de température (t réglé sur la validation) ; décisions inchangées."""
     if not t or t == 1:
@@ -299,7 +393,12 @@ def executer(ctx):
     photos = ctx.inventaire.photos
     chemins = [p.chemin for p in photos]
     temp = reg.get("temperature", {}) or {}
-    if m["type"] == "convnext":
+    f1 = bool(reg.get("melange_proche")) and m["type"] == "convnext" and len(chemins) > 0
+    if f1:   # F1 (adopté le 13/11/2026)
+        ctx.journal.info(f"  Maladies : v10b {m['nom']} ({len(m['reseaux'])} réseau(x) {m['reseau']}), alerte à "
+                         f"{m['seuil_alerte']:.2f}, nom à {m['seuil_nom']:.2f} (réglages : {m['source_reglages']})")
+        reponse, p_malade, confiance, probas, branche, pl = _executer_melange(ctx, reg, m, chemins, temp)
+    elif m["type"] == "convnext":
         ctx.journal.info(f"  Maladies : modèle {m['nom']} ({len(m['reseaux'])} réseau(x) {m['reseau']}, {len(m['classes'])} classes), "
                          f"{len(m['vues'])} vue(s), alerte à {m['seuil_alerte']:.2f}, nom à {m['seuil_nom']:.2f}, "
                          f"« je ne sais pas » sous {m['seuil']:.4f} (réglages : {m['source_reglages']})")
@@ -313,9 +412,10 @@ def executer(ctx):
         reponse, p_malade, confiance, P = decider(L, m, reg["seuil_malade"])
         P_aff = P
     classes = list(m["classes"])
-    probas = {c: P_aff[:, k].copy() for k, c in enumerate(classes)}
-    branche, pl = np.full(len(chemins), "unique", dtype=object), np.full(len(chemins), np.nan)
-    if reg.get("aiguilleur") and m["type"] == "convnext" and len(chemins):
+    if not f1:
+        probas = {c: P_aff[:, k].copy() for k, c in enumerate(classes)}
+        branche, pl = np.full(len(chemins), "unique", dtype=object), np.full(len(chemins), np.nan)
+    if not f1 and reg.get("aiguilleur") and m["type"] == "convnext" and len(chemins):
         # Architecture à deux branches (docs/protocole_maladies_cinq_classes.md, section 4) : les photos prises de loin
         # (plante entière) passent par le modèle « loin » (la v2), avec un message « à confirmer par un gros plan ».
         pl = p_loin(chemins, charger_aiguilleur(Path(reg["aiguilleur"])))

@@ -1,0 +1,3 @@
+7b19e2215c4717363d9e9db1b374b806e8fe78d1693a49fd352f322af6d4df48 *docs/plan_nuit_2026-11-12.md
+Thu Nov 12 22:14:34     2026
+73017722045aa8711af85c59cdcde8aa0cb3ef613122d1f1e43aa0bec231b6ab *docs/nuit_2026-11-12/regle_gel_finalistes.md

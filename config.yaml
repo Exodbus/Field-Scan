@@ -15,6 +15,16 @@ maladies:
   # Aiguilleur loin / près : DINOv2 ViT-B/14 figé + régression logistique (scripts/ajuster_aiguilleur.py). Sans cette
   # ligne, une seule branche (« modele »).
   aiguilleur: modeles/maladies_aiguilleur/aiguilleur.npz
+  # F1 « trois morceaux 2 x 2 », adopté par Corentin le 13/11/2026 (docs/nuit_2026-11-12/recap.md, section 2) : lecteur
+  # proche = moyenne géométrique à poids égaux de la v10b (« modele », lue entière et en 4 morceaux), de la soupe v2 + v8
+  # et de la v2 ; seuils de la v10b sauf la confiance (0,70). Photo « loin » : réponse de la v2 si elle alerte, sinon
+  # celle du lecteur proche. Juges : BanSpot 4 / 646 malades sans alerte, 56 / 646 saines en alerte ; Cordana du Pérou
+  # 99,4 %. Environ 10 s de plus par photo (morceaux). Pour revenir à la chaîne du 11/11 : commenter ces quatre lignes.
+  # Option plus simple, non jugée : F3 = morceaux_2x2: false et seuil_confiance_melange: 0.74.
+  melange_proche: [modeles/maladies_soupe_v2_v8/poids, modeles/maladies_binome/maladies_v2/poids]
+  seuil_confiance_melange: 0.70
+  loin_ou_proche: true
+  morceaux_2x2: true
   # Branche « proche » : « je ne sais pas » avec P(malade) >= seuil d'alerte -> « malade, non identifiée » (alerte).
   # Adopté par l'amendement 2 du protocole « cinq classes » : en validation, malades sans alerte 112 -> 9 / 2 001,
   # saines en alerte 9 -> 15 / 1 000.
