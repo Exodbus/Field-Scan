@@ -397,3 +397,76 @@ Mesure : F1 **mères seules**, appariement un à un à 1 m, disque de 2 000 px, 
   - Suivent les chiffres des trois méthodes, les IC et le verdict contre la baseline.
 - **`val_scellee` est consommée.** Aucune variante du vote n'y sera plus mesurée. Une nouvelle confirmation demanderait un nouvel ensemble scellé, choisi par Corentin (§ 2.5). Les chiffres d'E-020 ne servent à régler aucun paramètre ni aucun seuil.
 - **Erreur de code découverte après coup** : elle est corrigée et consignée. Les deux chiffres sont rapportés, et la mesure n'est pas relancée pour choisir.
+
+## 9. Résultat E-020 sur `val_scellee` (7 novembre 2026, mesure unique)
+
+Mesure faite une seule fois, selon le § 8, par independent-evaluator.
+- **Lancement :** 16 h 37 à 16 h 39.
+- **Contrôles :** les 17 empreintes du § 8.4 étaient identiques avant le lancement, et aucun fichier `VERROU` n'existait. Le script les a revérifiées (`bilan_E-020.json`, champs `empreintes` et `empreinte_script`).
+- **Commande :** celle du § 8.4.
+- **Aucun réglage ni aucune relance.**
+
+### 9.1 Résultats
+
+[M, E-020] 40 photos conformes, 6 blocs, 5 336 mères. Mères seules, appariement un à un à 1 m, disque de 2 000 px. Bootstrap par blocs, 10 000 tirages, graine 2026. Chaque méthode est à son seuil figé (§ 8.3).
+
+| Méthode | P | R | F1 [IC 95 % par blocs] | F1 à k = N_réf | Erreur de comptage | Double comptage |
+| --- | --- | --- | --- | --- | --- | --- |
+| Vote B′ (z ≥ 2,238) | 0,697 | 0,667 | **0,682** [0,668 ; 0,693] | 0,684 | −4,2 % | 0,056 |
+| v5 (0,30) | 0,870 | 0,774 | **0,819** [0,816 ; 0,823] | 0,833 | −11,0 % | 0,008 |
+| Baseline T3 (0,1688) | 0,483 | 0,732 | **0,582** [0,570 ; 0,597] | 0,487 | +51,4 % | 0,072 |
+
+Différences appariées de F1 (bootstrap par blocs, mêmes tirages) :
+
+| Différence | Estimation | IC 95 % | Borne basse unilatérale 95 % | Par bloc (min ; max) |
+| --- | --- | --- | --- | --- |
+| Vote − v5 | **−0,138** | [−0,149 ; −0,128] | −0,147 | −0,163 (L2B3) ; −0,118 (L2B1) |
+| Vote − baseline T3 | **+0,100** | [+0,082 ; +0,114] | +0,085 | +0,068 (L1B1) ; +0,124 (L1B3) |
+| Baseline T3 − v5 (rapporté) | −0,237 | [−0,250 ; −0,224] | −0,248 | — |
+
+### 9.2 Verdict (§ 8.6 et § 8.8)
+
+**Non confirmé** : sur `val_scellee` (40 photos conformes, 6 blocs), le vote B′ figé (E-010) ne bat pas le v5 au seuil 0,30.
+
+Aucune des trois conditions n'est remplie :
+- F1 0,682 < 0,819 ;
+- borne basse −0,147 < 0 ;
+- au budget, 0,684 < 0,833.
+
+**Contre la baseline T3** (rapporté, sans effet sur le verdict principal), les trois conditions sont remplies :
+- F1 0,682 > 0,582 ;
+- borne basse +0,085 > 0 ;
+- au budget, 0,684 ≥ 0,487.
+
+### 9.3 Comparaison avec les prédictions du § 8.7
+
+| Grandeur | Prédiction [fourchette à 80 %] | Mesure | Dans la fourchette |
+| --- | --- | --- | --- |
+| F1 vote B′ | 0,62 [0,55 ; 0,68] | 0,682 | non, juste au-dessus (0,6817 > 0,68) |
+| F1 v5 | 0,83 [0,78 ; 0,88] | 0,819 | oui |
+| F1 baseline T3 | 0,54 [0,46 ; 0,60] | 0,582 | oui |
+| Vote − v5 | −0,21 [−0,30 ; −0,12] | −0,138 | oui |
+| Vote − baseline | +0,08 [+0,02 ; +0,14] | +0,100 | oui |
+| Erreur de comptage du vote | 0 % [−15 % ; +15 %] | −4,2 % | oui |
+
+**Verdicts attendus et seuils de surprise :**
+- verdict principal attendu, « non confirmé » : c'est le résultat obtenu ;
+- borne basse contre la baseline > 0, attendue avec une probabilité d'environ 65 % : elle l'est ;
+- aucun des cas de surprise du § 8.7 n'est atteint : vote au-dessus de 0,72 ou sous 0,50, v5 sous 0,75.
+
+### 9.4 Conséquences
+
+- **`val_scellee` est consommée.** Aucune variante du vote n'y sera plus mesurée. Une nouvelle confirmation demanderait un nouvel ensemble scellé, choisi par Corentin (§ 2.5).
+- Les chiffres d'E-020 ne servent à régler aucun paramètre ni aucun seuil.
+- **Portée :** cette ferme seulement (§ 8.6).
+
+**Sorties :**
+- Dans `out/comptage_math/evaluation/E-020/` :
+  - `VERROU` ;
+  - `detections_vote_B_prime.csv` (`52b7c6a7…`) ;
+  - `detections_v5.csv` (`e1e02711…`) ;
+  - `detections_baseline_T3.csv` (`6a882e68…`) ;
+  - `bilan_E-020.json` (`ab8f5276…`) ;
+  - `evaluation/`.
+- Journal : `out/comptage_math/evaluation/E-020.log`.
+- Entrée E-020 dans `docs/experiment-log.md`.

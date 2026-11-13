@@ -40,13 +40,14 @@ def noyau(res, r_max, r_min=R_MIN_M, rho_forme="inv"):
     return k.astype(np.complex64), (rho ** 2).astype(np.float32)
 
 
-def champ(rgb, res, sigma_t_m=SIGMA_T_M, masque="provisoire", canal="luminance"):
+def champ(rgb, res, sigma_t_m=SIGMA_T_M, masque="provisoire", canal="luminance", sigma_g_m=SIGMA_G_M):
     """Champ T_feuille (luminance, σ_g 4 cm, σ_t 10 cm par défaut) et masque de végétation. rgb float (H, W, 3) en RGB 0–255.
-    masque : "provisoire" (orientation.masque_vegetation, E-008 à E-012) ou "couleur" (couleur.masque_vegetation, E-014)."""
+    masque : "provisoire" (orientation.masque_vegetation, E-008 à E-012) ou "couleur" (couleur.masque_vegetation, E-014).
+    sigma_g_m : échelle de dérivation (E-022 ; défaut 4 cm = B′ figé, inchangé)."""
     bgr = np.ascontiguousarray(rgb[..., ::-1]).clip(0, 255).astype(np.uint8)
     # canal "exg" : témoin T2 (test_final.md § 7), tenseur sur l'ExG normalisé au lieu de la luminance
     Y = O.luminance(bgr) if canal == "luminance" else O.exg_norm_bgr(bgr).astype(np.float32)
-    z, _ = O.tenseur(Y, SIGMA_G_M / res, sigma_t_m / res)
+    z, _ = O.tenseur(Y, sigma_g_m / res, sigma_t_m / res)
     if masque == "couleur":
         from comptage_math import couleur as CO
         m = CO.masque_vegetation(rgb, rgb.sum(2) > 15, res)
@@ -100,13 +101,16 @@ def carte_votes_image(rgb, res, r_max=1.3, p=1.0, melanger=None):
     return carte_votes(z, m & valide, res, r_max, p, valide=valide, melanger=melanger)
 
 
-def carte_votes_multi(rgb, res, r_max=1.6, p=1.0, sigmas_t=(SIGMA_T_M,)):
+def carte_votes_multi(rgb, res, r_max=1.6, p=1.0, sigmas_t=(SIGMA_T_M,), sigmas_g=None):
     """Fusion des votes sur plusieurs échelles σ_t (E-010, notes § 3.1) : z = zrob(Σ_s z_an,s).
+    sigmas_g : échelles de dérivation associées (E-022), une par σ_t ; None = σ_g 4 cm partout (comportement E-010).
     Retourne dict(z=carte robuste, champ=z du canal σ_t = 10 cm (ou le premier), masque)."""
     valide = rgb.sum(2) > 15
     somme, z_ref, m_ref = None, None, None
-    for st in sigmas_t:
-        z, m = champ(rgb, res, st)
+    if sigmas_g is None:
+        sigmas_g = (SIGMA_G_M,) * len(sigmas_t)
+    for st, sg in zip(sigmas_t, sigmas_g):
+        z, m = champ(rgb, res, st, sigma_g_m=sg)
         m &= valide
         zan = carte_votes(z, m, res, r_max, p, valide=valide)["z_an"]
         somme = zan if somme is None else somme + zan

@@ -603,3 +603,204 @@ Source : `docs/recherche/notes/scientific-challenger.md`, section E-017 (OBJ-E1 
     - G3 : densité −15 % (seuil 11 %) et CV des densités entre tuiles 1,11 (seuil 0,97). L'amincissement crée des trouées trop grandes.
 - **Écart de méthode relevé par l'auteur.** La géométrie a été calée avec des allées à p = 0,5, puis p a été ramené à 0,3 pour la photométrie sans recaler la géométrie : cause probable de G3.
 - **Conséquence.** Le test de prédiction n'est pas lancé. Le chef d'orchestre lance la v2.3, **dernière version permise**, corrigée uniquement sur CAL : géométrie recalée avec p = 0,3, amincissement plafonné par la part de cellules de 10 m vides de CAL (3,1 %), densité et d1 vérifiés sur CAL avant la passe VAL-S. Si la v2.3 échoue, le simulateur est déclaré non fidèle et ne sert pas au test de prédiction.
+
+### E-020 — Mesure unique sur val_scellee : vote B′, v5 et baseline T3 (independent-evaluator, 7 novembre 2026)
+- **Règles :** `docs/recherche/test_final.md` § 8, commitées avant la mesure (commit d084589, branche `comptage-math/val-scellee`, accord de Corentin, D-012).
+- **Empreintes :** les 17 SHA-256 du § 8.4 ont été vérifiées avant le lancement, toutes identiques (script `05536ad3…`, `votes.py` `eff3fb21…`, ONNX v5 `12f9b4ca…`, `math_evaluer.py` `934585b1…`, etc.). Le script les a revérifiées et les consigne dans `bilan_E-020.json` (`empreintes`, `empreinte_script`). Aucun fichier `VERROU` n'existait avant le lancement.
+- **Commande, lancée une seule fois** (16 h 37 → 16 h 39, détections en 76 s) :
+  `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -I -u out/comptage_math/evaluation/e020_val_scellee.py --mesure E-020`
+- **Données :** 40 photos conformes de `val_scellee` (DJI_0862 à 0902 sans 0867 ni 0903), 6 blocs, 5 336 mères. Mères seules, appariement un à un à 1 m, disque de 2 000 px. Bootstrap par blocs, 10 000 tirages, graine 2026.
+- **[M, E-020]** Résultats, chaque méthode à son seuil figé :
+
+| Méthode | P | R | F1 [IC 95 % par blocs] | F1 à k = N_réf | Erreur de comptage | Double comptage | Prédiction § 8.7 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Vote B′ (z ≥ 2,238) | 0,697 | 0,667 | **0,682** [0,668 ; 0,693] | 0,684 | −4,2 % | 0,056 | 0,62 [0,55 ; 0,68] |
+| v5 (0,30) | 0,870 | 0,774 | **0,819** [0,816 ; 0,823] | 0,833 | −11,0 % | 0,008 | 0,83 [0,78 ; 0,88] |
+| Baseline T3 (0,1688) | 0,483 | 0,732 | **0,582** [0,570 ; 0,597] | 0,487 | +51,4 % | 0,072 | 0,54 [0,46 ; 0,60] |
+
+- **Vote − v5 :** −0,138, IC 95 % [−0,149 ; −0,128], borne basse unilatérale −0,147 ; au budget, 0,684 contre 0,833. Par bloc : de −0,118 (L2B1) à −0,163 (L2B3). Prédiction : −0,21 [−0,30 ; −0,12].
+- **Vote − baseline T3 :** +0,100, IC 95 % [+0,082 ; +0,114], borne basse unilatérale +0,085 ; au budget, 0,684 contre 0,487. Par bloc : de +0,068 (L1B1) à +0,124 (L1B3). Prédiction : +0,08 [+0,02 ; +0,14].
+- **Baseline − v5 (rapporté) :** −0,237, IC 95 % [−0,250 ; −0,224].
+- **Écart aux prédictions :** le F1 du vote (0,6817) dépasse de peu la borne haute de la fourchette à 80 % (0,68), sans atteindre le seuil de surprise (0,72). Les autres grandeurs sont dans leurs fourchettes.
+- **Lecture (§ 8.6 et 8.8) :**
+  - « **Non confirmé** : sur `val_scellee` (40 photos conformes, 6 blocs), le vote B′ figé (E-010) ne bat pas le v5 au seuil 0,30. » Aucune des trois conditions n'est remplie.
+  - Contre la baseline T3 (rapporté, sans effet sur le verdict principal) : les trois conditions sont remplies.
+  - `val_scellee` est consommée. Aucune variante du vote n'y sera plus mesurée, et ces chiffres ne servent à régler aucun paramètre ni aucun seuil.
+- **Sorties :** `out/comptage_math/evaluation/E-020/` : `VERROU`, `detections_vote_B_prime.csv` (`52b7c6a7…`), `detections_v5.csv` (`e1e02711…`), `detections_baseline_T3.csv` (`6a882e68…`), `bilan_E-020.json` (`ab8f5276…`), et `evaluation/` (résumés, détails par image et courbes rappel-budget de chaque évaluation). Journal de la console : `out/comptage_math/evaluation/E-020.log`.
+
+### D-013, simulateur v2.3 (leaf-mathematician, 7 novembre 2026) — 3e et dernière version : fidélité non atteinte, simulateur clos
+- **[M]** `out/comptage_math/leaf-mathematician/D-013/fidelite_v2.3.json`, 176 tuiles. `simulateur.py` 26668ddd… (revérifié par le chef d'orchestre), `parametres_v2.3.json` 5124e5b8…, consignés avant la passe (`modele_feuille.md` § 11.5). Contrôles sur CAL écrits avant et tous passés.
+  - Passent : F2, F3, F5 et, pour la première fois, les six tests géométriques G1 à G6.
+  - Échouent :
+    - F1 : KS de luminance 0,112 pour un seuil de 0,10 ; l'image est trop sombre (ombre 0,126 contre 0,109) ;
+    - F4 : rapport de dispersion du sol 1,69 pour un seuil de 1,5. Sur CAL, il était déjà de 1,46.
+- **Conséquence (contrat D-013, § 5).** Les trois versions sont consommées et aucune n'atteint la fidélité. Le simulateur n'a aucun usage permis : pas de test de prédiction, pas de diagnostic du vote par facteur. Les cibles scellées restent fermées. Le code et les scènes sont conservés pour référence.
+
+### E-021 — Diagnostic de l'écart vote–v5, développement seulement (error-analyst, 7 novembre 2026)
+- **Règles** écrites avant le calcul dans `docs/recherche/notes/error-analyst.md` (section E-021). Commande : `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -I -u out/comptage_math/error-analyst/e021_ecart_v5.py`. Sorties dans `out/comptage_math/error-analyst/E-021/`, relues par le chef d'orchestre. Comptes d'E-011 reproduits à l'identique.
+- **[M] Oracle sur bv_session_a** (écart v5 − vote 0,184 ; bornes hautes, en ne corrigeant que ce que le v5 réussit) :
+  - FN sans candidat : +0,056 ;
+  - FN sous le seuil : +0,052 ;
+  - FP autre végétal : +0,042 ;
+  - bord : +0,025 (environ +0,006 une fois le taux de base retiré, [H]) ;
+  - feuille isolée : +0,022 ;
+  - doublon : +0,018 ;
+  - chacune des autres classes : moins de +0,006.
+  - Sur dev_transfert, le premier levier est l'autre végétal (+0,140).
+- **[M] Grandes couronnes (≥ 2,8 m) trouvées par le v5 et oubliées par le vote, hors bord (n = 857) :**
+  - signal radial absent : 55,7 %, contre 13,8 % pour les mères trouvées ;
+  - pic déplacé : 23,6 % ;
+  - signal présent mais trop faible au centre : 20,8 %.
+  - Seule l'**alignement radial à 0,4–1,6 m** sépare oubliées et trouvées (AUC 0,15). Cohérence, végétation et contraste ne les séparent pas.
+  - Le signal situé uniquement au-delà de r_max = 1,6 m ne concerne que 4,5 % des oubliées : **la troncature est réfutée comme cause**.
+- **Écarts au protocole signalés par l'auteur :**
+  - une relance, après un plantage à l'étape des planches ;
+  - un amendement daté de la règle « pic déplacé », fait avant la lecture des planches et sans effet sur les effectifs.
+
+### E-022 — Échelle de dérivation σ_g du vote : pré-enregistrement (7 novembre 2026, avant tout calcul)
+- **Hypothèse [H], tirée d'E-021.** Sur les grands limbes, le tenseur à σ_g = 4 cm suit les nervures secondaires plutôt que les axes radiaux des feuilles. σ_g n'a jamais été varié : E-010 n'a varié que σ_t.
+- **Données :** bv_session_a sans pépinière ; dev_transfert en contrôle. Interdits : bv_b_*, val_*, D-013.
+- **Étape A — diagnostic, sans F1.**
+  - Alignement radial à 0,4–1,6 m aux grandes couronnes hors bord, pour σ_g ∈ {4, 6, 8, 12} cm, avec σ_t = 2,5 σ_g.
+  - Seuil de présence recalculé à chaque échelle : 90e centile sur les milieux de paires de mères.
+  - **Critère A :** retenir la plus petite échelle σ_g* pour laquelle :
+    - la part des oubliées avec signal passe de 39,7 % à au moins 55 % ;
+    - la part des mères trouvées avec signal (85,6 %) ne baisse pas de plus de 2 points.
+  - Si aucune échelle ne passe : arrêt, et l'hypothèse « nervures » est réfutée.
+- **Étape B — seulement si A passe.**
+  - Fusion z = zrob(z_an(4 cm) + z_an(σ_g*)), comme `carte_votes_multi`.
+  - Seul réglage permis : le seuil, choisi sur bv_session_a selon la règle d'E-008.
+  - **Critère B, tous requis :**
+    - gain de F1 apparié d'au moins +0,010 sur bv_session_a, avec un IC 95 % par blocs de 7 photos qui exclut 0 ;
+    - taux d'oubli des mères de 2,8 m et plus en baisse d'au moins 5 points ;
+    - F1 sur dev_transfert sans perte de plus de 0,005 ;
+    - fenêtre d'égalité de 0,001 (D-008).
+  - Réserve : l'optimisme de sélection est estimé entre 0,005 et 0,02, donc un gain inférieur à 0,02 sera déclaré ambigu.
+- **Pas de nouvelle mesure de test :** val_scellee est consommée. Une éventuelle validation fera l'objet d'une décision distincte, soumise à Corentin.
+
+### E-022 — Échelle de dérivation σ_g : résultat (convergence-engineer, 7 novembre 2026)
+- **[M]** Commande : `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -I -u out/comptage_math/convergence-engineer/e022_sigma_g.py`. Sorties dans `out/comptage_math/convergence-engineer/E-022/`, relues par le chef d'orchestre. Contrôle de départ conforme (39,7 % et 85,6 % à 4 cm).
+- **Étape A, part des oubliées avec signal (bv_session_a) :**
+  - 39,7 % à 4 cm ; 50,4 % à 6 cm ; **54,96 % à 8 cm (471 sur 857, alors qu'il en fallait 472)** ; 53,8 % à 12 cm.
+  - Mères trouvées : de 85,6 % à 89,8 %.
+  - L'AUC entre oubliées et trouvées monte de 0,15 à 0,22 : les deux groupes se séparent moins.
+  - Sur dev_transfert, la part des oubliées avec signal **baisse** à chaque échelle (de 41,8 % à 24,8 %).
+- **Conclusion.** **Critère A manqué** : l'étape B n'est pas lancée et l'hypothèse « nervures » est réfutée au sens du critère. Le quasi-passage sur bv_session_a ne se transfère pas ; il ressemble à un effet de lissage commun aux deux groupes [H]. Le seuil n'est pas réinterprété (D-008).
+- **Code.** `comptage_math/votes.py` reçoit deux paramètres, dont les valeurs par défaut gardent B′ figé : `sigma_g_m` et `sigmas_g`.
+  - Les cartes z sont identiques au bit près sur 3 tuiles.
+  - Nouvelle empreinte : b3131dcc…. La version mesurée en E-020 (eff3fb21…) reste celle du commit d084589.
+
+### E-023 — Symétrie radiale de la couronne (FRST) : pré-enregistrement (7 novembre 2026, avant tout calcul)
+- **Décision de Corentin**, après E-022 : explorer la symétrie radiale.
+- **Hypothèse [H].** Sur les grandes couronnes « sans signal » d'E-021, l'orientation fine des feuilles ne converge pas, mais la couronne entière reste un objet à symétrie radiale à son échelle : contours, alternance limbes/ombres. Une transformée de symétrie radiale rapide **[S] Loy et Zelinsky, « Fast Radial Symmetry for Detecting Points of Interest », IEEE TPAMI 25(8), 2003** capterait ce signal à partir des gradients de luminance à l'échelle de la couronne. Ce serait une information complémentaire du vote B′, qui n'utilise que l'orientation des axes.
+- **Formulation.**
+  - Luminance lissée à σ_s ∈ {8, 16} cm.
+  - Gradients, puis votes en p ± n·ĝ pour les rayons n ∈ {0,6 ; 0,9 ; 1,2 ; 1,5} m.
+  - Polarité : positive, négative ou les deux.
+  - Images O_n (orientation) et M_n (magnitude), exposant radial α ∈ {1, 2}, lissage A_n de largeur 0,25 n.
+  - Score S = moyenne sur n de F_n * A_n, normalisé en z robuste par tuile, dans le masque végétation de `votes.champ`.
+  - Le vote B′ n'est pas modifié.
+- **Données :** bv_session_a sans pépinière ; dev_transfert en contrôle. Interdits : bv_b_*, val_*, `out/comptage_math/evaluation/D-013/`.
+- **Étape A — diagnostic sans F1.** Groupes et milieux d'E-021 : 857 grandes couronnes oubliées hors bord, dont 477 « signal radial absent » ; 2 742 trouvées par les deux ; milieux de paires de mères.
+  - Pour chaque configuration (σ_s × polarité × α, soit 12), seuil T = 90e centile de S sur les milieux.
+  - **Critère A, sur bv_session_a :** retenir la configuration qui maximise la part des 477 « signal absent » avec S ≥ T, sous trois conditions :
+    1. cette part est d'au moins 40 % (le taux de base des milieux est de 10 %) ;
+    2. la part des 2 742 trouvées avec S ≥ T est d'au moins 60 % ;
+    3. sur dev_transfert, la part des « signal absent » avec S ≥ T de la même configuration est d'au moins 30 %.
+  - Si aucune configuration ne passe : arrêt, FRST réfutée comme complément.
+- **Étape B — seulement si A passe.**
+  - Fusion z = zrob(z_vote + w · z_FRST), avec w ∈ {0,5 ; 1,0}. Mêmes NMS 1,0 m et maxima que le vote.
+  - Seul autre réglage : le seuil, choisi sur bv_session_a selon la règle d'E-008.
+  - FRST seule est aussi mesurée, pour information.
+  - **Critère B, tous requis :**
+    - gain de F1 apparié contre B′ figé d'au moins +0,010 sur bv_session_a, avec un IC 95 % par blocs de 7 photos qui exclut 0 ;
+    - taux d'oubli des mères de 2,8 m et plus en baisse d'au moins 5 points ;
+    - F1 sur dev_transfert sans perte de plus de 0,005 ;
+    - fenêtre d'égalité de 0,001 (D-008).
+  - Un gain inférieur à 0,02 est déclaré ambigu (optimisme de sélection).
+- **Pas de mesure de test :** val_scellee est consommée. Toute validation fera l'objet d'une décision distincte, soumise à Corentin.
+
+### E-023 — Symétrie radiale FRST : résultat (convergence-engineer, 7 novembre 2026)
+- **[M]** Commandes : `out/comptage_math/convergence-engineer/e023_frst.py` et `e023_synthetique.py`. Sorties dans `E-023/`, critère A relu par le chef d'orchestre (`critere_A.csv`). Précisions de formulation fixées avant le calcul dans la note de l'auteur, § 13.0.
+- **Contrôle synthétique.**
+  - Disque : le maximum tombe au centre, à 1 cm près.
+  - Étoile de 8 bandes radiales : le maximum tombe à 1,2 m du centre. La FRST capte le contour d'un objet compact, pas une étoile de limbes, car les bords des bandes ont un gradient tangentiel [H].
+- **Étape A.** Aucune des 12 configurations n'approche les seuils.
+  - « Signal absent » au-dessus de T : 8,6 % au mieux, pour 40 % requis.
+  - Mères trouvées : 1,5 % au mieux, pour 60 % requis.
+  - Toutes les parts sont sous le taux de base de 10 % : **le signal est inversé**. Le z de la FRST est négatif au centre des mères (médiane de −0,27 à −0,68) et positif aux milieux entre mères (+0,29 à +0,68), sur les deux jeux.
+- **Conclusion.** **Critère A manqué** ; l'étape B n'est pas lancée. La FRST de couronne est réfutée comme complément du vote. Les maxima de symétrie compacte tombent dans les trouées et sur des limbes isolés, pas au centre des couronnes.
+
+### E-024 — Distance aux trouées : pré-enregistrement (7 novembre 2026, avant tout calcul)
+- **Décision de Corentin**, après E-023.
+- **Hypothèse [H].** E-023 montre que les objets compacts de la canopée dense sont les trouées entre couronnes. Le centre d'un plant serait donc le point de feuillage le plus éloigné des trouées. C'est une formulation compatible avec la délimitation de couronnes par carte de distance et bassins versants **[S] méthode classique en télédétection forestière, par exemple Wang, Gong et Biging 2004, PE&RS 70(3)**. Elle n'utilise ni l'orientation des limbes ni la forme d'étoile.
+- **Formulation.**
+  - **Trouées** : pixels hors du masque végétation de `votes.champ`, ou de luminance (lissée à 5 cm) sous le centile p ∈ {15, 25} de la végétation de la tuile.
+  - **Nettoyage** : ouverture puis suppression des composantes de moins de a ∈ {0,02 ; 0,08} m².
+  - **Carte** : D = distance euclidienne aux trouées, en mètres, lissée à σ_d ∈ {10, 25} cm, puis normalisée en z robuste dans le masque, par tuile.
+  - Grille de 2 × 2 × 2 = 8 configurations.
+  - Le vote B′ n'est pas modifié.
+- **Données :** bv_session_a sans pépinière ; dev_transfert en contrôle. Interdits : bv_b_*, val_*, `out/comptage_math/evaluation/D-013/`.
+- **Étape A — diagnostic sans F1, groupes et milieux d'E-021.** Seuil T de chaque configuration = 90e centile de z_D sur les milieux de paires de mères.
+  - **Critère A** : retenir la configuration qui maximise la part des 477 grandes couronnes « signal absent » avec z_D ≥ T, à trois conditions :
+    1. cette part est d'au moins 40 % ;
+    2. la part des 2 742 mères trouvées par les deux méthodes avec z_D ≥ T est d'au moins 60 % ;
+    3. sur dev_transfert, la même configuration donne au moins 30 % pour les « signal absent ».
+  - Si aucune configuration ne passe : arrêt, et la distance aux trouées est réfutée.
+- **Étape B — seulement si A passe.**
+  - Candidats : maxima locaux de z_D seul, et fusion z = zrob(z_vote + w · z_D) avec w ∈ {0,5 ; 1,0}.
+  - Même NMS de 1,0 m que le vote. Seul autre réglage : le seuil, choisi sur bv_session_a selon la règle d'E-008.
+  - **Critère B**, tous requis, pour la meilleure fusion :
+    - gain de F1 apparié contre B′ figé d'au moins +0,010 sur bv_session_a, avec un IC 95 % par blocs de 7 photos qui exclut 0 ;
+    - taux d'oubli des mères de 2,8 m et plus en baisse d'au moins 5 points ;
+    - perte de F1 sur dev_transfert d'au plus 0,005 ;
+    - fenêtre d'égalité de 0,001 (D-008).
+  - Un gain inférieur à 0,02 est déclaré ambigu. z_D seul est rapporté pour information.
+- **Pas de mesure de test** : val_scellee est consommée.
+
+### E-024 — Distance aux trouées : résultat (dense-canopy-engineer, 7 novembre 2026)
+- **[M]** Commandes : `out/comptage_math/dense-canopy-engineer/e024_synthetique.py` et `e024_trouees.py`. Sorties dans `E-024/`. Le critère A a été relu par le chef d'orchestre (`critere_A.csv`). Les points muets ont été fixés avant le calcul (note de l'auteur, § 1.0).
+- **Contrôle synthétique : échec.**
+  - Avec le bruit prévu, aucune des 8 configurations ne place les maxima aux centres (écarts de 0,6 à 2,4 m).
+  - Diagnostic après coup : sans bruit, les maxima tombent à 1 à 5 cm des centres. La règle du centile p fragmente un feuillage texturé [H].
+- **Étape A.** Pour la meilleure configuration (p 15, a 0,02 m², σ_d 25 cm) :
+  - « signal absent » : 44,9 % (condition 1 remplie) ;
+  - dev_transfert : 41,6 % (condition 3 remplie) ;
+  - mères trouvées : **50,4 %, pour 60 % requis** (condition 2 manquée). Aucune configuration ne la remplit.
+  - Le signe est le bon, contrairement à la FRST : la médiane de z_D vaut de +0,4 à +1,3 aux mères, contre environ −0,35 aux milieux. C'est 3 à 5 fois le taux de base.
+  - [O] Les maxima suivent les crêtes de canopée entre ombres internes, pas les centres.
+- **Conclusion.** **Critère A manqué** ; l'étape B n'est pas lancée. Selon la règle écrite, la distance aux trouées est réfutée comme complément. Le résultat n'est pas réinterprété (D-008).
+- **[O] Remarque du chef d'orchestre, pour une éventuelle expérience future et sans valeur de verdict ici.** z_D signale à peu près autant les oubliées « signal absent » (45 %) que les trouvées (50 %). Son information semble donc peu corrélée au vote, ce que la condition 2 ne mesurait pas.
+
+### E-025 — Fusion vote + distance aux trouées, mesurée en F1 : pré-enregistrement (7 novembre 2026, avant tout calcul)
+- **Décision de Corentin**, après E-024. C'est une **nouvelle expérience**, pas une reprise d'E-024 : le verdict d'E-024 (critère A manqué, distance réfutée selon sa règle) reste tel quel (D-008).
+- **Motif [O].** z_D signale à peu près autant les grandes couronnes « signal absent » (45 %) que les mères trouvées par le vote (50 %). Son information paraît peu corrélée au vote. Seul le F1 dira si elle le complète.
+- **Configuration figée, sans F1** : p 15, a 0,02 m², σ_d 25 cm. C'est celle qui maximise la part « signal absent » à l'étape A d'E-024 (règle de choix d'E-024, appliquée sans les conditions). Aucune autre configuration n'est mesurée.
+- **Candidats.**
+  - Fusion z = zrob(z_vote + w · z_D), w ∈ {0,5 ; 1,0} ; z_vote = vote B′ figé (E-010) ; même NMS de 1,0 m.
+  - Seul autre réglage : le seuil, choisi sur bv_session_a selon la règle d'E-008. w est choisi sur le F1 de bv_session_a ; à égalité (0,001), w = 0,5.
+  - z_D seul est rapporté pour information, sans verdict.
+- **Données :** bv_session_a sans pépinière (réglage et verdict) ; dev_transfert en contrôle. Interdits : bv_b_*, val_*, `out/comptage_math/evaluation/D-013/`.
+- **Critère**, tous requis, pour le w retenu :
+  1. gain de F1 apparié contre B′ figé d'au moins +0,010 sur bv_session_a, IC 95 % par blocs de 7 photos excluant 0 ;
+  2. taux d'oubli des mères de 2,8 m et plus en baisse d'au moins 5 points ;
+  3. perte de F1 sur dev_transfert d'au plus 0,005, au seuil choisi sur bv_session_a ;
+  4. fenêtre d'égalité 0,001 (D-008).
+- **Réserve écrite d'avance.** Le seuil et w sont choisis sur les mêmes images que le verdict : un gain inférieur à 0,02 est déclaré **ambigu** (optimisme de sélection). Aucun test indépendant n'est disponible (val_scellee consommée) : même un succès reste un résultat de développement, pas une adoption.
+
+### E-025 — Fusion vote + distance aux trouées : résultat (dense-canopy-engineer, 7 novembre 2026)
+- **[M]** Commande : `PYTHONIOENCODING=utf-8 .venv/Scripts/python.exe -I -u out/comptage_math/dense-canopy-engineer/e025_fusion.py` (186 s). Sorties dans `E-025/`. Le chef d'orchestre a relu `bilan_E-025.json`.
+- **Contrôle** : le vote B′ recalculé retrouve E-010 à l'identique (16 650 détections, seuil 2,2382, F1 0,6368 ; dev_transfert 0,5455).
+- **F1 sur bv_session_a (seuil par la règle d'E-008) et sur dev_transfert (au même seuil)** :
+  - vote B′ : 0,6368 et 0,5455 ;
+  - fusion w = 0,5 : **0,6580** et 0,5468 ;
+  - fusion w = 1,0 : 0,6442 et 0,5141 ;
+  - z_D seul, pour information : 0,5074 et 0,4123.
+- **Critère pour w = 0,5**, retenu sur le F1 de bv_session_a :
+  1. gain apparié +0,0212, IC 95 % par blocs [+0,0082 ; +0,0362] : rempli ;
+  2. oubli des mères ≥ 2,8 m de 29,5 % à 23,2 % (−6,3 points) : rempli ;
+  3. dev_transfert : +0,0013, donc sans perte : rempli.
+- **Verdict : succès selon la règle écrite.** Le gain dépasse le seuil d'ambiguïté (0,02) de seulement 0,0012. La réserve écrite d'avance s'applique : w et le seuil ont été choisis sur les mêmes images, et aucun test indépendant n'existe. C'est donc un résultat de développement, **pas une adoption**.
+- **Mécanisme [M]** : le rappel passe de 0,643 à 0,703 ; la précision baisse de 0,630 à 0,619.
+- **Écart restant** : la fusion reste loin de v5 sur ces photos (0,821 en E-006, v5 entraîné dessus).
+- **Note** : l'empreinte de `votes.py` (b3131dcc) diffère de celle du bilan d'E-010 (993bff46). Les détections et le F1 sont pourtant identiques, et c'est la même empreinte que pour E-022 à E-024.
