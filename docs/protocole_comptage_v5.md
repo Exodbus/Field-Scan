@@ -89,9 +89,23 @@ Le v4 retrouve, à 0,002 près, les chiffres de son propre test (protocole v4, s
 **Lecture** :
 - **Dense, test neuf (banano)** : le gain est faible, +0,011 de F1 (rappel 0,776 contre 0,747). Sur la validation dense, il était de +0,059. Cette validation vient de la même ferme que l'entraînement (limite écrite à la section 2) et a surestimé le gain.
 - **Segmento est** (dense, déjà vu au test du v3 et du v4) : le v5 regagne une partie du rappel perdu par le v4 (0,577 contre 0,452), sans revenir au niveau du v3 (F1 0,733).
-- **Plantation espacée** : le v5 recule nettement, F1 0,546 contre 0,732 (rappel 0,384 contre 0,586) ; le v3 faisait 0,814. Aucune validation du v5 n'est une plantation espacée indépendante : la validation plantain (100_metros) n'a baissé que de 0,008 et n'a pas signalé ce recul.
+- **Plantation espacée** (`banana_tree_detection`, en fait une plantation tout juste plantée : très petits plants en rangs sur paillage, vu au contrôle visuel) : le v5 recule nettement, F1 0,546 contre 0,732 (rappel 0,384 contre 0,586) ; le v3 faisait 0,814. Aucune validation du v5 n'est une plantation espacée indépendante : la validation plantain (100_metros) n'a baissé que de 0,008 et n'a pas signalé ce recul.
 - **Agroforesterie (CG)** : le v5 recule aussi, 0,315 contre 0,380, avec plus de précision et moins de rappel.
 - **Images sans bananier** : 0,5 % de fausses détections, sous la limite de 5 %.
 - **D'une version à l'autre**, chaque gain sur un type de plantation s'accompagne d'une perte sur un autre. Du v3 au v4, l'agroforesterie s'améliore et les plantations reculent ; du v4 au v5, le dense s'améliore, l'espacée et l'agroforesterie reculent. Un seul détecteur avec un seul seuil couvre mal les trois situations.
 - **Conformément au protocole, le v5 reste adopté** et le compromis est rapporté tel quel. Revenir au v4 à cause de ce test serait une décision prise sur le test. Dans les plantations espacées, le bulletin sous-comptera ; la fourchette, mesurée sur la validation, ne couvre pas ce cas.
 - **Limite** : segmento est, `banana_tree_detection` et CG ont servi au test du v3 et du v4, et le test du v4 a motivé la v5. Ce ne sont plus des tests vierges. Pour cette version, seul banano l'était.
+
+**Fourchette du bulletin (section 7 bis, 6 novembre 2026)** : banavista session B 8 196 / 8 809 (0,93), plantain 100_metros 2 633 / 2 896 (0,91), dji_0544 118 / 137 (0,86), MM 69 / 89 (0,78) : **coefficients 0,78 à 0,93** (`out/fourchette_v5.json`). Tous les rapports sont sous 1 : sur la validation, le v5 détecte un peu plus de pieds qu'il n'y en a. Sur la plantation tout juste plantée du test, c'est l'inverse (38 790 annotés pour 15 816 détectés, rapport 2,45), hors fourchette.
+
+**Contrôle visuel (section 8, `scripts/planches_controle_v5.py`, `out/controle_visuel_v5`)** : décompte sur les images tirées à l'avance.
+
+| Images | v4 | v5 |
+| --- | --- | --- |
+| banano, 6 tuiles (594 boîtes) | 452 retrouvées, 83 détections sans boîte | 467, 91 |
+| segmento est, 6 images (625 boîtes) | 275, 25 | 339, 58 |
+| `banana_tree_detection`, 6 images (638 boîtes) | 408, 8 | 253, 15 |
+| El Oro EO1-EO4, sans référence (Roboflow 388, v3 302) | 212 pieds | 304 pieds |
+| dont EO1, plantation fermée (Roboflow 61, v3 56) | 12 | 41 |
+
+Remarques à l'œil : sur `banana_tree_detection`, le v5 oublie surtout les très petits plants ; sur banano, beaucoup de boîtes non retrouvées vont par paires très serrées (doublons d'annotation probables), ce qui gonfle les oublis des deux modèles. **Appréciation de Corentin : « la v5 est moins bonne sur les petits bananiers. »**

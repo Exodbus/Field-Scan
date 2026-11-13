@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Fourchette d'estimation du bulletin pour le détecteur v3 (protocole, section 4 bis), sur la VALIDATION seulement.
+"""Fourchette d'estimation du bulletin (protocoles v3 section 4 bis, v4 et v5 section 7 bis), sur la VALIDATION seulement.
 
 Rapport réel / détecté, au seuil du .json du modèle, avec le détecteur de la chaîne (fieldscan.drone.DetecteurCentres) :
 - segmento est : tuiles de validation (boîtes Roboflow) ;
 - dji_0544 : photo réduite à 5 cm, points et détections dans le disque de 2 000 px ;
+- banavista session B (v5, option --ensemble-dense val_dense_bv) : photos entières, plants et détections dans le disque ;
 - MM1-MM2 : carrés de la référence manuelle, mères seules, détections dans le carré.
 coefficient_bas = plus petit rapport, coefficient_haut = plus grand. CG n'est jamais utilisé.
 
-Exemple :
+Exemples :
     python scripts/mesurer_fourchette_v3.py
+    python scripts/mesurer_fourchette_v3.py --modele modeles/centres_5cm_v5.onnx --donnees data/drone/comptage_v5_5cm         --ensemble-plantation val_plantain --ensemble-dense val_dense_bv --out out/fourchette_v5.json
 """
 import argparse
 import json
@@ -31,6 +33,15 @@ def detecter(det, chemin, seuil):
     return xy[sc >= seuil]
 
 
+def compter_disque(det, d, r, O, seuil):
+    """Plants (mères) et détections dans le disque de la ligne r de tuiles.csv."""
+    xy = detecter(det, d / "images" / r.image_path, seuil)
+    dans = (xy[:, 0] - r.masque_cx) ** 2 + (xy[:, 1] - r.masque_cy) ** 2 <= r.masque_r ** 2
+    o = O[(O.image_path == r.image_path) & (O.type == "mere")]
+    dans_o = (o.cx - r.masque_cx) ** 2 + (o.cy - r.masque_cy) ** 2 <= r.masque_r ** 2
+    return int(dans_o.sum()), int(dans.sum())
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--modele", default="modeles/centres_5cm_v3.onnx")
@@ -38,6 +49,8 @@ def main(argv=None):
     ap.add_argument("--out", default="out/fourchette_v3.json")
     ap.add_argument("--ensemble-plantation", default="val_dense",
                     help="ensemble de validation des plantations : val_dense (v3, segmento est) ou val_plantain (v4, 100_metros)")
+    ap.add_argument("--ensemble-dense", default=None,
+                    help="ensemble dense mesuré dans le disque (v5 : val_dense_bv) ; absent en v3 et v4")
     args = ap.parse_args(argv)
     det = DetecteurCentres(args.modele)
     s = det.seuil
@@ -52,13 +65,17 @@ def main(argv=None):
         detecte += len(detecter(det, d / "images" / nom, s))
     res["segmento_est" if args.ensemble_plantation == "val_dense" else "plantain_100_metros"] = dict(reel=reel, detecte=detecte)
 
+    # banavista session B (v5) dans le disque
+    if args.ensemble_dense:
+        reel = detecte = 0
+        for _, r in T[T.ensemble == args.ensemble_dense].iterrows():
+            a, b = compter_disque(det, d, r, O, s)
+            reel, detecte = reel + a, detecte + b
+        res["dense_banavista_b"] = dict(reel=reel, detecte=detecte)
+
     # dji_0544 dans le disque
-    r = T[T.ensemble == "val_jeunes"].iloc[0]
-    xy = detecter(det, d / "images" / r.image_path, s)
-    dans = (xy[:, 0] - r.masque_cx) ** 2 + (xy[:, 1] - r.masque_cy) ** 2 <= r.masque_r ** 2
-    o = O[(O.image_path == r.image_path) & (O.type == "mere")]
-    dans_o = (o.cx - r.masque_cx) ** 2 + (o.cy - r.masque_cy) ** 2 <= r.masque_r ** 2
-    res["jeunes_dji_0544"] = dict(reel=int(dans_o.sum()), detecte=int(dans.sum()))
+    reel, detecte = compter_disque(det, d, T[T.ensemble == "val_jeunes"].iloc[0], O, s)
+    res["jeunes_dji_0544"] = dict(reel=reel, detecte=detecte)
 
     # MM1-MM2, mères seules, détections dans le carré
     P, Z = pd.read_csv(d / "mm" / "points.csv"), pd.read_csv(d / "mm" / "zones.csv")

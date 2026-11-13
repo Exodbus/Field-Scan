@@ -1,0 +1,254 @@
+{
+  "versions": {
+    "torch": "2.11.0+cu130",
+    "torchvision": "0.26.0+cu130",
+    "python": "3.13.16",
+    "onnxruntime": "1.31.1",
+    "gpu": "Tesla T4"
+  },
+  "reglages": {
+    "reseau": "resnet18 ImageNet + décodeur FPN, sortie au quart",
+    "resolution_cm": 5,
+    "decoupe_px": 448,
+    "stride": 4,
+    "epoques": 30,
+    "lot": 16,
+    "lr_squelette": 0.0003,
+    "lr_decodeur": 0.001,
+    "decroissance_poids": 0.0001,
+    "programme": "OneCycle, 5 % de montée",
+    "ecretage": 5.0,
+    "augmentations": "échelle 0,8-1,25, luminosité/contraste/saturation 0,8-1,2, miroir, quarts de tour",
+    "k_pics": 7,
+    "rayon_px": 20,
+    "rayon_ignore_px": 20.0,
+    "duree_max_h": 4.0,
+    "graine": 2026,
+    "parts": "autres 25 %, plantations (dont banavista) 25 %, ReforesTree 20 %, jeunes bananiers 10 %, sans bananier au plus 20 %",
+    "rep_plantations": 1,
+    "rep_reforestree": 8,
+    "rep_jeunes": 42,
+    "n_negatifs_par_epoque": 1006
+  },
+  "retenu": {
+    "epoque": 15,
+    "seuil": 0.3,
+    "f1_dense": 0.7767,
+    "f1_plantain": 0.8846,
+    "f1_jeunes": 0.8926,
+    "f1_mm": 0.8571,
+    "fp_neg": 17,
+    "taux_fp_neg": 0.0026,
+    "moyenne": 0.8528,
+    "eligible": true
+  },
+  "seuil": 0.3,
+  "adoption": {
+    "v4_sur_validation_v5": {
+      "epoque": "v4",
+      "seuil": 0.4,
+      "f1_dense": 0.718,
+      "f1_plantain": 0.8929,
+      "f1_jeunes": 0.8889,
+      "f1_mm": 0.7891,
+      "fp_neg": 7,
+      "taux_fp_neg": 0.0011,
+      "moyenne": 0.8222,
+      "eligible": true
+    },
+    "v5": {
+      "epoque": 15,
+      "seuil": 0.3,
+      "f1_dense": 0.7767,
+      "f1_plantain": 0.8846,
+      "f1_jeunes": 0.8926,
+      "f1_mm": 0.8571,
+      "fp_neg": 17,
+      "taux_fp_neg": 0.0026,
+      "moyenne": 0.8528,
+      "eligible": true
+    },
+    "adopte": true
+  },
+  "tests": {
+    "v5": {
+      "seuil": 0.3,
+      "banano": {
+        "vp": 3902,
+        "fp": 739,
+        "fn": 1127,
+        "f1": 0.807,
+        "detectes": 4641,
+        "reels": 5029
+      },
+      "dense": {
+        "vp": 2348,
+        "fp": 560,
+        "fn": 1719,
+        "f1": 0.6733,
+        "detectes": 2908,
+        "reels": 4067
+      },
+      "espace": {
+        "vp": 14913,
+        "fp": 903,
+        "fn": 23877,
+        "f1": 0.5462,
+        "detectes": 15816,
+        "reels": 38790
+      },
+      "cg_meres": {
+        "vp": 56,
+        "fp": 10,
+        "fn": 234,
+        "f1": 0.3146
+      },
+      "cg_tous": {
+        "vp": 56,
+        "fp": 10,
+        "fn": 257,
+        "f1": 0.2955
+      },
+      "sans_bananier": {
+        "fp": 36,
+        "arbres": 7876,
+        "taux": 0.0046
+      },
+      "comptes_cg": {
+        "CG1": {
+          "detectes": 20,
+          "meres": 88
+        },
+        "CG2": {
+          "detectes": 5,
+          "meres": 71
+        },
+        "CG3": {
+          "detectes": 31,
+          "meres": 88
+        },
+        "CG4": {
+          "detectes": 0,
+          "meres": 0
+        },
+        "CG5": {
+          "detectes": 2,
+          "meres": 7
+        },
+        "CG6": {
+          "detectes": 0,
+          "meres": 0
+        },
+        "CG7": {
+          "detectes": 2,
+          "meres": 8
+        },
+        "CG8": {
+          "detectes": 4,
+          "meres": 13
+        },
+        "CG9": {
+          "detectes": 2,
+          "meres": 15
+        }
+      }
+    },
+    "v4": {
+      "seuil": 0.4,
+      "banano": {
+        "vp": 3756,
+        "fp": 656,
+        "fn": 1273,
+        "f1": 0.7957,
+        "detectes": 4412,
+        "reels": 5029
+      },
+      "dense": {
+        "vp": 1840,
+        "fp": 287,
+        "fn": 2227,
+        "f1": 0.5941,
+        "detectes": 2127,
+        "reels": 4067
+      },
+      "espace": {
+        "vp": 22740,
+        "fp": 596,
+        "fn": 16050,
+        "f1": 0.7321,
+        "detectes": 23336,
+        "reels": 38790
+      },
+      "cg_meres": {
+        "vp": 73,
+        "fp": 21,
+        "fn": 217,
+        "f1": 0.3802
+      },
+      "cg_tous": {
+        "vp": 74,
+        "fp": 21,
+        "fn": 239,
+        "f1": 0.3627
+      },
+      "sans_bananier": {
+        "fp": 5,
+        "arbres": 7876,
+        "taux": 0.0006
+      },
+      "comptes_cg": {
+        "CG1": {
+          "detectes": 32,
+          "meres": 88
+        },
+        "CG2": {
+          "detectes": 19,
+          "meres": 71
+        },
+        "CG3": {
+          "detectes": 28,
+          "meres": 88
+        },
+        "CG4": {
+          "detectes": 1,
+          "meres": 0
+        },
+        "CG5": {
+          "detectes": 2,
+          "meres": 7
+        },
+        "CG6": {
+          "detectes": 0,
+          "meres": 0
+        },
+        "CG7": {
+          "detectes": 1,
+          "meres": 8
+        },
+        "CG8": {
+          "detectes": 8,
+          "meres": 13
+        },
+        "CG9": {
+          "detectes": 4,
+          "meres": 15
+        }
+      }
+    }
+  },
+  "normalisation": {
+    "moyenne": [
+      0.48500001430511475,
+      0.4560000002384186,
+      0.4059999883174896
+    ],
+    "ecart_type": [
+      0.2290000021457672,
+      0.2240000069141388,
+      0.22499999403953552
+    ]
+  },
+  "entree": "RGB 0-255 / 255, normalisé, NCHW",
+  "sortie": "logits au quart de la résolution ; sigmoïde puis maxima locaux (fenêtre k_pics) au-dessus du seuil",
+  "regle": "protocole docs/protocole_comptage_v5.md : couple (époque, seuil) maximisant la moyenne des F1 dense banavista, plantain 100_metros, jeunes bananiers dji_0544 et MM1-MM2 (mères seules), fausses détections sans bananier <= 5 % ; adoption si moyenne strictement meilleure que le v4 sur la même validation ; test regardé une fois"
+}
