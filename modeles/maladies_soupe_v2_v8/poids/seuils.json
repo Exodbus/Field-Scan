@@ -1,0 +1,13 @@
+{
+ "modele": "soupe_v2_v8_convnext_tiny_x3",
+ "classes": [
+  "saine",
+  "black_sigatoka",
+  "fusarium"
+ ],
+ "quatre_vues": true,
+ "seuil_alerte": 0.55,
+ "seuil_nom": 0.5,
+ "seuil_confiance": 0.680232,
+ "note": "Réseau k = moyenne des réseaux k de la v2 et de la v8 ; seuils réglés sur la validation (3 001) par les règles de la v2 ; docs/protocole_maladies_melange_nouveaute.md"
+}

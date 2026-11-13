@@ -1,0 +1,26 @@
+{
+ "versions": {
+  "torch": "2.11.0+cu130",
+  "python": "3.13.16",
+  "gpu": "Tesla T4"
+ },
+ "effectifs": {
+  "entrainement": {
+   "khadavy/autre_maladie": 27,
+   "khadavy/black_sigatoka": 245,
+   "khadavy/saine": 159,
+   "perou_2026/black_sigatoka": 724,
+   "perou_2026/saine": 544,
+   "tanzanie_2021/black_sigatoka": 5767,
+   "tanzanie_2021/fusarium": 4300,
+   "tanzanie_2021/saine": 5628,
+   "tdtu/autre_maladie": 655,
+   "tdtu/black_sigatoka": 404,
+   "tdtu/saine": 577
+  },
+  "validation": 3001
+ },
+ "cout_un_reseau": 91,
+ "cout_moyenne": 71,
+ "essai_local": false
+}

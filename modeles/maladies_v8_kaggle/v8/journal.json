@@ -1,0 +1,34 @@
+{
+ "versions": {
+  "torch": "2.11.0+cu130",
+  "python": "3.13.16",
+  "gpu": "Tesla T4"
+ },
+ "effectifs": {
+  "entrainement": {
+   "perou_2026/black_sigatoka": 724,
+   "perou_2026/saine": 544,
+   "roamer_fusarium/fusarium": 324,
+   "roamer_fusarium/saine": 361,
+   "roamer_moko/saine": 161,
+   "tanzanie_2021/black_sigatoka": 5767,
+   "tanzanie_2021/fusarium": 4300,
+   "tanzanie_2021/saine": 5628
+  },
+  "validation": 3001
+ },
+ "reglages": {
+  "PART_AUTRE": 0.1,
+  "PART_ROAMER": 0.1,
+  "P_MOSAIQUE": 0.15,
+  "P_BASSE_RESOLUTION": 0.3,
+  "FACTEURS_RESOLUTION": [
+   0.25,
+   0.7
+  ],
+  "MIXTE": true
+ },
+ "cout_un_reseau": 121,
+ "cout_moyenne": 62,
+ "essai_local": false
+}

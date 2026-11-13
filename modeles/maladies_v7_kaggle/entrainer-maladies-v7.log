@@ -1,0 +1,61 @@
+[{"stream_name":"stdout","time":11.333534063,"data":"Calcul sur : cuda Tesla T4\n"}
+,{"stream_name":"stdout","time":15.076025393,"data":"exclusions test « de loin » : 954 images (exclusions_roamer_val_loin.csv)\n"}
+,{"stream_name":"stdout","time":15.758648558,"data":"recadrages ROAMER lus dans /kaggle/input/datasets/affilecorentin/roamer-recadrages-v7/recadrages.csv\n"}
+,{"stream_name":"stdout","time":15.764535817,"data":"recadrages retirés (images communes avec le test « de loin ») : 0 sur 1090\n"}
+,{"stream_name":"stdout","time":15.782657928999999,"data":"entraînement   20120 images  {('khadavy', 'autre_maladie'): 27, ('khadavy', 'black_sigatoka'): 245, ('khadavy', 'saine'): 159, ('perou_2026', 'black_sigatoka'): 724, ('perou_2026', 'saine'): 544, ('roamer_fusarium', 'fusarium'): 324, ('roamer_fusarium', 'saine'): 361, ('roamer_moko', 'autre_maladie'): 244, ('roamer_moko', 'saine'): 161, ('tanzanie_2021', 'black_sigatoka'): 5767, ('tanzanie_2021', 'fusarium'): 4300, ('tanzanie_2021', 'saine'): 5628, ('tdtu', 'autre_maladie'): 655, ('tdtu', 'black_sigatoka'): 404, ('tdtu', 'saine'): 577}\n"}
+,{"stream_name":"stdout","time":15.78398582,"data":"validation      3001 images  {('tanzanie_2022', 'black_sigatoka'): 1000, ('tanzanie_2022', 'fusarium'): 1001, ('tanzanie_2022', 'saine'): 1000}\n"}
+,{"stream_name":"stdout","time":21.520858867,"data":"Part du Pérou : 14.8%   autre_maladie (hors ROAMER) : 9.0%   ROAMER : 10.0%\n"}
+,{"stream_name":"stdout","time":22.026642419,"data":"Downloading: \"https://download.pytorch.org/models/convnext_tiny-983f1562.pth\" to /root/.cache/torch/hub/checkpoints/convnext_tiny-983f1562.pth\n"}
+,{"stream_name":"stderr","time":22.589481158,"data":"\r  0%|          | 0.00/109M [00:00\u003c?, ?B/s]\r 21%|██        | 22.8M/109M [00:00\u003c00:00, 238MB/s]\r 44%|████▍     | 48.0M/109M [00:00\u003c00:00, 253MB/s]\r 66%|██████▋   | 72.4M/109M [00:00\u003c00:00, 254MB/s]\r 89%|████████▊ | 96.6M/109M [00:00\u003c00:00, 245MB/s]\r100%|██████████| 109M/109M [00:00\u003c00:00, 248MB/s] \n"}
+,{"stream_name":"stdout","time":23.02535975,"data":"--- réseau 1/3 (graine 0)\n"}
+,{"stream_name":"stdout","time":318.844374915,"data":"époque 1  perte 0.589  coût validation 123  (296 s)\n"}
+,{"stream_name":"stdout","time":484.885833569,"data":"époque 2  perte 0.524  coût validation 128  (166 s)\n"}
+,{"stream_name":"stdout","time":637.416830974,"data":"époque 3  perte 0.494  coût validation 104  (153 s)\n"}
+,{"stream_name":"stdout","time":786.85209945,"data":"époque 4  perte 0.481  coût validation 133  (149 s)\n"}
+,{"stream_name":"stdout","time":935.525672317,"data":"époque 5  perte 0.463  coût validation 102  (149 s)\n"}
+,{"stream_name":"stdout","time":1083.554173071,"data":"époque 6  perte 0.451  coût validation 122  (148 s)\n"}
+,{"stream_name":"stdout","time":1084.174978145,"data":"--- réseau 2/3 (graine 1)\n"}
+,{"stream_name":"stdout","time":1233.594643111,"data":"époque 1  perte 0.588  coût validation 82  (149 s)\n"}
+,{"stream_name":"stdout","time":1384.172392295,"data":"époque 2  perte 0.525  coût validation 108  (151 s)\n"}
+,{"stream_name":"stdout","time":1534.719201395,"data":"époque 3  perte 0.496  coût validation 219  (151 s)\n"}
+,{"stream_name":"stdout","time":1685.221615932,"data":"époque 4  perte 0.477  coût validation 102  (151 s)\n"}
+,{"stream_name":"stdout","time":1833.77081556,"data":"époque 5  perte 0.459  coût validation 124  (149 s)\n"}
+,{"stream_name":"stdout","time":1984.386768409,"data":"époque 6  perte 0.448  coût validation 135  (151 s)\n"}
+,{"stream_name":"stdout","time":1985.008492511,"data":"--- réseau 3/3 (graine 2)\n"}
+,{"stream_name":"stdout","time":2136.542728809,"data":"époque 1  perte 0.586  coût validation 90  (152 s)\n"}
+,{"stream_name":"stdout","time":2286.5753264,"data":"époque 2  perte 0.521  coût validation 83  (150 s)\n"}
+,{"stream_name":"stdout","time":2437.365123437,"data":"époque 3  perte 0.499  coût validation 67  (151 s)\n"}
+,{"stream_name":"stdout","time":2587.775211663,"data":"époque 4  perte 0.484  coût validation 101  (150 s)\n"}
+,{"stream_name":"stdout","time":2738.610737879,"data":"époque 5  perte 0.456  coût validation 96  (151 s)\n"}
+,{"stream_name":"stdout","time":2888.279383594,"data":"époque 6  perte 0.443  coût validation 91  (150 s)\n"}
+,{"stream_name":"stdout","time":2974.665658052,"data":"coût 4 vues : un réseau 102, moyenne 86 -\u003e 3 réseau(x)\n"}
+,{"stream_name":"stdout","time":3055.405570214,"data":"4 vues ; seuil d'alerte 0.80\n"}
+,{"stream_name":"stdout","time":3055.41296911,"data":" seuil  malades_ratees  fausses_alertes  cout\n"}
+,{"stream_name":"stdout","time":3055.412989681,"data":"  0.05               0             1000  1000\n"}
+,{"stream_name":"stdout","time":3055.413020848,"data":"  0.10               0              808   808\n"}
+,{"stream_name":"stdout","time":3055.413026041,"data":"  0.15               0              580   580\n"}
+,{"stream_name":"stdout","time":3055.413032074,"data":"  0.20               0              444   444\n"}
+,{"stream_name":"stdout","time":3055.413039278,"data":"  0.25               1              351   353\n"}
+,{"stream_name":"stdout","time":3055.413042196,"data":"  0.30               1              277   279\n"}
+,{"stream_name":"stdout","time":3055.413045117,"data":"  0.35               1              223   225\n"}
+,{"stream_name":"stdout","time":3055.413048558,"data":"  0.40               2              177   181\n"}
+,{"stream_name":"stdout","time":3055.413051418,"data":"  0.45               5              147   157\n"}
+,{"stream_name":"stdout","time":3055.413054185,"data":"  0.50               6              120   132\n"}
+,{"stream_name":"stdout","time":3055.41305708,"data":"  0.55              11               99   121\n"}
+,{"stream_name":"stdout","time":3055.413059852,"data":"  0.60              14               84   112\n"}
+,{"stream_name":"stdout","time":3055.413062618,"data":"  0.65              17               70   104\n"}
+,{"stream_name":"stdout","time":3055.413065467,"data":"  0.70              22               59   103\n"}
+,{"stream_name":"stdout","time":3055.413068233,"data":"  0.75              25               45    95\n"}
+,{"stream_name":"stdout","time":3055.413071079,"data":"  0.80              28               30    86\n"}
+,{"stream_name":"stdout","time":3055.413073925,"data":"  0.85              42               24   108\n"}
+,{"stream_name":"stdout","time":3055.413076707,"data":"  0.90              65               13   143\n"}
+,{"stream_name":"stdout","time":3055.413079522,"data":"  0.95             150                3   303\n"}
+,{"stream_name":"stdout","time":3055.422203597,"data":"seuil de nom 0.72 ; seuil de confiance 0.5181\n"}
+,{"stream_name":"stdout","time":3055.657162788,"data":"-\u003e /kaggle/working/v7 ['historique.csv', 'journal.json', 'maladies_v7_convnext_tiny_1.pt', 'maladies_v7_convnext_tiny_2.pt', 'maladies_v7_convnext_tiny_3.pt', 'probas_validation.csv', 'seuils.json']\n"}
+,{"stream_name":"stderr","time":3063.984637481,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":3063.984681304,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":3064.271316482,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":3064.271344403,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":3065.134036948,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":3066.266937477,"data":"[NbConvertApp] Writing 393879 bytes to __results__.html\n"}
+]

@@ -1,0 +1,36 @@
+{
+ "modele": "v10b_384_regle_b",
+ "classes": [
+  "saine",
+  "black_sigatoka",
+  "fusarium",
+  "autre"
+ ],
+ "seuil_alerte": 0.725,
+ "seuil_nom": 0.79,
+ "seuil_confiance": 0.5186470150947571,
+ "regle_b": true,
+ "seuil_inconnu_malade": 0.675,
+ "quatre_vues": true,
+ "membres": [
+  {
+   "motif": "maladies_v10b_*.pt",
+   "reseau": "timm:convnext_tiny.dinov3_lvd1689m",
+   "taille": 384,
+   "taille_apprentissage": 224,
+   "moyenne": [
+    0.485,
+    0.456,
+    0.406
+   ],
+   "ecart": [
+    0.229,
+    0.224,
+    0.225
+   ],
+   "lecture": 896
+  }
+ ],
+ "decision": "alerte si 1 - P(saine) >= seuil_alerte ; maladie nommée si la plus probable des maladies n'est pas « autre » et fait au moins seuil_nom de 1 - P(saine), sinon malade_non_identifiee ; inconnu si la plus forte probabilité est sous seuil_confiance ; règle B : saine seulement si P(saine) >= seuil_confiance, sinon inconnu ; un inconnu devient malade_non_identifiee si 1 - P(saine) >= seuil_inconnu_malade",
+ "note": "v10b : 3 ConvNeXt-Tiny aux poids DINOv3, appris en 224 px sur Tanzanie 2023, Pérou, BananaLSD, cm8zf62kzh, BLADE et godliver (4 classes), lus en 384 px ; seuils réglés sur la validation à plusieurs sources (modeles/maladies_v10/protocole.md). Règle B décidée avant BanSpot (modeles/maladies_banspot/protocole.md) ; seuil_inconnu_malade réglé sur la validation (modeles/maladies_v11/protocole.md). Installé le 11/11/2026. Built with DINOv3."
+}

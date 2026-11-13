@@ -1,0 +1,10 @@
+{
+ "modele": "v9_loin_convnext_tiny_binaire_x3",
+ "classes": [
+  "saine",
+  "malade"
+ ],
+ "quatre_vues": true,
+ "nb_reseaux": 3,
+ "seuil_malade": 0.5845068693161011
+}

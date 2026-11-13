@@ -1,0 +1,11 @@
+{
+ "caracteristiques": "DINOv2 ViT-B/14 figé (torch.hub facebookresearch/dinov2, dinov2_vitb14), [x_norm_clstoken, moyenne de x_norm_patchtokens], préparation de la v2 (224 px, JPEG 95), vue d'origine",
+ "decision": "loin si P(loin) >= 0,5",
+ "seuil": 0.5,
+ "protocole": "docs/protocole_maladies_deux_branches.md (partie A, réussie)",
+ "verification": {
+  "proche_validation": 0.9950016661112963,
+  "proche_bananalsd": 0.9966555183946488,
+  "loin_mesure_loin_telephone": 0.9892086330935251
+ }
+}

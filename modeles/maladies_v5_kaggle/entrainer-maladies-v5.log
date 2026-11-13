@@ -1,0 +1,77 @@
+[{"stream_name":"stderr","time":8.841083325,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":8.841153824,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":8.841160299,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":8.841164464,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stderr","time":9.509235002,"data":"0.00s - Debugger warning: It seems that frozen modules are being used, which may\n"}
+,{"stream_name":"stderr","time":9.50931959,"data":"0.00s - make the debugger miss breakpoints. Please pass -Xfrozen_modules=off\n"}
+,{"stream_name":"stderr","time":9.509333738,"data":"0.00s - to python to disable frozen modules.\n"}
+,{"stream_name":"stderr","time":9.509342622,"data":"0.00s - Note: Debugging will proceed. Set PYDEVD_DISABLE_FILE_VALIDATION=1 to disable this validation.\n"}
+,{"stream_name":"stdout","time":19.431994567,"data":"Calcul sur : cuda Tesla T4\n"}
+,{"stream_name":"stdout","time":31.368415043,"data":"entraînement   19030 images  {('khadavy', 'autre_maladie'): 27, ('khadavy', 'black_sigatoka'): 245, ('khadavy', 'saine'): 159, ('perou_2026', 'black_sigatoka'): 724, ('perou_2026', 'saine'): 544, ('tanzanie_2021', 'black_sigatoka'): 5767, ('tanzanie_2021', 'fusarium'): 4300, ('tanzanie_2021', 'saine'): 5628, ('tdtu', 'autre_maladie'): 655, ('tdtu', 'black_sigatoka'): 404, ('tdtu', 'saine'): 577}\n"}
+,{"stream_name":"stdout","time":31.368466519,"data":"validation      3001 images  {('tanzanie_2022', 'black_sigatoka'): 1000, ('tanzanie_2022', 'fusarium'): 1001, ('tanzanie_2022', 'saine'): 1000}\n"}
+,{"stream_name":"stdout","time":38.190551063,"data":"Part du Pérou : 16.4%   part de autre_maladie : 10.0%\n"}
+,{"stream_name":"stdout","time":38.944099913,"data":"Downloading: \"https://download.pytorch.org/models/convnext_tiny-983f1562.pth\" to /root/.cache/torch/hub/checkpoints/convnext_tiny-983f1562.pth\n"}
+,{"stream_name":"stderr","time":38.945148324,"data":"\r  0%|          | 0.00/109M [00:00\u003c?, ?B/s]\n"}
+,{"stream_name":"stderr","time":39.046152378,"data":"\r  0%|          | 0.00/109M [00:00\u003c?, ?B/s]\r  9%|▉         | 10.2M/109M [00:00\u003c00:00, 107MB/s]\n"}
+,{"stream_name":"stderr","time":39.147034682,"data":"\r  9%|▉         | 10.2M/109M [00:00\u003c00:00, 107MB/s]\r 27%|██▋       | 29.8M/109M [00:00\u003c00:00, 164MB/s]\n"}
+,{"stream_name":"stderr","time":39.247193097,"data":"\r 27%|██▋       | 29.8M/109M [00:00\u003c00:00, 164MB/s]\r 46%|████▌     | 50.2M/109M [00:00\u003c00:00, 187MB/s]\n"}
+,{"stream_name":"stderr","time":39.34765935,"data":"\r 46%|████▌     | 50.2M/109M [00:00\u003c00:00, 187MB/s]\r 65%|██████▍   | 70.9M/109M [00:00\u003c00:00, 198MB/s]\n"}
+,{"stream_name":"stderr","time":39.447817211,"data":"\r 65%|██████▍   | 70.9M/109M [00:00\u003c00:00, 198MB/s]\r 83%|████████▎ | 91.0M/109M [00:00\u003c00:00, 203MB/s]\n"}
+,{"stream_name":"stderr","time":39.53175988,"data":"\r 83%|████████▎ | 91.0M/109M [00:00\u003c00:00, 203MB/s]\r100%|██████████| 109M/109M [00:00\u003c00:00, 195MB/s] \n"}
+,{"stream_name":"stderr","time":39.547217968,"data":"\r100%|██████████| 109M/109M [00:00\u003c00:00, 195MB/s] \n"}
+,{"stream_name":"stderr","time":39.547243142,"data":"\n"}
+,{"stream_name":"stderr","time":39.54724746,"data":"\n"}
+,{"stream_name":"stdout","time":39.945062094,"data":"--- réseau 1/3 (graine 0)\n"}
+,{"stream_name":"stdout","time":568.290428221,"data":"époque 1  perte 0.477  coût validation 117  (528 s)\n"}
+,{"stream_name":"stdout","time":1044.225282974,"data":"époque 2  perte 0.428  coût validation 132  (476 s)\n"}
+,{"stream_name":"stdout","time":1518.762232269,"data":"époque 3  perte 0.415  coût validation 64  (475 s)\n"}
+,{"stream_name":"stdout","time":1992.452801703,"data":"époque 4  perte 0.407  coût validation 97  (474 s)\n"}
+,{"stream_name":"stdout","time":2466.614779066,"data":"époque 5  perte 0.394  coût validation 84  (474 s)\n"}
+,{"stream_name":"stdout","time":2941.468074511,"data":"époque 6  perte 0.388  coût validation 92  (475 s)\n"}
+,{"stream_name":"stdout","time":2941.859101692,"data":"--- réseau 2/3 (graine 1)\n"}
+,{"stream_name":"stdout","time":3416.567063296,"data":"époque 1  perte 0.473  coût validation 116  (475 s)\n"}
+,{"stream_name":"stdout","time":3890.168438291,"data":"époque 2  perte 0.430  coût validation 115  (474 s)\n"}
+,{"stream_name":"stdout","time":4365.452302959,"data":"époque 3  perte 0.412  coût validation 87  (475 s)\n"}
+,{"stream_name":"stdout","time":4840.852744916,"data":"époque 4  perte 0.408  coût validation 92  (475 s)\n"}
+,{"stream_name":"stdout","time":5315.560597861,"data":"époque 5  perte 0.393  coût validation 84  (475 s)\n"}
+,{"stream_name":"stdout","time":5790.456613993,"data":"époque 6  perte 0.385  coût validation 88  (475 s)\n"}
+,{"stream_name":"stdout","time":5790.879294463,"data":"--- réseau 3/3 (graine 2)\n"}
+,{"stream_name":"stdout","time":6265.853654098,"data":"époque 1  perte 0.471  coût validation 80  (475 s)\n"}
+,{"stream_name":"stdout","time":6741.372015705,"data":"époque 2  perte 0.430  coût validation 53  (476 s)\n"}
+,{"stream_name":"stdout","time":7216.921846134,"data":"époque 3  perte 0.420  coût validation 74  (476 s)\n"}
+,{"stream_name":"stdout","time":7693.256610503,"data":"époque 4  perte 0.405  coût validation 66  (476 s)\n"}
+,{"stream_name":"stdout","time":8168.985020738,"data":"époque 5  perte 0.392  coût validation 58  (476 s)\n"}
+,{"stream_name":"stdout","time":8644.363427917,"data":"époque 6  perte 0.388  coût validation 53  (475 s)\n"}
+,{"stream_name":"stdout","time":8885.753071369,"data":"coût 4 vues : un réseau 91, moyenne 71 -\u003e 3 réseau(x)\n"}
+,{"stream_name":"stdout","time":9113.433972885,"data":"1 vue ; seuil d'alerte 0.50\n"}
+,{"stream_name":"stdout","time":9113.434009696,"data":" seuil  malades_ratees  fausses_alertes  cout\n"}
+,{"stream_name":"stdout","time":9113.434021622,"data":"  0.05               0              996   996\n"}
+,{"stream_name":"stdout","time":9113.434027253,"data":"  0.10               0              337   337\n"}
+,{"stream_name":"stdout","time":9113.43403206,"data":"  0.15               0              188   188\n"}
+,{"stream_name":"stdout","time":9113.434036825,"data":"  0.20               1              141   143\n"}
+,{"stream_name":"stdout","time":9113.434041351,"data":"  0.25               1              113   115\n"}
+,{"stream_name":"stdout","time":9113.434045985,"data":"  0.30               2               91    95\n"}
+,{"stream_name":"stdout","time":9113.434059617,"data":"  0.35               2               81    85\n"}
+,{"stream_name":"stdout","time":9113.434068229,"data":"  0.40               4               70    78\n"}
+,{"stream_name":"stdout","time":9113.434071429,"data":"  0.45               8               56    72\n"}
+,{"stream_name":"stdout","time":9113.434074509,"data":"  0.50              11               47    69\n"}
+,{"stream_name":"stdout","time":9113.434077691,"data":"  0.55              18               41    77\n"}
+,{"stream_name":"stdout","time":9113.434080769,"data":"  0.60              20               33    73\n"}
+,{"stream_name":"stdout","time":9113.434083862,"data":"  0.65              23               30    76\n"}
+,{"stream_name":"stdout","time":9113.434108919,"data":"  0.70              29               26    84\n"}
+,{"stream_name":"stdout","time":9113.434113739,"data":"  0.75              36               24    96\n"}
+,{"stream_name":"stdout","time":9113.434117818,"data":"  0.80              45               18   108\n"}
+,{"stream_name":"stdout","time":9113.434122446,"data":"  0.85              59               11   129\n"}
+,{"stream_name":"stdout","time":9113.434126029,"data":"  0.90             107               10   224\n"}
+,{"stream_name":"stdout","time":9113.434129909,"data":"  0.95             218                2   438\n"}
+,{"stream_name":"stdout","time":9113.457243071,"data":"seuil de nom 0.72 ; seuil de confiance 0.5662\n"}
+,{"stream_name":"stdout","time":9113.674074993,"data":"-\u003e /kaggle/working/v5 ['historique.csv', 'journal.json', 'maladies_v5_convnext_tiny_1.pt', 'maladies_v5_convnext_tiny_2.pt', 'maladies_v5_convnext_tiny_3.pt', 'seuils.json']\n"}
+,{"stream_name":"stderr","time":9119.036061131,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":9119.036112698,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":9119.217515359,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":9119.21755052,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":9120.038065598,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to notebook\n"}
+,{"stream_name":"stderr","time":9120.120278737,"data":"[NbConvertApp] Writing 25400 bytes to __notebook__.ipynb\n"}
+,{"stream_name":"stderr","time":9122.743316523,"data":"[NbConvertApp] Converting notebook __notebook__.ipynb to html\n"}
+,{"stream_name":"stderr","time":9123.327340076,"data":"[NbConvertApp] Writing 351210 bytes to __results__.html\n"}
+]

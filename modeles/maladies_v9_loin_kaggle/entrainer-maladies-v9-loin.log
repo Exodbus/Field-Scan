@@ -1,0 +1,36 @@
+[{"stream_name":"stdout","time":16.79852195,"data":"cuda dev {'malade': 1715, 'saine': 1270} val 3014\n"}
+,{"stream_name":"stdout","time":17.282405186,"data":"Downloading: \"https://download.pytorch.org/models/convnext_tiny-983f1562.pth\" to /root/.cache/torch/hub/checkpoints/convnext_tiny-983f1562.pth\n"}
+,{"stream_name":"stderr","time":17.929116609,"data":"\r  0%|          | 0.00/109M [00:00\u003c?, ?B/s]\r 20%|█▉        | 21.4M/109M [00:00\u003c00:00, 223MB/s]\r 40%|████      | 43.9M/109M [00:00\u003c00:00, 230MB/s]\r 60%|██████    | 66.0M/109M [00:00\u003c00:00, 230MB/s]\r 81%|████████  | 88.0M/109M [00:00\u003c00:00, 230MB/s]\r100%|██████████| 109M/109M [00:00\u003c00:00, 230MB/s] \n"}
+,{"stream_name":"stdout","time":66.905195766,"data":"réseau 1 époque 1 perte 0.638 (49 s)\n"}
+,{"stream_name":"stdout","time":91.292938451,"data":"réseau 1 époque 2 perte 0.600 (24 s)\n"}
+,{"stream_name":"stdout","time":112.133863232,"data":"réseau 1 époque 3 perte 0.569 (21 s)\n"}
+,{"stream_name":"stdout","time":132.015864083,"data":"réseau 1 époque 4 perte 0.523 (20 s)\n"}
+,{"stream_name":"stdout","time":152.121090888,"data":"réseau 1 époque 5 perte 0.495 (20 s)\n"}
+,{"stream_name":"stdout","time":172.515531933,"data":"réseau 1 époque 6 perte 0.489 (20 s)\n"}
+,{"stream_name":"stdout","time":192.888780409,"data":"réseau 1 époque 7 perte 0.452 (20 s)\n"}
+,{"stream_name":"stdout","time":212.876098391,"data":"réseau 1 époque 8 perte 0.435 (20 s)\n"}
+,{"stream_name":"stdout","time":233.571636812,"data":"réseau 2 époque 1 perte 0.653 (20 s)\n"}
+,{"stream_name":"stdout","time":254.003458718,"data":"réseau 2 époque 2 perte 0.598 (20 s)\n"}
+,{"stream_name":"stdout","time":274.513464001,"data":"réseau 2 époque 3 perte 0.552 (21 s)\n"}
+,{"stream_name":"stdout","time":294.897382742,"data":"réseau 2 époque 4 perte 0.517 (20 s)\n"}
+,{"stream_name":"stdout","time":315.147425314,"data":"réseau 2 époque 5 perte 0.478 (20 s)\n"}
+,{"stream_name":"stdout","time":335.509965992,"data":"réseau 2 époque 6 perte 0.465 (20 s)\n"}
+,{"stream_name":"stdout","time":355.93053432,"data":"réseau 2 époque 7 perte 0.431 (20 s)\n"}
+,{"stream_name":"stdout","time":376.499651681,"data":"réseau 2 époque 8 perte 0.431 (21 s)\n"}
+,{"stream_name":"stdout","time":397.450119114,"data":"réseau 3 époque 1 perte 0.657 (20 s)\n"}
+,{"stream_name":"stdout","time":417.829175861,"data":"réseau 3 époque 2 perte 0.590 (20 s)\n"}
+,{"stream_name":"stdout","time":438.170127303,"data":"réseau 3 époque 3 perte 0.565 (20 s)\n"}
+,{"stream_name":"stdout","time":458.463404252,"data":"réseau 3 époque 4 perte 0.529 (20 s)\n"}
+,{"stream_name":"stdout","time":478.948626457,"data":"réseau 3 époque 5 perte 0.487 (20 s)\n"}
+,{"stream_name":"stdout","time":499.286177349,"data":"réseau 3 époque 6 perte 0.461 (20 s)\n"}
+,{"stream_name":"stdout","time":519.670732036,"data":"réseau 3 époque 7 perte 0.433 (20 s)\n"}
+,{"stream_name":"stdout","time":540.044321021,"data":"réseau 3 époque 8 perte 0.432 (20 s)\n"}
+,{"stream_name":"stdout","time":702.100595766,"data":"seuil (10 % FA sur dev) : 0.5845\n"}
+,{"stream_name":"stdout","time":866.629229307,"data":"-\u003e ['maladies_v9_loin_1.pt', 'maladies_v9_loin_2.pt', 'maladies_v9_loin_3.pt', 'predictions_v9_val_loin_feuilles.csv', 'seuils.json']\n"}
+,{"stream_name":"stderr","time":874.200079193,"data":"/usr/local/lib/python3.13/dist-packages/mistune.py:435: SyntaxWarning: invalid escape sequence '\\|'\n"}
+,{"stream_name":"stderr","time":874.20011176,"data":"  cells[i][c] = re.sub('\\\\\\\\\\|', '|', cell)\n"}
+,{"stream_name":"stderr","time":874.488782576,"data":"/usr/local/lib/python3.13/dist-packages/nbconvert/filters/filter_links.py:36: SyntaxWarning: invalid escape sequence '\\_'\n"}
+,{"stream_name":"stderr","time":874.488821301,"data":"  text = re.sub(r'_', '\\_', text) # Escape underscores in display text\n"}
+,{"stream_name":"stderr","time":875.332361976,"data":"[NbConvertApp] Converting notebook __script__.ipynb to html\n"}
+,{"stream_name":"stderr","time":876.363581313,"data":"[NbConvertApp] Writing 312660 bytes to __results__.html\n"}
+]

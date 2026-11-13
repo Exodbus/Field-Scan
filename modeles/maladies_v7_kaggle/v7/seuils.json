@@ -1,0 +1,16 @@
+{
+ "modele": "v7_convnext_tiny_v5_plus_roamer10_aug_loin_x3",
+ "classes": [
+  "saine",
+  "black_sigatoka",
+  "fusarium",
+  "autre_maladie"
+ ],
+ "quatre_vues": true,
+ "nb_reseaux": 3,
+ "seuil_alerte": 0.8,
+ "seuil_nom": 0.72,
+ "seuil_confiance": 0.5180901288986206,
+ "decision": "malade si P(black_sigatoka)+P(fusarium)+P(autre_maladie) >= seuil_alerte ; maladie nommée si elle n'est pas autre_maladie et fait au moins seuil_nom de P(malade), sinon malade_non_identifiee ; inconnu si la plus forte probabilité est sous seuil_confiance",
+ "note": "Seuils réglés sur la validation Tanzanie 2022-2023 (3 001 images) ; brouillon amelioration-modele"
+}

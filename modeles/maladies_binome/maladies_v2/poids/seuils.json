@@ -1,0 +1,13 @@
+{
+  "modele": "v2_convnext_tiny_perou3_jpeg_lissage0.1_x3",
+  "classes": [
+    "saine",
+    "black_sigatoka",
+    "fusarium"
+  ],
+  "quatre_vues": true,
+  "seuil_alerte": 0.3,
+  "seuil_nom": 0.5,
+  "seuil_confiance": 0.645875871181488,
+  "note": "Seuils réglés sur la validation (Tanzanie 2025), voir docs/experiences.md, section 2."
+}
