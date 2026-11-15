@@ -3,6 +3,15 @@ entrees:
   drone_resolution_max_m: 0.5
 nuages:
   seuil_masque_pct: 50.0
+temporel:
+  # TT1, adopté par Corentin le 15/11/2026 (docs/journee_2026-11-15/recap.md, section 3) : zones de dégradation
+  # (pixel comparé à sa parcelle) à la place des alertes de parcelle. Banc d'anomalies injectées, Côte d'Ivoire lue une
+  # fois : 52 % des zones retrouvées contre 12,5 %, 0,39 ha en alerte sans anomalie contre 6,0 ha. Aucune référence de
+  # terrain. « site » = TT2 ; null = module d'avant.
+  zones_temporel: parcelle
+  # Le score d'une parcelle n'est pénalisé que si ses zones de dégradation totalisent au moins cette surface (choix de
+  # Corentin du 15/11, fait après avoir vu les zones d'Équateur : 0,05 à 0,49 ha). Les zones restent toutes affichées.
+  surface_min_penalite_ha: 0.5
 maladies:
   # Module à deux branches (docs/protocole_maladies_cinq_classes.md, sections 4 et 6 ; docs/protocole_maladies_deux_branches.md).
   # Branche « proche » (gros plans) : v10b du binôme (3 ConvNeXt-Tiny aux poids DINOv3, lus en 384 px, 4 vues, 4 classes

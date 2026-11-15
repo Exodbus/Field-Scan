@@ -66,6 +66,8 @@ def calculer(ctx, statuts):
     pen, f_moy = reg["penalites"], reg.get("facteur_moyenne", 0.6)
     f_conf, s_vert, s_orange = reg.get("facteur_confiance_faible", 0.5), reg.get("seuil_vert", 80), reg.get("seuil_orange", 60)
     alertes = [a for nom in ctx.resultats for a in ctx.resultats[nom].alertes]
+    # Zones de dégradation du suivi temporel (TT1) : pénalité seulement au-delà d'une surface totale par parcelle
+    surf_min_temporel = float(ctx.reglages.get("temporel", {}).get("surface_min_penalite_ha") or 0)
     (ctx.sortie / "preuves").mkdir(exist_ok=True)
     for k, a in enumerate(alertes, start=1):
         a["id"] = f"A{k:03d}"
@@ -87,8 +89,14 @@ def calculer(ctx, statuts):
         pid = p.parcelle_id
         siennes = [a for a in alertes if a["parcelle_id"] == pid]
         retrait, detail = 0.0, []
-        for module in sorted({a["module"] for a in siennes}):
-            du_module = [a for a in siennes if a["module"] == module]
+        zones_t = [a for a in siennes if a["module"] == "temporel" and a.get("type") == "zone_degradation"]
+        surf_t = sum(a.get("surface_ha", 0) for a in zones_t)
+        petites = zones_t if zones_t and surf_t < surf_min_temporel else []   # affichées, mais sans pénalité
+        if petites:
+            detail.append(f"temporel : zones {surf_t:.2f} ha < {surf_min_temporel:g} ha, sans pénalité")
+        comptees = [a for a in siennes if not any(a is b for b in petites)]
+        for module in sorted({a["module"] for a in comptees}):
+            du_module = [a for a in comptees if a["module"] == module]
             f = max(1.0 if a["gravite"] == "forte" else f_moy for a in du_module)
             if all(a.get("confiance") == "faible" for a in du_module):
                 f *= f_conf
@@ -98,7 +106,7 @@ def calculer(ctx, statuts):
         if pid in evaluees:
             score = max(0.0, 100.0 - retrait)
             niveau = "vert" if score >= s_vert else "orange" if score >= s_orange else "rouge"
-            if niveau == "vert" and any(a["gravite"] == "forte" and a.get("confiance") != "faible" for a in siennes):
+            if niveau == "vert" and any(a["gravite"] == "forte" and a.get("confiance") != "faible" for a in comptees):
                 niveau = "orange"         # une alerte forte et fiable ne laisse jamais une parcelle en vert
         else:
             score, niveau = np.nan, "non évalué"
@@ -209,7 +217,8 @@ section{{padding:12px 18px}} #preuve img{{max-width:100%;border:1px solid #ccc}}
 <section><h3>Modules</h3><ul>{mod}</ul>
 <p><b>Score</b> : 100 moins une pénalité par module en alerte ({', '.join(f'{k} {v}' for k, v in reg['penalites'].items())}),
 réduite à {int(reg.get('facteur_moyenne', 0.6) * 100)} % pour une gravité moyenne et divisée par deux si la confiance est faible.
-Vert ≥ {reg.get('seuil_vert', 80)}, orange ≥ {reg.get('seuil_orange', 60)}, rouge en dessous ; une alerte forte et fiable place la parcelle au moins en orange.</p>
+Vert ≥ {reg.get('seuil_vert', 80)}, orange ≥ {reg.get('seuil_orange', 60)}, rouge en dessous ; une alerte forte et fiable place la parcelle au moins en orange.
+{f"Suivi temporel : les zones de dégradation sont toutes affichées, mais ne pénalisent une parcelle qu'au-delà de {float(ctx.reglages.get('temporel', {}).get('surface_min_penalite_ha') or 0):g} ha au total." if ctx.reglages.get('temporel', {}).get('zones_temporel') else ""}</p>
 {note_comptage}</section>
 <script>
 const parcelles={json.dumps(parc_json)}, alertes={json.dumps(al_json)}, couleurs={json.dumps(COULEURS)};
