@@ -268,17 +268,63 @@ def decider_melange(P10, Pso, Pv2, pl, G2, m_proche, m_loin, loin_ou_proche=True
     return np.where(par_v2, rl, rp), np.where(par_v2, pml, pmp), np.where(par_v2, cl, cp), Pp, par_v2
 
 
+def _lire_morceaux(chemins, idx, m, G2):
+    """Lit les morceaux 2 x 2 de la v10b pour les photos idx (par lots de 8) et les range dans G2."""
+    for k in range(0, len(idx), 8):
+        lot = idx[k:k + 8]
+        G2[lot] = predire_convnext([t for i in lot for t in morceaux_2x2(chemins[i])], m).reshape(len(lot), 4, -1)
+
+
+def _melange_bornes(ctx, chemins, m, ms, mv2, pl, m_proche, m_loin):
+    """F1_bornes (adopté par Corentin le 15/11/2026 ; docs/nuit_2026-11-13/recap.md ; référence :
+    scripts/m13_banc_finalistes.py, executer_f1_bornes). Mêmes alertes que F1 par construction, en lisant moins :
+      1. v2 sur toutes les photos ; soupe et v10b sauf sur les photos « loin » où la v2 alerte (la v2 y décide seule) ;
+      2. morceaux 2 x 2 seulement sur les photos dont l'alerte change entre morceaux « saine 100 % » et « malade 100 % » ;
+      3. ailleurs, réponse du mélange à trois sans morceaux (le nom de la maladie peut alors différer de F1).
+    Renvoie (reponse, p_malade, confiance, Pp, par_v2, Pv2)."""
+    import time
+    n = len(chemins)
+    Pv2 = predire_convnext(chemins, mv2)
+    lv = (pl >= 0.5) & np.isin(decider_convnext(Pv2, m_loin)[0], list(MALADES))
+    k = len(m["classes"])
+    P10, Pso = np.full((n, k), 0.5), np.full((n, Pv2.shape[1]), 0.5)   # valeurs neutres là où la v2 décide seule
+    a_lire = np.flatnonzero(~lv)
+    if len(a_lire):
+        P10[a_lire] = predire_convnext([chemins[i] for i in a_lire], m)
+        Pso[a_lire] = predire_convnext([chemins[i] for i in a_lire], ms)
+    g_saine, g_malade = np.zeros(k), np.zeros(k)
+    g_saine[0], g_malade[2] = 1.0, 1.0
+    def alerte(G):
+        return np.isin(decider_melange(P10, Pso, Pv2, pl, G, m_proche, m_loin, True)[0], list(MALADES))
+    dep = (alerte(np.tile(g_saine, (n, 4, 1))) != alerte(np.tile(g_malade, (n, 4, 1)))) & ~lv
+    G2 = np.tile(g_saine, (n, 4, 1))
+    idx, t0 = np.flatnonzero(dep), time.time()
+    _lire_morceaux(chemins, idx, m, G2)
+    ctx.journal.info(f"  Maladies : F1_bornes, soupe et v10b lues sur {len(a_lire)} photo(s), morceaux 2 x 2 sur "
+                     f"{len(idx)} photo(s) en {time.time() - t0:.0f} s")
+    sans = decider_melange(P10, Pso, Pv2, pl, None, m_proche, m_loin, True)
+    avec = decider_melange(P10, Pso, Pv2, pl, G2, m_proche, m_loin, True)
+    reponse, p_malade, confiance = (np.where(dep, a, s) for a, s in zip(avec[:3], sans[:3]))
+    return reponse, p_malade, confiance, np.where(dep[:, None], avec[3], sans[3]), sans[4], Pv2
+
+
 def _executer_melange(ctx, reg, m, chemins, temp):
-    """Chaîne F1 complète : aiguilleur, trois lecteurs, morceaux 2 x 2 de la v10b, décision. Lit les morceaux sur toutes
-    les photos dont la réponse vient du lecteur proche (environ 10 s de plus par photo sur le processeur)."""
+    """Chaîne F1 complète : aiguilleur, trois lecteurs, morceaux 2 x 2 de la v10b, décision. Avec morceaux_bornes
+    (réglage par défaut depuis le 15/11), lecture F1_bornes : mêmes alertes, environ deux fois moins de calcul. Sinon, lit
+    les morceaux sur toutes les photos dont la réponse vient du lecteur proche (environ 10 s de plus par photo)."""
     import time
     n = len(chemins)
     ms, mv2 = (charger_convnext(Path(d)) for d in reg["melange_proche"])
     m_proche = {**m, "seuil": float(reg["seuil_confiance_melange"]), "jnsp_alerte": bool(reg.get("jnsp_alerte", False))}
     m_loin = {**mv2, "jnsp_alerte": bool(reg.get("jnsp_alerte_loin", False))}
+    bornes = bool(reg.get("morceaux_2x2") and reg.get("morceaux_bornes") and reg.get("loin_ou_proche", True))
     ctx.journal.info(f"  Maladies : F1, mélange géométrique {m['nom']} + {ms['nom']} + {mv2['nom']}, confiance sous "
-                     f"{m_proche['seuil']:.2f}, morceaux 2 x 2 : {'oui' if reg.get('morceaux_2x2') else 'non'}")
+                     f"{m_proche['seuil']:.2f}, morceaux 2 x 2 : "
+                     f"{'bornes' if bornes else 'oui' if reg.get('morceaux_2x2') else 'non'}")
     pl = p_loin(chemins, charger_aiguilleur(Path(reg["aiguilleur"]))) if reg.get("aiguilleur") else np.zeros(n)
+    if bornes:
+        reponse, p_malade, confiance, Pp, par_v2, Pv2 = _melange_bornes(ctx, chemins, m, ms, mv2, pl, m_proche, m_loin)
+        return _sorties_melange(ctx, m, mv2, temp, reg, n, pl, reponse, p_malade, confiance, Pp, Pv2, par_v2)
     P10, Pso, Pv2 = predire_convnext(chemins, m), predire_convnext(chemins, ms), predire_convnext(chemins, mv2)
     G2 = None
     if reg.get("morceaux_2x2"):
@@ -286,12 +332,15 @@ def _executer_melange(ctx, reg, m, chemins, temp):
         besoin = ~((pl >= 0.5) & np.isin(rl, list(MALADES))) if reg.get("loin_ou_proche", True) else (pl < 0.5)
         G2 = np.tile(np.eye(P10.shape[1])[0], (n, 4, 1))   # « saine » pour les photos dont la v2 décide seule (non lu)
         idx, t0 = np.flatnonzero(besoin), time.time()
-        for k in range(0, len(idx), 8):
-            lot = idx[k:k + 8]
-            G2[lot] = predire_convnext([t for i in lot for t in morceaux_2x2(chemins[i])], m).reshape(len(lot), 4, -1)
+        _lire_morceaux(chemins, idx, m, G2)
         ctx.journal.info(f"  Maladies : morceaux 2 x 2 lus sur {len(idx)} photo(s) en {time.time() - t0:.0f} s")
     reponse, p_malade, confiance, Pp, par_v2 = decider_melange(P10, Pso, Pv2, pl, G2, m_proche, m_loin,
                                                                reg.get("loin_ou_proche", True))
+    return _sorties_melange(ctx, m, mv2, temp, reg, n, pl, reponse, p_malade, confiance, Pp, Pv2, par_v2)
+
+
+def _sorties_melange(ctx, m, mv2, temp, reg, n, pl, reponse, p_malade, confiance, Pp, Pv2, par_v2):
+    """Mise en forme commune aux deux lectures de F1 (complète ou bornes)."""
     # Probabilités affichées : celles du mélange (température « melange » si elle est réglée un jour), ou celles de la v2
     # pour les photos qu'elle décide (température « loin »)
     Pp_aff, Pv2_aff = calibrer(Pp, temp.get("melange")), calibrer(Pv2, temp.get("loin"))

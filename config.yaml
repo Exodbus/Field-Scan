@@ -25,6 +25,10 @@ maladies:
   seuil_confiance_melange: 0.70
   loin_ou_proche: true
   morceaux_2x2: true
+  # F1_bornes, adopté par Corentin le 15/11/2026 (docs/nuit_2026-11-13/recap.md) : chaque lecteur n'est lu que si la
+  # décision d'alerte en dépend. Mêmes alertes que F1 (juges : BanSpot 4 et 56 / 646, Cordana 99,4 %), environ deux fois
+  # moins de calcul ; le nom de la maladie peut différer sur quelques photos. false = lecture complète de F1.
+  morceaux_bornes: true
   # Branche « proche » : « je ne sais pas » avec P(malade) >= seuil d'alerte -> « malade, non identifiée » (alerte).
   # Adopté par l'amendement 2 du protocole « cinq classes » : en validation, malades sans alerte 112 -> 9 / 2 001,
   # saines en alerte 9 -> 15 / 1 000.
