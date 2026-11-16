@@ -4,6 +4,9 @@ Types reconnus :
   - scène Sentinel-2 exportée du Copernicus Browser : fichiers « AAAA-MM-JJ-…_L2A_B04_(Raw).tiff »,
     dans des dossiers ou des .zip (une scène par date) ;
   - produit Sentinel-2 L2A officiel (.SAFE, dossier ou .zip) : bandes JP2 et SCL ;
+  - bandes Sentinel-2 au nommage libre (GeoTIFF, dossier ou .zip) : nom contenant la bande (B04, B8A, SCL ou
+    « scene classification ») et date dans le nom ou dans un dossier parent (AAAA-MM-JJ, AAAAMMJJ, AAAA_MM_JJ),
+    par exemple « 2023-02-10/B04.tiff » ; réflectances flottantes ou entières, SCL en couleurs ou en classes ;
   - orthomosaïque de drone : GeoTIFF de 3 ou 4 bandes, résolution inférieure à `drone_resolution_max_m` ;
   - photos de feuilles : JPG ou PNG non géoréférencés (coordonnées GPS lues dans l'EXIF si présentes).
 Tout le reste est listé avec la raison pour laquelle il est ignoré.
@@ -18,6 +21,11 @@ RE_COPERNICUS = re.compile(r"^(\d{4}-\d{2}-\d{2}).*_L2A_(B\d{1,2}A?|True_color|S
                            r"(?:_\(Raw\))?\.tiff?$", re.IGNORECASE)
 RE_SAFE = re.compile(r"S2[ABC]_MSIL2A_(\d{8})T\d{6}.*\.SAFE", re.IGNORECASE)
 RE_BANDE_SAFE = re.compile(r"_(B\d{1,2}A?|SCL)_(10|20|60)m\.jp2$", re.IGNORECASE)
+# Nommage libre (par exemple « 2023-02-10/B04.tiff » ou « B04_20230210.tif ») : une bande Sentinel-2 reconnue par son
+# nom (B01 à B12, B8A, SCL ou « scene classification »), la date lue dans le nom du fichier ou dans l'un de ses dossiers
+RE_BANDE_LIBRE = re.compile(r"(?<![A-Za-z0-9])(B0[1-9]|B1[0-2]|B8A|SCL|scene[ _-]?classification(?:[ _-]?map)?)"
+                            r"(?![A-Za-z0-9])", re.IGNORECASE)
+RE_DATE_LIBRE = re.compile(r"(?<!\d)(20\d{2})[-_.]?(0[1-9]|1[0-2])[-_.]?(0[1-9]|[12]\d|3[01])(?!\d)")
 EXT_PHOTOS = {".jpg", ".jpeg", ".png"}
 EXT_RASTERS = {".tif", ".tiff"}
 BANDES_S2 = ("B04", "B05", "B08", "B8A", "B11")
@@ -32,7 +40,7 @@ ANNEXES = {".xml", ".html", ".json", ".txt", ".md", ".jp2", ".gml", ".xsd", ".tf
 @dataclass
 class SceneS2:
     date: str
-    format: str                      # "copernicus" ou "safe"
+    format: str                      # "copernicus", "safe" ou "libre"
     source: str                      # dossier ou zip d'origine
     bandes: dict = field(default_factory=dict)   # nom -> chemin (ou "zip::membre")
     metadonnees: str = None                      # MTD_MSIL2A.xml des produits .SAFE (décalage BOA_ADD_OFFSET)
@@ -93,6 +101,23 @@ def _bande_copernicus(nom):
     return m.group(1), "SCL" if bande.lower().startswith("scene") else bande.upper()
 
 
+def _bande_libre(chemin_posix):
+    """(date, bande, source) pour une bande Sentinel-2 au nom libre, sinon None. La date est cherchée dans le nom du
+    fichier, puis dans ses dossiers en remontant ; la source est le dossier qui contient le fichier."""
+    p = PurePosixPath(chemin_posix)
+    if p.suffix.lower() not in EXT_RASTERS:
+        return None
+    m = RE_BANDE_LIBRE.search(p.stem)
+    if not m:
+        return None
+    bande = "SCL" if m.group(1).lower().startswith(("scl", "scene")) else m.group(1).upper()
+    for partie in [p.name] + [q.name for q in p.parents]:
+        d = RE_DATE_LIBRE.search(partie)
+        if d:
+            return f"{d.group(1)}-{d.group(2)}-{d.group(3)}", bande, str(p.parent)
+    return None
+
+
 def _date_safe(texte):
     m = RE_SAFE.search(texte)
     return f"{m.group(1)[:4]}-{m.group(1)[4:6]}-{m.group(1)[6:]}" if m else None
@@ -118,6 +143,17 @@ def _resolution_m(src):
         lat = (src.bounds.top + src.bounds.bottom) / 2
         return min(rx * 111320 * math.cos(math.radians(lat)), ry * 110540)
     return min(rx, ry)
+
+
+def _ressemble_s2(chemin, bande, s2_min, s2_max):
+    """Contrôle d'un GeoTIFF au nom de bande : géoréférencé, à la résolution de Sentinel-2, une bande (ou trois pour
+    une carte SCL en couleurs). Évite de prendre pour une bande une orthomosaïque dont le nom contiendrait « B12 »."""
+    import rasterio
+    with rasterio.open(chemin) as src:
+        if src.crs is None:
+            return False
+        n_ok = src.count == 1 or (bande == "SCL" and src.count in (3, 4))
+        return n_ok and s2_min <= _resolution_m(src) <= s2_max
 
 
 def reconnaitre(dossier, reglages):
@@ -153,6 +189,8 @@ def reconnaitre(dossier, reglages):
                         _ajouter_bande(scenes, date_safe, "safe", p.name, bande, f"{p}::{n}"); trouve = True
                     elif (b := _bande_copernicus(nom)):
                         _ajouter_bande(scenes, b[0], "copernicus", p.name, b[1], f"{p}::{n}"); trouve = True
+                    elif (b := _bande_libre(f"{p.name}/{n}")):
+                        _ajouter_bande(scenes, b[0], "libre", b[2], b[1], f"{p}::{n}"); trouve = True
                 if not trouve:
                     inv.ignores.append(dict(fichier=rel, raison="archive sans bande Sentinel-2 reconnue"))
                 mtd = next((n for n in membres if PurePosixPath(n).name.upper() == "MTD_MSIL2A.XML"), None)
@@ -170,6 +208,8 @@ def reconnaitre(dossier, reglages):
                             scenes[(date, dossier_safe.name)].metadonnees = str(dossier_safe / "MTD_MSIL2A.xml")
             elif (b := _bande_copernicus(p.name)):
                 _ajouter_bande(scenes, b[0], "copernicus", p.parent.name, b[1], str(p))
+            elif (b := _bande_libre(p.relative_to(racine).as_posix())) and _ressemble_s2(p, b[1], s2_min, s2_max):
+                _ajouter_bande(scenes, b[0], "libre", b[2], b[1], str(p))
             elif p.suffix.lower() in EXT_RASTERS:
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore", NotGeoreferencedWarning)

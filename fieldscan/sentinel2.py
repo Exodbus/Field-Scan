@@ -100,6 +100,21 @@ def _decalage_safe(scene, journal=None):
     return valeur
 
 
+def _decalage_libre(scene, valeurs, journal=None):
+    """Décalage des comptes numériques d'une scène au nommage libre, décidé une fois par scène sur la première bande
+    lue. Depuis la ligne de traitement 04.00 (janvier 2022), les L2A portent un décalage de +1 000 : leurs pixels les
+    plus sombres ne descendent plus sous 1 000. Si le 1er centile des pixels valides atteint 1 000, on retire 1 000."""
+    if getattr(scene, "_decalage", None) is not None:
+        return scene._decalage
+    ok = valeurs[np.isfinite(valeurs) & (valeurs > 0)]
+    p1 = float(np.percentile(ok, 1)) if ok.size else 0.0
+    scene._decalage = -1000.0 if p1 >= 1000 else 0.0
+    if journal:
+        journal.info(f"  Sentinel-2 {scene.date} (nommage libre, entiers) : 1er centile {p1:.0f}, décalage des "
+                     f"réflectances {scene._decalage:+.0f}")
+    return scene._decalage
+
+
 def _classes_couleur(rgb):
     arr = np.rint(rgb * 255).astype(np.int32) if rgb.dtype.kind == "f" else rgb.astype(np.int32)
     meilleur = np.full(arr.shape[1:], 10 ** 9, dtype=np.int64)
@@ -154,7 +169,7 @@ def _lire_scene(scene, grille, journal=None):
     sortie = {}
     for nom in BANDES + ("SCL",):
         with _ouvrir(scene.bandes[nom]) as src:
-            if nom == "SCL" and scene.format == "copernicus":
+            if nom == "SCL" and (scene.format == "copernicus" or (scene.format == "libre" and src.count >= 3)):
                 # SCL colorée (3 bandes) : classes calculées sur la fenêtre, puis ramenées sur la grille
                 from rasterio.io import MemoryFile
                 from rasterio.windows import from_bounds
@@ -174,6 +189,9 @@ def _lire_scene(scene, grille, journal=None):
             v = _lire_bande(src, g, plus_proche=(nom == "SCL"))
             if scene.format == "safe" and nom != "SCL":
                 v = np.where((v == 0) | np.isnan(v), np.nan, (v + _decalage_safe(scene, journal)) / 10000.0)
+            elif scene.format == "libre" and nom != "SCL" and np.dtype(src.dtypes[0]).kind in "iu":
+                # nommage libre en entiers (comptes numériques L2A) : 0 = sans donnée, réflectance = (CN + décalage) / 10 000
+                v = np.where((v == 0) | np.isnan(v), np.nan, (v + _decalage_libre(scene, v, journal)) / 10000.0)
             sortie[nom] = v
     return sortie, g
 
