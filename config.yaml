@@ -3,6 +3,12 @@ entrees:
   drone_resolution_max_m: 0.5
 nuages:
   seuil_masque_pct: 50.0
+vigueur:
+  # Choix de Corentin du 16/11/2026 (« Oui, comme TT1 ») : les zones faibles de vigueur (drone ou satellite) restent toutes
+  # affichées, mais ne pénalisent le score d'une parcelle que si elles totalisent au moins cette surface. Motif : sur
+  # l'orthophoto de Basse-Pointe, des zones de quelques m² (trous, pistes, ombres) mettaient presque toutes les parcelles
+  # en orange. Les « parcelles faibles » (parcelle entière moins verte) gardent leur pénalité. 0 = règle d'avant.
+  surface_min_penalite_ha: 0.5
 temporel:
   # TT1, adopté par Corentin le 15/11/2026 (docs/journee_2026-11-15/recap.md, section 3) : zones de dégradation
   # (pixel comparé à sa parcelle) à la place des alertes de parcelle. Banc d'anomalies injectées, Côte d'Ivoire lue une
@@ -60,6 +66,20 @@ comptage:
   coefficient_haut: 0.93   # plus grand : banavista session B (8196 / 8809) ; plantas_platano 100_metros 2633 / 2896 ; jeunes bananiers dji_0544 118 / 137 (scripts/mesurer_fourchette_v3.py)
   # Test (une fois) : rappel 0,78 en plantation dense neuve (banano), 0,58 en dense (segmento est), 0,38 en plantation
   # tout juste plantée (très petits plants), 0,19 en agroforesterie (CG) : ces situations sont sous-comptées au-delà de la fourchette
+  # Aiguillage par résolution d'origine (16/11, accord de Corentin) : une orthomosaïque dont le pixel d'origine dépasse
+  # 7,5 cm passe au spécialiste basse résolution c16_a (départ v5, distillé du v5, appris sur images dégradées de 7 à 15 cm).
+  # Règles : docs/journee_2026-11-16/avenant_c16_aiguillage_resolution.md, avenant_c16_juges.md, avenant_c16_installation.md.
+  # Résultats : out/comptage/jour_1611/ (finalistes.md, juges_c16_a.md, installation.md). Juges dégradés à 11 cm, lus une fois :
+  # F1 moyen (segmento est, CG, banano_dense) 0,519 contre 0,457 pour le v5 dégradé ; test_negatifs 0,30 %.
+  # Limites : à basse résolution, l'agroforesterie dense (CG) reste presque invisible pour les deux réseaux (14 mères sur 290
+  # pour c16_a à 11 cm) ; seuil de 7,5 cm fixé avant les mesures (aucune mesure entre 5 et 8 cm). À 7,5 cm ou moins : v5 inchangé.
+  # Supprimer ce bloc rend le comportement d'avant (v5 partout).
+  aiguillage_resolution:
+    seuil_aiguillage_cm: 7.5
+    modele: modeles/centres_5cm_c16_a.onnx
+    seuil: 0.35              # règle 4.1 de l'avenant c16 (réglage dégradé à 11 cm, val_negatifs < 1 % à 8, 11 et 14 cm)
+    coefficient_bas: 0.87    # fourchette (protocole v5, 7 bis) à 8, 11 et 14 cm par la lecture de la chaîne : plus petit, jeunes dji_0544 à 8 cm (118 / 135)
+    coefficient_haut: 1.25   # plus grand : MM1-MM2 mères à 14 cm (69 / 55) ; rééchantillonnage : celui de la chaîne (average), retenu par R1
   # Détecteur de centres v4 (comparaison) : modele: modeles/centres_5cm_v4.onnx, coefficients 0.82 et 1.02
   # Détecteur de centres v3 (comparaison) : modele: modeles/centres_5cm_v3.onnx, coefficients 0.85 et 0.95
   # Détecteur de centres v2 (comparaison) : modele: modeles/centres_5cm_v2.onnx, coefficients 0.80 et 1.33

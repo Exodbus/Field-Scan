@@ -6,6 +6,12 @@ gardé pour comparaison). Le détecteur de centres lit son seuil et sa résoluti
 (choisis sur la validation) ; seuil_score et resolution_cm de la configuration ne servent qu'à DeepForest.
 Les réglages réellement appliqués sont écrits dans journal.json (« comptage_effectif »).
 
+Aiguillage par résolution (bloc facultatif `aiguillage_resolution` de la configuration, détecteur de centres seulement) :
+une orthomosaïque dont la résolution d'origine (taille du pixel au sol lue dans le GeoTIFF, avant la remise à 5 cm)
+dépasse `seuil_aiguillage_cm` est comptée par un spécialiste de la basse résolution (son modèle, son seuil, sa
+fourchette) ; les autres gardent le détecteur principal. Sans ce bloc, le comportement est celui d'avant.
+Règles et mesures : docs/journee_2026-11-16/avenant_c16_*.md, out/comptage/jour_1611/.
+
 Pieds estimés : une fourchette, pieds détectés x [coefficient_bas, coefficient_haut], les rapports réel / détecté
 mesurés en validation (détecteur de centres v4 : 0,82 à 1,02, voir docs/protocole_comptage_v4.md).
 Sans connaître le milieu de chaque parcelle, on affiche les deux bornes. Les jeunes plantations et les bananiers
@@ -93,6 +99,23 @@ def executer(ctx):
     else:
         effectif.update(source_reglages="config", taille_fenetre=reg.get("taille_fenetre", 400),
                         recouvrement=reg.get("recouvrement", 0.25), nms=reg.get("nms", 0.3))
+    # aiguillage par résolution d'origine (facultatif) : spécialiste basse résolution au-delà de seuil_aiguillage_cm
+    bas = float(reg.get("coefficient_bas", reg.get("coefficient", 1.0)))
+    haut = float(reg.get("coefficient_haut", reg.get("coefficient", bas)))
+    principal = dict(det=det, seuil=seuil, bas=bas, haut=haut, nom=chemin_modele.stem)
+    aig = reg.get("aiguillage_resolution") if centres else None
+    specialiste = None
+    if aig:
+        chemin_spec = Path(aig["modele"])
+        if not chemin_spec.exists():
+            raise RuntimeError(f"modèle du spécialiste basse résolution introuvable : {chemin_spec}")
+        specialiste = dict(det=drone.DetecteurCentres(chemin_spec), seuil=float(aig["seuil"]), nom=chemin_spec.stem,
+                           bas=float(aig.get("coefficient_bas", bas)), haut=float(aig.get("coefficient_haut", haut)),
+                           seuil_cm=float(aig.get("seuil_aiguillage_cm", 7.5)))
+        effectif["aiguillage_resolution"] = dict(seuil_aiguillage_cm=specialiste["seuil_cm"], modele=chemin_spec.as_posix(),
+                                                 empreinte_modele=empreinte(chemin_spec), seuil=specialiste["seuil"],
+                                                 coefficient_bas=specialiste["bas"], coefficient_haut=specialiste["haut"])
+        effectif["par_ortho"] = []
     ctx.journal.infos["comptage_effectif"] = effectif
     utm = ctx.parcelles.estimate_utm_crs()
     parc_m = ctx.parcelles.to_crs(utm)
@@ -100,6 +123,17 @@ def executer(ctx):
     meilleurs, pieds = {}, []
     t_total, ha_total = 0.0, 0.0
     for o in ctx.inventaire.orthos:
+        choix = principal
+        if specialiste is not None:
+            res_origine_cm = float(o.resolution_m) * 100
+            if res_origine_cm > specialiste["seuil_cm"]:
+                choix = specialiste
+            effectif["par_ortho"].append(dict(ortho=Path(o.chemin).name, resolution_origine_cm=round(res_origine_cm, 2),
+                                              detecteur=choix["nom"], seuil=choix["seuil"],
+                                              empreinte_modele=empreinte(chemin_spec if choix is specialiste else chemin_modele)))
+            ctx.journal.info(f"  Comptage : {Path(o.chemin).name} à {res_origine_cm:.1f} cm/px d'origine -> {choix['nom']} "
+                             f"(seuil {choix['seuil']})")
+        det_o, seuil_o = choix["det"], choix["seuil"]
         for pid in drone.recouvrement(o.chemin, parc_m):
             geom = parc_m.set_index("parcelle_id").geometry[pid]
             x0, y0, x1, y1 = geom.bounds
@@ -110,13 +144,13 @@ def executer(ctx):
                 continue
             debut = time.time()
             if centres:
-                xy, scores = det.predire(rgb, valide)
+                xy, scores = det_o.predire(rgb, valide)
             else:
                 boites, scores = det.predire(rgb, valide, reg.get("taille_fenetre", 400), reg.get("recouvrement", 0.25), reg.get("nms", 0.3))
             duree = time.time() - debut
             surface_lue = valide.sum() * res * res / 1e4
             t_total, ha_total = t_total + duree, ha_total + surface_lue
-            garde = scores >= seuil
+            garde = scores >= (seuil_o if centres else seuil)
             if centres:
                 cx, cy = xy[garde, 0], xy[garde, 1]
             else:
@@ -134,6 +168,8 @@ def executer(ctx):
                                   espacement_median_m=espacement,
                                   ortho=Path(o.chemin).name, preuve=f"preuves/{chemin_v.name}",
                                   points=[(p, float(s)) for p, s in dedans])
+            if specialiste is not None:
+                meilleurs[pid].update(detecteur=choix["nom"], coefficient_bas=choix["bas"], coefficient_haut=choix["haut"])
     if not meilleurs:
         raise RuntimeError("aucune orthomosaïque ne recouvre les parcelles")
     for m in meilleurs.values():
@@ -141,13 +177,16 @@ def executer(ctx):
     if pieds:
         gpd.GeoDataFrame(pieds, geometry="geometry", crs=utm).to_crs("EPSG:4326").to_file(ctx.sortie / "pieds.geojson", driver="GeoJSON")
     tab = pd.DataFrame([{k: v for k, v in m.items() if k != "points"} for m in meilleurs.values()]).set_index("parcelle_id")
-    # ancienne configuration (un seul « coefficient ») : les deux bornes valent ce coefficient
-    bas = float(reg.get("coefficient_bas", reg.get("coefficient", 1.0)))
-    haut = float(reg.get("coefficient_haut", reg.get("coefficient", bas)))
-    tab["n_pieds_estimes_bas"] = (tab.n_pieds * bas).round().astype(int)
-    tab["n_pieds_estimes_haut"] = (tab.n_pieds * haut).round().astype(int)
-    tab["densite_estimee_bas_ha"] = (tab.densite_ha * bas).round(1)
-    tab["densite_estimee_haut_ha"] = (tab.densite_ha * haut).round(1)
+    # fourchette : coefficients du détecteur qui a compté la parcelle (ancienne configuration à un seul « coefficient » :
+    # les deux bornes valent ce coefficient)
+    cb = tab.coefficient_bas if specialiste is not None else bas
+    ch = tab.coefficient_haut if specialiste is not None else haut
+    tab["n_pieds_estimes_bas"] = (tab.n_pieds * cb).round().astype(int)
+    tab["n_pieds_estimes_haut"] = (tab.n_pieds * ch).round().astype(int)
+    tab["densite_estimee_bas_ha"] = (tab.densite_ha * cb).round(1)
+    tab["densite_estimee_haut_ha"] = (tab.densite_ha * ch).round(1)
+    if specialiste is not None and len(tab):           # coefficients affichés : bornes de ceux réellement utilisés
+        bas, haut = float(tab.coefficient_bas.min()), float(tab.coefficient_haut.max())
     lo, hi = ESPACEMENT_PLAUSIBLE_M
     tab["echelle_douteuse"] = tab.espacement_median_m.notna() & ~tab.espacement_median_m.between(lo, hi)
     for pid, r in tab[tab.echelle_douteuse].iterrows():
@@ -177,7 +216,8 @@ def executer(ctx):
     ctx.journal.infos["comptage_secondes_par_ha"] = sec_ha
     return Resultat(par_parcelle=tab[["n_pieds", "n_pieds_estimes_bas", "n_pieds_estimes_haut", "densite_ha",
                                       "densite_estimee_bas_ha", "densite_estimee_haut_ha", "couverture",
-                                      "surface_couverte_ha", "espacement_median_m", "echelle_douteuse", "ortho"]], alertes=alertes,
+                                      "surface_couverte_ha", "espacement_median_m", "echelle_douteuse", "ortho"]
+                                     + (["detecteur"] if specialiste is not None else [])], alertes=alertes,
                     couches=[str(ctx.sortie / "pieds.geojson")],
                     resume=dict(secondes_par_ha=sec_ha, pieds=len(pieds), coefficient_bas=bas, coefficient_haut=haut,
                                 pieds_estimes_bas=int(tab.n_pieds_estimes_bas.sum()),

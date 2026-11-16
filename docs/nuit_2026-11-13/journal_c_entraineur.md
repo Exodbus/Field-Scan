@@ -1,0 +1,111 @@
+# Journal de l'agent C-entraîneur (nuit du 13 au 14 novembre 2026)
+
+Rôle : essais CE1 (v5 robuste à la résolution) et CE2 (spécialiste « petits » pour l'aiguillage d'E5p90b), `docs/plan_nuit_2026-11-13.md`, sections 5.2, 5.3, 6. Kaggle (GPU gratuits, carnets et jeux privés), 7 h de GPU au plus. Écrit seulement dans `notebooks/c13_*.py`, `scripts/c13_entr_*.py`, `out/comptage/nuit_1311/kaggle/`, `modeles/comptage_nuit_1311/`, `C:\Users\coren\kaggle_tmp\c13_*\` (hors dépôt) et ce journal. Aucun commit.
+
+**Aucun juge** : les carnets retirent au chargement les ensembles `test_*` (contrôle bloquant `assert`), n'ouvrent jamais `cg/` ; `banana_trees_kp` n'est dans aucun jeu Kaggle utilisé (`comptage-v6-5cm`, `comptage-v6-maitres`) ; le script d'envoi refuse une recette qui cite un juge. Les mesures locales passent par `scripts/v6_banc_commun.py` (`bc.jeu` des 5 jeux de réglage et de `neg` seulement).
+
+Compteur d'essais : un essai = une recette entraînée (une graine) et mesurée sur le réglage, ou un assemblage (aiguillage) mesuré sur le réglage.
+
+- 23:35 Démarrage. Lu : CLAUDE.md, plan de la nuit (1 à 3, 5, 6, 7), journal C-entraîneur du 12/11 (17 essais), `out/comptage_v6/kaggle/finalistes.md`, `out/comptage_v6/banc/finalistes.md` (définition d'E5p90b), carnets `notebooks/v6_travail_centres.py` et `v6_lanceur_kaggle.py`, `scripts/v6_banc_commun.py`, `out/comptage/analyse/rapport_cycle3_echelle.md`, `scripts/v6_analyse_degradation.py`, `modeles/centres_5cm_v5.json`. Kaggle : aucun carnet en cours.
+- 23:40 Carnets écrits (repris de ceux du 12/11) : `notebooks/c13_travail_centres.py`, `notebooks/c13_lanceur_kaggle.py`, `scripts/c13_entr_pousser.py`. Ajouts : tirage `parts_v5` (parts exactes du v5 : autres 1, plantations 1, ReforesTree 8, jeunes 42, sans bananier 20 % ; btd_train seulement si `avec_espace`), tirage `petits` (CE2), augmentation « image dégradée » (fenêtre à 5 cm réduite à c cm/px, c uniforme 5-12, filtres tirés au hasard, puis remise à la taille de sortie ; JPEG qualité 60-95 une fois sur deux), mesure du réglage dégradé à 11 cm/px dans le carnet (information). Essais locaux (processeur, 3 tuiles par groupe) passés pour CE1 et CE2.
+
+## Règles de lecture, écrites à 23:45 avant tout entraînement et toute mesure de la nuit
+
+1. **Seuil** d'un candidat : règle 5.3 (moyenne des 5 F1 de réglage maximale sur 0,10-0,60 pas 0,05, sous moins de 1 % de fausses détections sur `val_negatifs`). Poids : EMA de la dernière époque, pas de choix d'époque.
+2. **Référence v5** : mesurée par le même code. Comme la nuit dernière, la plus exigeante des deux lignes du v5 : moyenne à son seuil 5.3 (0,20 la nuit dernière : 0,7923) ; perte par jeu comparée au v5 à son seuil 5.3 ; erreur de compte comparée à la plus basse des deux lignes (0,20 et 0,30 ; 0,262 la nuit dernière).
+3. **Réglage dégradé à 11 cm/px** : les 5 jeux de réglage (dense, plantain, jeunes, MM, btd_val), chaque image dégradée par la fonction `degrader` de `scripts/v6_analyse_degradation.py` (5 cm → 11 cm LANCZOS → taille d'origine LANCZOS → JPEG qualité 95), annotations inchangées. Chaque candidat est lu **à son seuil choisi à 5 cm** (règle 1) ; « v5 dégradé » = la plus haute des deux moyennes du v5 dégradé à 0,20 et à 0,30.
+4. **Finaliste « résolution »** (CE1) : moyenne des 5 F1 à 11 cm ≥ v5 dégradé + 0,030 ; moyenne des 5 F1 à 5 cm ≥ v5 − 0,005 ; aucun jeu (5 cm) sous le v5 − 0,020 ; erreur de compte (5 cm) ≤ v5 (règle 2) ; `val_negatifs` < 1 %. **Finaliste ordinaire** : règle 5.3 telle quelle.
+5. **CE2** : mesuré seul (famille B, règle 5.3) puis dans E5p90b à la place de v3 + v4 (famille C) : `aiguillage_p90` de `scripts/v6_banc_candidats.py`, tau 0,55, pics du v5 ≥ 0,15, 90e centile, branche « petits » = CE2 seul, décalage 0,10 (réglage d'E5p90b) **et** décalage 0 (2 essais) ; seuil par la règle 5.3 sur le score rendu. Comparé à E5p90b mesuré par le même code.
+6. **Les chiffres qui font foi** sont ceux de l'ONNX exporté, mesuré en local (onnxruntime, 2 fils) par `scripts/c13_entr_mesure.py` avec le code du banc ; ceux du carnet sont de l'information.
+
+- 23:50 **Règle 2 corrigée avant tout résultat** (aucun chiffre de la nuit vu, lot 1 en cours, mesure v5 locale pas encore sortie) : pour parler la même langue que C-banc et le Contrôleur (leurs journaux, 23 h 38 et 23 h 44), **la référence v5 est le v5 au seuil 0,30** (moyenne des 5 F1 0,7777, 4 anciennes 0,8539, erreur de compte 0,262, val_negatifs 0,25 %) : finaliste ordinaire si moyenne des 5 > 0,7877, 4 anciennes ≥ 0,8539, chaque jeu ≥ v5 (0,30) − 0,020, erreur ≤ 0,262. Finaliste « résolution » : moyenne à 11 cm ≥ **v5 dégradé à 0,30** + 0,030, moyenne à 5 cm ≥ 0,7727 (0,7777 − 0,005), et les trois autres conditions. Pour information, je donne aussi l'écart au v5 dégradé lu à 0,20 (plus exigeant si plus haut).
+
+## Lot 1 (écrit avant son lancement)
+
+| essai | nom | recette |
+| --- | --- | --- |
+| 1 | c13a | CE1 depuis zéro : recette du v5 (ResNet-18, FPN au quart, 30 époques, lot 16, AdamW 3e-4 / 1e-3, OneCycle, perte focale, parts `parts_v5`, sans btd_train), échelle 0,6-1,6, dégradation p = 0,5, EMA 0,999, graine 0 |
+| 2 | c13b | CE1 réglage fin depuis le v5 (ONNX converti, BN figées) : mêmes données et augmentations, 10 époques, taux 1e-5 / 3e-5, EMA 0,999 |
+| 3 | c13c | CE1 réglage fin, taux 3e-5 / 1e-4 (sinon comme c13b) |
+| 4 | c13d | CE2 depuis zéro : tirage `petits` (btd_train 1 copie, jeunes 34 copies, tuiles d'ailleurs à petits plants 2 copies, ReforesTree 2, un quart des plantations et des autres, sans bananier 40 % de l'époque), échelle 0,6-1,6, sans dégradation, 25 époques, EMA 0,999 |
+
+- 23:42 **Lot 1 lancé** : carnet privé `affilecorentin/c13-lot1` (T4 x 2, 4 sous-processus, 2 par GPU), jeux `comptage-v6-5cm` et `comptage-v6-maitres`. Essais 1 à 4.
+- 23:43 Mesure locale du v5 lancée (`scripts/c13_entr_mesure.py --nom v5 --cm 5 11 --cache`, 2 fils) : référence à 5 cm (même code que les candidats) et réglage dégradé à 11 cm. Cartes du v5 dégradé en cache (`out/comptage/nuit_1311/kaggle/cache/v5_d11_*`), utilisables par C-banc pour CB2.
+- 23:52 **Lot 2 écrit avant tout résultat du lot 1** (une seule place GPU pour moi, l'autre reste à M-entraîneur) :
+  - essai 5, **c13e** : CE2 en réglage fin depuis le v5 (tirage `petits`, BN figées, taux 3e-5 / 1e-4, 10 époques, échelle 0,6-1,6) ; le spécialiste n'a pas besoin de garder MM, seulement les images aiguillées ;
+  - essais 6 et 7 : graines 1 et 2 de la **meilleure recette CE1** = la plus haute moyenne à 11 cm parmi c13a, c13b, c13c qui remplissent les conditions à 5 cm de la règle « résolution » ; si aucune ne les remplit, la plus haute moyenne à 11 cm ;
+  - essai 8, **c13f** : cette même recette CE1 avec btd_train (`avec_espace`, 15 %), qui peut viser aussi la règle ordinaire.
+- 23:48 Script `scripts/c13_entr_aiguillage.py` écrit (CE2 dans E5p90b, règle 5 ci-dessus ; cache du banc v6 lu sans écriture).
+- 00:13 **v5 à 5 cm, ONNX local, mon script** [M] (`out/comptage/nuit_1311/kaggle/mesures/v5_5cm.csv`) : à 0,30 dense 0,7795, plantain 0,8865, jeunes 0,8926, MM 0,8571, btd 0,4726, moyenne 0,7777, 4 anciennes 0,8539, erreur 0,2618, val_negatifs 16 (0,25 %) ; à 0,20 moyenne 0,7923 (61, 0,94 %). **Identique** au banc de C-banc (23 h 38) et à la nuit dernière : le script mesure comme le banc. Durée locale (2 fils, machine partagée) : environ 30 min pour le 5 cm complet, dont val_negatifs environ 20 min.
+- 00:26 **v5 au réglage dégradé à 11 cm/px** [M] (`mesures/v5_11cm.csv`, cartes `cache/v5_d11_*`) : à 0,30 dense 0,622, plantain 0,875, jeunes 0,768, MM 0,724, btd 0,014 ; **moyenne 0,6006** (4 anciennes 0,7471, erreur 0,413) ; à 0,20 moyenne 0,6426. Dense, jeunes, MM identiques à C-analyste (cycle 3) : même dégradation. **Seuil « résolution » : moyenne à 11 cm ≥ 0,6306** (information : 0,6726 contre le v5 dégradé lu à 0,20). btd_val s'effondre à 11 cm (jeunes plants de 1 à 2 m, 10 à 20 px à 11 cm) : il pèse 1/5 de la moyenne dégradée.
+
+## Arrêt et reprise
+
+- vers 01:05 (14/11) **Arrêt de la session** (tous les agents arrêtés) pendant que `c13-lot1` tournait. Le carnet a fini seul (COMPLETE, « TOUT EST FINI en 82 min », 22 h 43 → 0 h 05 heure Kaggle UTC, soit 23 h 43 → 1 h 05 heure locale) : **environ 1,4 h de GPU** (T4 x 2).
+- 13:10 **Reprise** à la demande du chef d'orchestre. Avenant (`docs/nuit_2026-11-13/avenant_horaires.md`) : `finalistes.md` avant 18 h 40, gel à 19 h ; règles 5.3 inchangées ; quota Kaggle remis à zéro à 1 h, ma limite reste 7 h de GPU en tout (1,4 h déjà prises). Sorties du lot 1 récupérées (`scripts/c13_entr_recuperer.py lot1`) : ONNX, json et poids dans `modeles/comptage_nuit_1311/`, journaux et csv dans `out/comptage/nuit_1311/kaggle/lot1/`. Écart ONNX / torch ≤ 6e-6 pour les 4.
+- 13:15 **Lot 1, chiffres du carnet** (torch sur GPU, information ; l'ONNX local fera foi), seuil par la règle 5.3 :
+
+| essai | nom | seuil | dense | plantain | jeunes | MM | btd | moyenne 5 | erreur | sans bananier | moyenne 11 cm (au même seuil) |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| réf. | v5 (ONNX local) | 0,30 | 0,780 | 0,887 | 0,893 | 0,857 | 0,473 | 0,7777 | 0,262 | 16 | 0,6006 |
+| 1 | c13a (CE1, zéro) | 0,20 | 0,744 | 0,844 | 0,883 | 0,766 | 0,697 | 0,7865 | 0,323 | 28 | **0,7132** (dense 0,748, MM 0,772, btd 0,336) |
+| 2 | c13b (CE1, réglage fin 1e-5) | 0,25 | 0,765 | 0,860 | 0,898 | 0,752 | 0,615 | 0,7779 | 0,348 | 26 | 0,6761 |
+| 3 | c13c (CE1, réglage fin 3e-5) | 0,25 | 0,765 | 0,861 | 0,902 | 0,795 | 0,567 | 0,7779 | 0,331 | 12 | 0,6787 |
+| 4 | c13d (CE2, petits) | 0,35 | 0,766 | 0,877 | 0,863 | 0,805 | 0,986 | 0,8596 | 0,173 | 12 | 0,7354 (btd 0,989) |
+
+  - CE1 : l'augmentation dégradée marche à 11 cm (c13a +0,11 sur la moyenne dégradée, dense 0,62 → 0,75), mais **aucun CE1 ne remplit les conditions à 5 cm** : sans btd_train, btd_val reste faible et pousse la règle de seuil vers 0,20-0,25, où MM, plantain et l'erreur de compte décrochent (c13a : MM 0,766, plantain 0,844, erreur 0,323 ; limites 0,837, 0,867, 0,262). Même à 0,30, c13a a MM 0,758.
+  - CE2 (c13d) : bon partout sauf jeunes 0,863 et MM 0,805 ; garde btd à 11 cm.
+- 13:20 **Lot 2 modifié** par rapport au plan écrit à 23 h 52 (choix de recettes, pas une règle de sélection ; la règle de seuil et de finaliste ne change pas) : les graines 1 et 2 de c13a ne changeraient pas l'échec à 5 cm, qui vient du seuil tiré par btd_val ; elles sont remplacées par des recettes CE1 qui apprennent aussi btd_train (pour que btd_val ne tire plus le seuil vers le bas). Lot 2 :
+  - essai 5, **c13e** (CE2) : réglage fin du v5 (ONNX converti, BN figées) sur le tirage `petits`, 3e-5 / 1e-4, 10 époques, échelle 0,6-1,6 ;
+  - essai 6, **c13f** (CE1) : c13a + btd_train (`parts_v5`, `avec_espace` 15 %), ResNet-18, 30 époques ;
+  - essai 7, **c13g** (CE1) : recette de v6f (ResNet-34, parts v6a avec btd_train, EMA) + échelle 0,6-1,6 + dégradation p = 0,5, 30 époques ;
+  - essai 8, **c13h** (CE1) : réglage fin de v6f (poids EMA `poids_v6f.pt`, BN libres, jeu privé `comptage-c13-depart`) avec la dégradation, parts v6a, échelle 0,6-1,6, 3e-5 / 1e-4, 10 époques.
+- 13:20 L'agent rend la main (demande de rapport). `finalistes.md` provisoire écrit : aucun finaliste à ce stade. Lot 2 (`c13-lot2`) en cours sur Kaggle ; file locale (`C:/Users/coren/kaggle_tmp/c13_file1.sh`) en cours : aiguillage c13d, puis ONNX c13a, c13c, c13b à 5 et 11 cm. GPU consommé : environ 1,4 h (lot 1) + lot 2 en cours (environ 2 h attendues). 8 essais lancés, 4 mesurés (carnet).
+- 13:17 Le chef d'orchestre précise que le travail continue jusqu'à 18 h 40 ; le rapport de 13 h 16 était provisoire. Suite : lot 2, file locale, finalistes.md définitif.
+- 13:25 **c13d, ONNX local** [M] (`mesures/c13d_5cm.csv`) : à 0,35 (règle 5.3) dense 0,769, plantain 0,879, jeunes 0,863, MM 0,805, btd 0,986, moyenne 0,8607, 4 anciennes 0,8292, erreur 0,168, val_negatifs 11 (0,17 %). **Pas finaliste seul** (4 anciennes, jeunes, MM). Cartes en cache : `out/comptage/nuit_1311/kaggle/cache/c13d_base_*`.
+- 13:25 **CE2 dans E5p90b** [M] (`scripts/c13_entr_aiguillage.py c13d`, `aiguillage_c13d*.csv`) ; E5p90b recalculé : 0,8549, 4 anciennes 0,8516 (= C-banc). Essais 9 et 10 :
+
+| essai | candidat | seuil | dense | plantain | jeunes | MM | btd | moyenne 5 | 4 anciennes | erreur | sans bananier |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| réf. | E5p90b (v3 + v4) | 0,30 | 0,7795 | 0,8771 | 0,8926 | 0,8571 | 0,8683 | 0,8549 | 0,8516 | 0,154 | 16 |
+| 9 | E5p90b_c13d_d0.1 | 0,30 | 0,7795 | 0,8720 | 0,8926 | 0,8571 | 0,9733 | 0,8749 | 0,8503 | 0,146 | 18 |
+| 10 | E5p90b_c13d_d0.0 | 0,30 | 0,7795 | 0,8827 | 0,8926 | 0,8571 | 0,9818 | 0,8787 | **0,8530** | 0,136 | 12 (0,19 %) |
+
+  - L'essai 10 remplit toutes les conditions de 5.3 **sauf une** : 4 anciennes 0,8530 < 0,8539 (plantain 0,8827 contre 0,8865 pour le v5, sur 15 tuiles aiguillées). **Pas finaliste.**
+- 13:27 **Essais 11 et 12 écrits avant mesure** : même aiguillage avec c13d, décalage −0,05 et −0,10 (la branche « petits » lit c13d à seuil + 0,05 / + 0,10, plus proche de son propre seuil 5.3, 0,35). Règle inchangée (5.3, seuil sur la grille) ; pas d'autre variante d'aiguillage de mon côté (les réglages d'aiguillage sont le travail de C-banc, CB1).
+- 13:32 **Essais 11 et 12** [M] (`aiguillage_c13d-0.05,-0.1*.csv`), seuil 5.3 = 0,30 pour les deux :
+  - 11, d −0,05 : plantain 0,8847, btd 0,9853, moyenne 0,8798, 4 anciennes 0,8535 (< 0,8539), erreur 0,133, sans bananier 11 : pas finaliste ;
+  - 12, **E5p90b_c13d_d-0.1** : dense 0,7795, plantain **0,8867**, jeunes 0,8926, MM 0,8571, btd 0,9879, **moyenne 0,8808**, 4 anciennes **0,8540** (≥ 0,8539), erreur 0,130, sans bananier 9 (0,14 %) : **remplit les 4 conditions de 5.3 → finaliste (famille C)**. Contrôle brut au seuil 0,30 sur le plantain : v5 2 465 VP / 463 FP / 168 FN (F1 0,88653) ; essai 12 2 462 / 458 / 171 (F1 0,88673). Dense, jeunes et MM sont exactement ceux du v5 (aucune image aiguillée). **Marge infime** sur la condition « 4 anciennes » (+0,0002 sur le plantain, 5 fausses détections de moins) et 4 décalages essayés : chiffre de réglage optimiste, à dire au Contrôleur.
+- 13:39 c13a ONNX local à 5 cm [M] : règle 5.3 → 0,20 : dense 0,7465, plantain 0,8448, jeunes 0,8863, MM 0,7660, btd 0,6969, moyenne 0,7881, 4 anciennes 0,8109, erreur 0,319, val_negatifs 28 (0,43 %) : conditions à 5 cm non remplies (comme dans le carnet, écarts ≤ 0,002).
+- 13:39 **Lot 3 écrit avant les résultats du lot 2** (lancé à la fin du lot 2, l'autre place GPU reste à M) : **graines 1 et 2 de c13d** (essais 13, 14 ; mesurées seules et dans l'aiguillage du finaliste, décalage −0,10 fixé, pour donner la stabilité du finaliste au Contrôleur, **sans changer** le finaliste), et **c13i** = c13d + dégradation (p = 0,5, 5-12 cm, JPEG) (essai 15) : à 11 cm, l'aiguillage envoie près de 40 % du dense vers la branche « petits » (C-analyste, cycle 3), que c13d ne lit pas mieux que le v5 (dense 0,617 à 11 cm dans le carnet). c13i est mesuré dans l'aiguillage au décalage −0,10, seuil par 5.3, et au réglage dégradé à 11 cm (règle « résolution » possible pour l'aiguillage entier).
+- 13:43 c13a ONNX local à 11 cm [M] : au seuil 0,20 (choisi à 5 cm) dense 0,751, plantain 0,847, jeunes 0,866, MM 0,772, btd 0,335, **moyenne 0,7141** (v5 0,6006) ; à 0,30 : 0,6933. La robustesse à 11 cm est nette (dense et plantain presque au niveau du 5 cm), mais c13a échoue à 5 cm (MM, plantain, dense, erreur). Pas finaliste.
+- 13:43 File locale refaite (`c13_file2.sh`) : c13d à 11 cm (cartes `cache/c13d_d11_*`) avant c13c et c13b, pour mesurer le finaliste au réglage dégradé (`C13_CM=11` ajouté à `scripts/c13_entr_aiguillage.py`, lecture au seuil 0,30 choisi à 5 cm ; information et règle « résolution »).
+- 13:47 **Finaliste E5p90b_c13d_d-0.1 au réglage dégradé à 11 cm** [M] (`aiguillage_c13d-0.1_11cm.csv`, cartes v5 et c13d dégradées) : au seuil 0,30 (choisi à 5 cm) dense 0,592, plantain 0,877, jeunes 0,768, MM 0,724, btd 0,987, **moyenne 0,7895** (v5 dégradé 0,6006, +0,189). Il remplit donc aussi la règle « résolution », mais grâce à btd (0,014 → 0,987) ; sur le dense dégradé il perd 0,030 contre le v5 (0,592 contre 0,622) : les images denses floues aiguillées vers c13d y sont lues à 0,40 et sous-comptées. C'est la cible de c13i (lot 3).
+- 14:19 **ONNX locaux de c13b et c13c** [M] (`mesures/c13b_*.csv`, `c13c_*.csv`), seuil 5.3 = 0,25 pour les deux :
+  - c13b : dense 0,768, plantain 0,862, jeunes 0,898, MM 0,756, btd 0,616, moyenne 0,7800, 4 anciennes 0,821, erreur 0,342, val_negatifs 26 ; 11 cm : 0,6770 ;
+  - c13c : dense 0,768, plantain 0,862, jeunes 0,905, MM 0,800, btd 0,568, moyenne 0,7807, 4 anciennes 0,834, erreur 0,324, val_negatifs 12 ; 11 cm : 0,6797.
+  - Les deux passent la condition à 11 cm (≥ 0,6306) et la moyenne à 5 cm (≥ 0,7727), mais **échouent** : plantain < 0,867, MM < 0,837, erreur > 0,262. Pas finalistes. Les chiffres du carnet sont retrouvés à 0,003 près.
+- 14:56 **Lot 2 fini** (`c13-lot2`, « TOUT EST FINI en 98 min », environ **1,65 h de GPU** ; cumul ≈ 3,05 h). Récupéré (`scripts/c13_entr_recuperer.py lot2`). Chiffres du **carnet** (information ; ONNX locaux à suivre), seuil 5.3 :
+
+| essai | nom | seuil | dense | plantain | jeunes | MM | btd | moyenne 5 | 4 anciennes | erreur | sans bananier | 11 cm |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 5 | c13e (CE2, réglage fin du v5) | 0,40 | 0,761 | 0,884 | 0,881 | 0,584 | 0,988 | 0,8195 | 0,777 | 0,261 | 1 | 0,741 |
+| 6 | c13f (CE1 + btd_train, R18) | 0,35 | 0,776 | 0,887 | 0,903 | 0,772 | 0,987 | 0,8648 | 0,834 | 0,073 | 7 | 0,855 |
+| 7 | c13g (CE1, recette v6f R34 + dégradation) | 0,40 | 0,766 | 0,884 | 0,912 | 0,766 | 0,990 | 0,8637 | 0,832 | 0,044 | 5 | 0,859 |
+| 8 | c13h (réglage fin de v6f + dégradation) | 0,35 | 0,775 | 0,885 | 0,899 | **0,831** | 0,988 | **0,8755** | 0,847 | 0,070 | 5 | 0,851 |
+
+  - Avec btd_train, le seuil remonte à 0,35-0,40 et la robustesse à 11 cm est très forte (0,85-0,86 contre 0,60 pour le v5). **Le seul obstacle est MM** (limite 0,837) : c13h à 0,831 manque la règle « résolution » de 0,006 (environ un arbre) dans le carnet.
+- 14:56 Lot 3 (`c13-lot3`) encore en file d'attente Kaggle : **remplacé par une version 2** qui ajoute, écrits avant toute mesure ONNX du lot 2 : **c13j** = c13h avec un réglage fin plus doux (1e-5 / 3e-5 ; v6f avait MM 0,851 : garder plus de v6f) (essai 16) et **c13h graine 1** (essai 17, stabilité de c13h ; mesurée et donnée telle quelle, jamais choisie pour sa chance). Lot 3 v2 = c13d_g1, c13d_g2, c13i, c13j, c13h_g1 (5 sous-processus).
+- 14:57 Kaggle refuse un 3e carnet GPU (2 sessions : la mienne en attente et `m13-lot2b`) : `c13-lot3` (v1, en file, jamais démarré, aucun GPU) supprimé et renvoyé dans sa version 2 (5 recettes). Mesures ONNX locales du lot 2 lancées (`c13_file3.sh`) : c13h, c13f, c13g à 5 et 11 cm, puis c13e à 5 cm avec cartes, puis **c13e dans E5p90b aux 4 mêmes décalages que c13d** (0,10, 0, −0,05, −0,10 ; essais 18 à 21, écrits avant mesure).
+- 15:05 **c13h ONNX local à 5 cm** [M] : règle 5.3 → **0,35** (moyenne 0,8765 ; 0,30 donne 0,8753) : dense 0,778, plantain 0,886, jeunes 0,899, **MM 0,831**, btd 0,989, 4 anciennes 0,848, erreur 0,067, val_negatifs 6 (0,09 %). MM sous 0,837 : **pas finaliste** (ni ordinaire : 4 anciennes 0,848 < 0,8539 ; ni « résolution » : MM). Pour information seulement (pas de choix de seuil hors règle) : à 0,30, MM 0,840.
+- 15:21 c13h à 11 cm (ONNX) [M] : au seuil 0,35 moyenne 0,8521 (dense 0,773, plantain 0,886, jeunes 0,905, MM 0,707, btd 0,989). **c13f ONNX** [M] : règle 5.3 → 0,35 : dense 0,778, plantain 0,887, jeunes 0,903, MM 0,772, btd 0,988, moyenne 0,8656, 4 anciennes 0,835, erreur 0,071, val_negatifs 7 ; 11 cm 0,858. MM < 0,837 : pas finaliste.
+- 15:21 `c13-lot3` toujours en file d'attente Kaggle (T4 puis P100 ; `m13-lot2b` de M aussi, depuis 14 h 08). Relancé à 15 h 14 sur P100 avec 3 recettes seulement (c13j, c13h_g1, c13i) ; les graines de c13d (essais 13, 14) sont abandonnées faute de temps GPU sûr.
+- 15:30 **c13g ONNX** [M] : règle 5.3 → 0,40 : dense 0,768, plantain 0,885, jeunes 0,912, MM 0,772, btd 0,991, moyenne 0,8656, 4 anciennes 0,834, erreur 0,047, val_negatifs 5 ; 11 cm 0,8593. MM < 0,837 : pas finaliste.
+- 15:36 **c13e ONNX** [M] : règle 5.3 → 0,40 : dense 0,762, plantain 0,886, jeunes 0,884, MM 0,587, btd 0,989, moyenne 0,8216, val_negatifs 1 : pas finaliste seul (MM). **c13e dans E5p90b** (essais 18 à 21) [M] (`aiguillage_c13e0.1,0.0,-0.05,-0.1_retenus.csv`), seuil 5.3 = 0,30 pour les quatre :
+  - d 0,10 : 0,8757, 4 anciennes 0,8510 (non) ; d 0 : 0,8795, 0,8536 (non) ;
+  - d −0,05 : plantain 0,8870, btd 0,9857, moyenne 0,8804, 4 anciennes 0,8540, erreur 0,131, sans bananier 4 (0,06 %) : **finaliste** ;
+  - d −0,10 : plantain **0,8883**, btd 0,9878, **moyenne 0,8811**, 4 anciennes **0,8544**, erreur 0,128, sans bananier **4 (0,06 %)** : **finaliste**, meilleure moyenne de mes candidats.
+- 15:39 Contrôle brut du plantain (seuil 0,30) : c13e d −0,10 : 2 458 / 443 / 175 (0,88833) ; d −0,05 : 2 465 / 460 / 168 (0,88701) ; v5 0,88653. Au réglage dégradé à 11 cm (seuil 0,30) : c13e d −0,10 0,7850 (dense 0,597), d −0,05 0,7924 (dense 0,623).
+- 15:39 **`finalistes.md` réécrit** : 3 candidats famille C (1. E5p90b_c13e_d-0.1 0,8811 ; 2. E5p90b_c13d_d-0.1 0,8808 ; 3. E5p90b_c13e_d-0.05 0,8804), aucun CE1. Lot 3 toujours en file Kaggle.
+- 16:49 `c13-lot3` (P100) jamais démarré : en file d'attente Kaggle de 15 h 14 à 16 h 49, comme `m13-lot2b` de M depuis 14 h 08. Trop tard pour entraîner puis mesurer avant 18 h 40 : **carnet supprimé** (aucune sortie, aucun GPU consommé). Essais 15 à 17 (c13i, c13j, c13h_g1) **non faits** ; graines de c13d non faites. Le finaliste n'a donc pas de mesure de stabilité entre graines.
+- 16:49 **Bilan GPU** : lot 1 environ 1,4 h (82 min, T4 x 2) + lot 2 environ 1,65 h (98 min, T4 x 2) = **environ 3,05 h** sur 7 h. **Essais comptés : 16** (essais 1 à 8 : recettes c13a à c13h entraînées et mesurées, c13d et c13e seuls compris ; essais 9 à 12 et 18 à 21 : aiguillages c13d et c13e × 4 décalages) ; essais 13 à 17 annoncés mais non faits. `finalistes.md` définitif : 3 candidats de la famille C, aucun CE1.
