@@ -14,12 +14,15 @@ ap = argparse.ArgumentParser()
 ap.add_argument("--images", default=str(RACINE / "out/video_trailer/travail/seg_trailer"))
 ap.add_argument("--son", default=str(RACINE / "out/video_trailer/bande_son.wav"))
 ap.add_argument("--sortie", default=str(RACINE / "out/video_trailer/field_scan_trailer.mp4"))
+ap.add_argument("--larg", type=int, default=1920)
+ap.add_argument("--haut", type=int, default=1080)
+ap.add_argument("--crf", default="HIGH")
 a = ap.parse_args(argv)
 fichiers = sorted(Path(a.images).glob("*.jpg"))
 sc = bpy.context.scene
 for o in list(bpy.data.objects):
     bpy.data.objects.remove(o)
-sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = 1920, 1080, 100
+sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = a.larg, a.haut, 100
 sc.render.fps, sc.render.fps_base = 24, 1.0
 se = sc.sequence_editor_create()
 for k, f in enumerate(fichiers):
@@ -33,7 +36,7 @@ im.file_format = "FFMPEG"
 ff = sc.render.ffmpeg
 ff.format = "MPEG4"
 ff.codec = "H264"
-ff.constant_rate_factor = "HIGH"
+ff.constant_rate_factor = a.crf
 ff.ffmpeg_preset = "GOOD"
 ff.audio_codec = "AAC"
 ff.audio_bitrate = 256

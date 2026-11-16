@@ -120,6 +120,19 @@ def definir_plans(plants):
                       cam=[(-60, -130, 24), (-50, -118, 27), (-40, -105, 30)],
                       cible=[(-10, 420, 22), (-4, 420, 24), (4, 420, 26)], foc_pts=[300.0, 300.0, 300.0],
                       roll=[-1.0, 0, 1.0])
+    # descente : de la vue zénithale (raccord avec la photo réelle) à l'allée, la caméra s'incline et plonge
+    P["descente"] = dict(duree=5.0, soleil=(250, 11), focale=30, fstop=5.6, ease=1.0, arbres_parcelle=False,
+                         cam=[(0, -5, 110), (-3, -14, 80), (-8, -26, 40), (-11, -34, 12), (-12, -37, 2.4)],
+                         cible=[(0, -4.9, 0), (0, -6, 0), (-2, 2, 1), (-3, 14, 2.5), (-4, 30, 3.0)],
+                         foc_pts=[110.0, 85.0, 45.0, 30.0, 14.0], roll=[0, 0, 0, 0, 0])
+    # oblique : vol en diagonale à 22 m au-dessus des bananiers, regard incliné vers l'avant
+    P["oblique"] = dict(duree=2.9, obt=0.3, soleil=(250, 10), focale=24, fstop=8, ease=0.4, arbres_parcelle=False,
+                        cam=[(62, -84, 24), (36, -52, 22), (12, -22, 20)],
+                        cible=[(-6, 20, 2), (-8, 26, 2), (-10, 32, 2)], foc_pts=[60.0, 50.0, 40.0], roll=[-2, 0, 2])
+    # contre-plongée : très bas dans l'allée, regard vers le soleil à travers les feuilles
+    P["contre"] = dict(duree=2.1, obt=0.25, soleil=(250, 11), focale=22, fstop=2.8, ease=0.3,
+                       cam=[sur_couloir(12, 0.8, 0.0), sur_couloir(-2, 0.85, 0.0)],
+                       cible=[sur_couloir(-30, 5.5, -9.0), sur_couloir(-36, 6.5, -9.0)], foc_pts=[9.0, 7.0], roll=[3, -2])
     return P
 
 

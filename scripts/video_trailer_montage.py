@@ -202,8 +202,8 @@ def plan_parcelles(t):
         nb += 1
         for pts in polys:
             pi = pts.astype(np.int32).reshape(-1, 1, 2)
-            cv2.fillPoly(cal, [pi], tuple(c / 255.0 * 0.22 * a for c in VERT))
-            cv2.polylines(cal, [pi], True, tuple(c / 255.0 * a for c in VERT), 4, cv2.LINE_AA)
+            cv2.fillPoly(cal, [pi], tuple(float(c / 255.0 * 0.11 * a) for c in VERT))
+            cv2.polylines(cal, [pi], True, tuple(float(c / 255.0 * a) for c in VERT), 4, cv2.LINE_AA)
         labels.append((p, ax, ay, a, to))
     # lueur des contours
     cal = cal + cv2.GaussianBlur(cal, (0, 0), 9) * 1.3
@@ -227,11 +227,17 @@ def plan_parcelles(t):
         d.rounded_rectangle((x0, y0, x0 + w, y0 + 76), 10, fill=(6, 18, 12, int(190 * a)), outline=VERT + (int(255 * a),), width=2)
         d.text((ax, y0 + 22), s1, font=f1, fill=BLANC + (int(255 * a),), anchor="mm")
         d.text((ax, y0 + 54), s2, font=f2, fill=VERT + (int(255 * a),), anchor="mm")
-    # compteur
+    # compteur : pastille sombre, texte blanc et vert vif
     a_c = prog(t, 1.0, 1.6) * (1 - prog(t, 7.5, 8.0))
-    texte_espace(im, f"{nb:02d}  PARCELLES", 1500, 740, semi(34), 8, VERT, a_c, 0.5, ancre="l")
-    if nb >= 13:
-        texte_espace(im, "43 HECTARES", 1500, 700, reg(26), 6, BLANC, prog(t, 5.8, 6.4), 0.5, ancre="l")
+    if a_c > 0:
+        pil = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        dd = ImageDraw.Draw(pil)
+        dd.rounded_rectangle((1470, 690, 1878, 790), 24, fill=(6, 18, 12, int(215 * a_c)), outline=VERT + (int(255 * a_c),), width=3)
+        b = im.convert("RGBA")
+        b.alpha_composite(pil)
+        im = b.convert("RGB")
+        texte_espace(im, f"{nb:02d} PARCELLES", 1496, 722, semi(36), 5, BLANC, a_c, 0.0, ancre="l")
+        texte_espace(im, "43 HECTARES" if nb >= 13 else "", 1496, 762, reg(24), 6, VERT, a_c, 0.0, ancre="l")
     arr = np.asarray(im).astype(np.float32)
     arr = degrade_bas(arr, 330, 0.7)
     im = Image.fromarray(arr.astype(np.uint8))
@@ -245,10 +251,9 @@ def plan_parcelles(t):
 _src = Image.open(RACINE / "out/demo_eloro/controle_pieds/extrait_P15.png").convert("RGB")
 _g_img = _src.crop((14, 22, 694, 700))
 _d_img = _src.crop((708, 22, 1388, 700))
-# coin sans données (noir) de l'image source : fondu dans l'arrière-plan sombre au lieu d'un triangle noir net
-_ga = np.array(_g_img)
-_mq = cv2.dilate((_ga.max(2) < 12).astype(np.uint8), np.ones((15, 15), np.uint8)).astype(np.float32)
-MASQUE_COIN = np.clip(cv2.GaussianBlur(_mq, (0, 0), 22) * 1.6, 0, 1)
+# la tuile source a un coin sans données (noir) : on ne garde que le carré valide de 540 px (environ 32 m)
+_g_img = _g_img.crop((0, 0, 540, 540))
+MASQUE_COIN = np.zeros((540, 540), np.float32)
 _a_d = np.array(_d_img)
 _rouge = cv2.dilate(((_a_d[..., 0] > 170) & (_a_d[..., 1] < 90) & (_a_d[..., 2] < 90)).astype(np.uint8), np.ones((5, 5), np.uint8))
 _nb, _lab = cv2.connectedComponents(_rouge)
@@ -257,6 +262,7 @@ for _k in range(1, _nb):
     _ys, _xs = np.nonzero(_lab == _k)
     if len(_xs) > 12:
         CENT.append((_xs.mean(), _ys.mean()))
+CENT = [c for c in CENT if c[0] < 540 and c[1] < 540]
 CENT.sort(key=lambda c: c[0] * 0.8 + c[1] * 0.6 + np.sin(c[1] * 0.37 + c[0] * 0.11) * 25)
 NCERC = len(CENT)
 
@@ -278,11 +284,12 @@ def plan_comptage(t):
     xs0, ys0 = max(ox, 0), max(oy, 0)
     xs1, ys1 = min(ox + taille, W), min(oy + taille, H)
     mk = cv2.resize(MASQUE_COIN, (taille, taille))[..., None]
-    sq = sq * (1 - mk) + fond[oy:oy + taille, ox:ox + taille] * mk if (oy >= 0 and ox >= 0 and oy + taille <= H and ox + taille <= W) else sq * (1 - mk)
-    canvas[ys0:ys1, xs0:xs1] = sq[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox] * (0.88 + 0.12 * a_in)
+    sq0 = sq
+    mks = mk[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox]
+    canvas[ys0:ys1, xs0:xs1] = (sq0[ys0 - oy:ys1 - oy, xs0 - ox:xs1 - ox] * (1 - mks) + fond[ys0:ys1, xs0:xs1] * mks) * (0.88 + 0.12 * a_in)
     # détections
     cal = np.zeros((H, W, 3), np.float32)
-    k = taille / 680.0
+    k = taille / 540.0
     nrev = 0
     for i, (cx, cy) in enumerate(CENT):
         tk = 1.0 + 5.4 * i / NCERC
@@ -315,7 +322,7 @@ def plan_comptage(t):
     sub[:] = sub + (gl[..., None] * np.array(VERT, np.float32) * 0.9 * ac)
     sub[:] = sub * (1 - m[..., None] * ac) + np.array(VERT, np.float32) * m[..., None] * ac
     im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
-    texte_espace(im, "BANANIERS REPÉRÉS SUR CE CARRÉ DE 40 M", 100, 690, reg(23), 5, BLANC, ac, 0.9, ancre="l")
+    texte_espace(im, "BANANIERS REPÉRÉS SUR CE CARRÉ DE 32 M", 100, 690, reg(23), 5, BLANC, ac, 0.9, ancre="l")
     etiquette_lieu(im, "ÉQUATEUR · IMAGE DE DRONE", ac)
     return np.asarray(im)
 
@@ -392,7 +399,7 @@ def plan_maladie(t):
         arr = vue_feuille("banspot_SIG_PER_RDMI_90.jpg", tt, 4.3, 38.0, 0.05, 0.4)
         col = AMBRE
         txt, coche = "FEUILLE MALADE", False
-    arr = arr * 0.92
+    arr = arr * 0.92 * prog(tt, 0.0, 0.35)
     arr = vignette(arr, 0.5)
     # ligne de balayage horizontale (analyse)
     dur = 3.7 if saine else 4.3
@@ -454,18 +461,19 @@ def plan_titre(t):
     esp = 46 - 18 * prog(t, 0.4, 5.0)
     texte_espace(im, "FIELD SCAN", W / 2, 360, fin(172), esp, BLANC, a, 1.0)
     a2 = prog(t, DEC.SLOGAN - DEC.TITRE_IMPACT, DEC.SLOGAN - DEC.TITRE_IMPACT + 1.4) * (1 - prog(t, 6.6, 7.0))
-    texte_espace(im, "Voir sa plantation comme jamais.", W / 2, 520, fin(48), 9, BLANC, a2, 1.0)
-    return np.asarray(im)
+    texte_espace(im, "Voir sa plantation comme jamais.", W / 2, 548, police("segoeui.ttf", 50), 8, BLANC, a2, 1.0)
+    arr = np.asarray(im).astype(np.float32) * (1 - prog(t, 6.45, 7.0))
+    return arr.astype(np.uint8)
 
 
 def plan_fin(t):
     """t = secondes depuis 65,6 s."""
     im = Image.fromarray(np.zeros((H, W, 3), np.uint8))
-    a1 = prog(t, 0.6, 1.8)
+    a1 = prog(t, 0.3, 1.2)
     texte_espace(im, "PROJET INTELLIGENCE LAB · ING4", W / 2, 250, fin(58), 12, BLANC, a1)
-    a2 = prog(t, 1.8, 2.8)
+    a2 = prog(t, 1.0, 1.8)
     texte_espace(im, "3 sites, 3 jeux de données publics", W / 2, 400, fin(42), 5, BLANC, a2)
-    a3 = prog(t, 3.0, 4.0)
+    a3 = prog(t, 1.8, 2.6)
     texte_espace(im, "Images 3D de synthèse · données réelles :", W / 2, 560, reg(27), 2, BLANC, a3)
     texte_espace(im, "IGN BD ORTHO® et RPG (Etalab 2.0), UTMACH / OpenAerialMap, BanSpot", W / 2, 606, reg(27), 2, BLANC, a3)
     arr = np.asarray(im).astype(np.float32)
@@ -480,52 +488,83 @@ def plan_texte_noir(t, lignes, tailles, y0, esp, a):
     return np.asarray(im)
 
 
+# ------------------------------------------------------------------------------------------------------ plans ajoutés
+import sys as _sys  # noqa: E402
+
+M = _sys.modules[__name__]
+import video_trailer_plans_neufs as N  # noqa: E402
+
+_reseau = None
+
+
+def plan_reseau(t):
+    global _reseau
+    if _reseau is None:
+        _reseau = N.Reseau(M)
+    return _reseau.image(t)
+
+
 # ------------------------------------------------------------------------------------------------------ chronologie
+def montee(t):
+    for k_, (d0, plan, p0, dur) in enumerate(DEC.MONTEE):
+        if d0 <= t < d0 + dur or (k_ == len(DEC.MONTEE) - 1 and t >= d0):
+            tt = t - d0
+            arr = charge_graded(plan, p0 + tt).astype(np.float32)
+            z = 1.0 + 0.045 * math.exp(-tt * 9)                  # petit « coup de zoom » à chaque coupe
+            if z > 1.001:
+                Mz = cv2.getRotationMatrix2D((W / 2, H / 2), 0, z)
+                arr = cv2.warpAffine(arr, Mz, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+            if d0 == DEC.T["montee"][0]:
+                arr = arr * min(1.0, 0.45 + 0.55 * tt / 0.12)
+            return arr
+    return np.zeros((H, W, 3), np.float32)
+
+
 def image_cadre(t):
     T = DEC.T
     f = np.zeros((H, W, 3), np.uint8)
-    if t < T["aube"][0]:
-        a = prog(t, 0.5, 1.6) * (1 - prog(t, 2.6, 3.2))
+    if t < T["reel"][0]:                                             # texte sur noir
+        a = prog(t, 0.5, 1.6) * (1 - prog(t, 2.5, 3.0))
         im = Image.fromarray(f)
         texte_espace(im, "Chaque matin,", W / 2, 330, fin(84), 11, BLANC, a)
-        texte_espace(im, "des milliers de bananiers.", W / 2, 440, fin(84), 11, BLANC, prog(t, 0.9, 2.0) * (1 - prog(t, 2.6, 3.2)))
+        texte_espace(im, "des milliers de bananiers.", W / 2, 440, fin(84), 11, BLANC, prog(t, 0.9, 2.0) * (1 - prog(t, 2.5, 3.0)))
         return np.asarray(im)
-    if t < T["texte3"][0]:                                           # aube
-        tt = t - T["aube"][0]
-        arr = charge_graded("aube", tt).astype(np.float32)
-        arr *= min(1.0, tt / 0.5)
-        arr = degrade_bas(arr, 360, 0.6)
-        im = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8))
-        a = prog(t, T["texte2"][0], T["texte2"][0] + 1.1) * (1 - prog(t, 7.7, 8.4))
-        texte_espace(im, "Impossible de tous les voir.", W / 2, 640, fin(80), 9, BLANC, a, 1.0)
-        arr = np.asarray(im).astype(np.float32) * (1 - prog(t, 8.3, 8.7))
-        return arr.astype(np.uint8)
-    if t < T["montee"][0]:                                           # « Jusqu'à aujourd'hui. »
-        tt = t - T["texte3"][0]
-        a = prog(tt, 0.3, 1.2) * (1 - prog(tt, 2.1, 2.5))
-        im = Image.fromarray(f)
-        texte_espace(im, "Jusqu'à aujourd'hui.", W / 2, H / 2, fin(100), 12, BLANC, a)
-        return np.asarray(im)
-    if t < T["parcelles"][0]:                                        # montée : coupes de plus en plus courtes
-        for (d0, plan, p0, dur) in DEC.MONTEE:
-            if d0 <= t < d0 + dur or (plan == DEC.MONTEE[-1][1] and t >= d0):
-                tt = t - d0
-                arr = charge_graded(plan, p0 + tt).astype(np.float32)
-                z = 1.0 + 0.045 * math.exp(-tt * 9)                  # petit « coup de zoom » à chaque coupe
-                if z > 1.001:
-                    M = cv2.getRotationMatrix2D((W / 2, H / 2), 0, z)
-                    arr = cv2.warpAffine(arr, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-                if d0 == T["montee"][0]:
-                    arr = arr * min(1.0, tt / 0.12)
-                return arr.astype(np.uint8)
+    if t < T["descente"][0]:                                         # photo réelle + contours RPG
+        return N.plan_reel(M, t - T["reel"][0])
+    if t < T["montee"][0]:                                           # fondu photo -> 3D, descente
+        tt = t - T["descente"][0]
+        arr3 = charge_graded("descente", tt).astype(np.float32)
+        a_ill = prog(t, 7.9, 8.6) * (1 - prog(t, 11.2, 11.9))
+        if t < 7.9:                                                  # balayage lumineux : photo à droite, 3D à gauche
+            xb = W * prog(t, 7.0, 7.9)
+            real = N.plan_reel(M, min(t - T["reel"][0], 4.4)).astype(np.float32)
+            out = real.copy()
+            xi = int(xb)
+            out[:, :xi] = arr3[:, :xi]
+            xs = np.arange(W, dtype=np.float32)
+            prof = np.exp(-((xs - xb) / 6.0) ** 2) + 0.25 * np.exp(-((xs - xb) / 70.0) ** 2)
+            out += prof[None, :, None] * np.array([0.5, 1.0, 0.6], np.float32) * 255
+            return np.clip(out, 0, 255)
+        arr3 = degrade_bas(arr3, 360, 0.55)
+        im = Image.fromarray(np.clip(arr3, 0, 255).astype(np.uint8))
+        a3 = prog(t, T["texte3"][0], T["texte3"][0] + 0.9) * (1 - prog(t, T["texte3"][1] - 0.5, T["texte3"][1]))
+        texte_espace(im, "Jusqu'à aujourd'hui.", W / 2, 640, fin(92), 11, BLANC, a3, 1.0)
+        return N.tag_illustration(M, np.asarray(im), a_ill)
+    if t < T["parcelles"][0]:                                        # montée : plans tous différents
+        return montee(t).clip(0, 255).astype(np.uint8)
+    k = 8.0 / 7.0                                                    # les plans de données durent 7 s au lieu de 8
+    if t < T["reseau"][0]:
+        return plan_parcelles((t - T["parcelles"][0]) * k)
     if t < T["comptage"][0]:
-        return plan_parcelles(t - T["parcelles"][0])
+        return plan_reseau(t - T["reseau"][0])
     if t < T["maladie"][0]:
-        return plan_comptage(t - T["comptage"][0])
+        return plan_comptage((t - T["comptage"][0]) * k)
+    if t < T["visite"][0]:
+        return plan_maladie((t - T["maladie"][0]) * k)
     if t < T["grue"][0]:
-        return plan_maladie(t - T["maladie"][0])
-    if t < T["silence"][0]:                                          # grande révélation
-        tt = t - T["grue"][0]
+        return N.plan_visite(M, t - T["visite"][0])
+    if t < T["silence"][0]:                                          # grande révélation (10 s rendues, jouées en 9 s)
+        tt = (t - T["grue"][0]) * DEC.VITESSE_GRUE
         arr = charge_graded("grue", tt).astype(np.float32)
         return vignette(arr, 0.1).clip(0, 255).astype(np.uint8)
     if t < T["titre"][0]:
@@ -539,10 +578,10 @@ def image_finale(i):
     t = i / FPS
     c = image_cadre(t).astype(np.float32)
     # flashs blancs (3 images) sur les coupes fortes
-    for tf in DEC.COUPES_FORTES[1:]:
+    for tf in DEC.COUPES_FORTES:
         d = t - tf
-        if 0 <= d < 0.14:
-            c = c + (1 - d / 0.14) * 170
+        if 0.03 <= d < 0.12:
+            c = c + (1 - d / 0.12) * 70
     # fondu au noir à la toute fin
     if t > DEC.DUREE - 0.35:
         c *= max(0.0, (DEC.DUREE - t) / 0.35)

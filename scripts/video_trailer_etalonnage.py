@@ -24,6 +24,9 @@ REGLAGES = dict(
     rangs=dict(fog=520, a=0.0, glow=0.30, streak=0.08),
     orbite=dict(fog=900, a=0.55, glow=0.20, streak=0.0),
     fpv=dict(fog=500, a=0.0, glow=0.28, streak=0.08),
+    descente=dict(fog=900, a=0.0, glow=0.30, streak=0.08),
+    oblique=dict(fog=700, a=0.35, glow=0.30, streak=0.08),
+    contre=dict(fog=500, a=0.0, glow=0.40, streak=0.18),
     grue=dict(fog=520, a=0.93, glow=0.30, streak=0.12),
     final=dict(fog=520, a=0.93, glow=0.38, streak=0.22),
 )

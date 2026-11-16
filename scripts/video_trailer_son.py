@@ -201,61 +201,51 @@ def etincelle(duree=3.5):
 def mixer(duree):
     P = Piste(duree)
     T = D.T
-    # fond : drone qui monte de 0 à 58 s, silence net de 58,0 à 58,6 s
-    dr = drone_grave(D.TITRE_IMPACT, 46.0, 98.0)
+    imp = D.TITRE_IMPACT
+    sil = T["silence"][0]
+    # fond : drone qui monte jusqu'au titre, silence net juste avant l'impact
+    dr = drone_grave(imp, 46.0, 98.0)
     n = len(dr)
     t = np.arange(n) / SR
-    niv = np.clip(t / 6.0, 0, 1) ** 1.5 * 0.55 + np.clip((t - 8.7) / 40.0, 0, 1) * 0.45
-    niv *= np.where(t > 57.95, np.clip(1 - (t - 57.95) / 0.04, 0, 1), 1.0)
+    niv = np.clip(t / 6.0, 0, 1) ** 1.5 * 0.55 + np.clip((t - T["texte3"][0]) / 50.0, 0, 1) * 0.45
+    niv *= np.where(t > sil - 0.05, np.clip(1 - (t - (sil - 0.05)) / 0.04, 0, 1), 1.0)
     P.ajouter(0.0, dr * niv[:, None], gain=0.55)
-    # petit tapis de sons graves sur noir : cœur sourd
-    # risers
-    P.ajouter(7.6, riser(3.6, 250, 3500, 0.6), gain=0.35)                 # vers « Jusqu'à aujourd'hui »
-    P.ajouter(8.7, riser(2.5, 300, 6000, 0.7), gain=0.30)
-    P.ajouter(19.5, riser(4.5, 300, 9000, 0.8), gain=0.40)                # fin de la montée
-    P.ajouter(44.5, riser(3.5, 300, 7000, 0.7), gain=0.30)
-    P.ajouter(50.0, riser(7.9, 250, 12000, 1.0), gain=0.55)               # grande montée avant le titre
-    # braams
-    for t0, f, g in ((D.T["montee"][0], 41.2, 0.9), (24.0, 43.65, 0.8), (32.0, 46.25, 0.8), (40.0, 49.0, 0.85),
-                     (48.0, 55.0, 0.95), (D.TITRE_IMPACT, 36.7, 1.5)):
-        P.ajouter(t0, braam(5.0 if t0 < 58 else 7.5, f, 1.0), gain=g * 0.9)
-    # tambour : battements qui accélèrent
-    temps = []
-    t0 = 11.2
-    for c in D.MONTEE:                                   # un coup sur chaque coupe de la montée
-        temps.append(c[0])
-    temps += [D.MONTEE[-1][0] + 0.5]
-    t = 24.0
-    for k in range(8):                                   # pouls calme pendant les trois pouvoirs
-        pass
-    for deb, fin in ((24.0, 48.0),):
-        t = deb + 1.0
-        while t < fin - 0.5:
-            temps.append(t)
-            t += 1.0 if t < 40 else 0.8
-    t = 48.0
+    # risers aux transitions importantes
+    P.ajouter(5.4, riser(3.6, 250, 3500, 0.6), gain=0.35)                  # photo réelle -> 3D
+    P.ajouter(T["texte3"][0], riser(2.6, 300, 6000, 0.7), gain=0.30)       # « Jusqu'à aujourd'hui »
+    P.ajouter(15.5, riser(3.5, 300, 9000, 0.8), gain=0.40)                 # fin de la montée
+    P.ajouter(43.5, riser(3.5, 300, 7000, 0.7), gain=0.30)                 # avant la visite
+    P.ajouter(T["grue"][0] + 1.0, riser(imp - 1.0 - T["grue"][0] - 0.5, 250, 12000, 1.0), gain=0.55)
+    # braams sur les coupes fortes, le plus grand sur le titre
+    for k, t0 in enumerate(D.COUPES_FORTES):
+        f = (41.2, 43.65, 46.25, 49.0, 55.0, 41.2, 36.7)[k % 7]
+        g = 0.95 if t0 == T["grue"][0] else 0.8
+        P.ajouter(t0, braam(5.0, f, 1.0), gain=g * 0.9)
+    P.ajouter(imp, braam(7.5, 36.7, 1.0), gain=1.5 * 0.9)
+    # tambour : un coup sur chaque coupe de la montée, pouls régulier ensuite, accélération vers le climax
+    temps = [c[0] for c in D.MONTEE] + [D.MONTEE[-1][0] + 0.7]
+    t = T["parcelles"][0] + 1.0
+    while t < T["grue"][0] - 0.3:
+        temps.append(t)
+        t += 1.0 if t < T["comptage"][0] else 0.8
+    t = T["grue"][0]
     iv = 0.62
-    while t < 57.8:                                      # accélération vers le climax
+    while t < sil - 0.2:
         temps.append(t)
         t += iv
         iv = max(iv * 0.93, 0.095)
-    for i, tt in enumerate(sorted(temps)):
-        fort = 1.0 if tt in [c[0] for c in D.MONTEE] or tt > 48 else 0.7
-        P.ajouter(tt, grosse_caisse(fort, 50.0 + 6 * (tt > 48)), gain=0.70, pan=0.0)
-    # petits coups graves sur les mots de la première partie (apparition du texte)
-    for tt in (0.9, 5.2, 8.9):
+    cuts = [c[0] for c in D.MONTEE]
+    for tt in sorted(temps):
+        fort = 1.0 if (tt in cuts or tt >= T["grue"][0]) else 0.7
+        P.ajouter(tt, grosse_caisse(fort, 50.0 + 6 * (tt >= T["grue"][0])), gain=0.70, pan=0.0)
+    for tt in (0.9, 3.5, T["texte3"][0] + 0.2):                              # petits coups sur les textes du début
         P.ajouter(tt, grosse_caisse(0.8, 40.0), gain=0.6)
-    # après le silence : accord, étincelle du slogan
-    P.ajouter(D.TITRE_IMPACT, accord_final(duree - D.TITRE_IMPACT), gain=0.55)
+    P.ajouter(imp, accord_final(duree - imp), gain=0.55)
     P.ajouter(D.SLOGAN, etincelle(), gain=1.0)
-    # réverbération globale
     m = reverb(P.m, 3.0, 0.32)
-    # silence juste avant le titre
     t = np.arange(len(m)) / SR
-    coupe = np.where((t > 57.95) & (t < D.TITRE_IMPACT - 0.02), 0.03, 1.0)
-    coupe = np.minimum(coupe, np.clip((t - 57.95) / 0.0001 * 0 + 1, 0, 1))
+    coupe = np.where((t > sil - 0.05) & (t < imp - 0.02), 0.03, 1.0)
     m *= coupe[:, None]
-    # fondu d'entrée et de sortie
     m *= np.clip(t / 0.4, 0, 1)[:, None] * np.clip((duree - t) / 2.0, 0, 1)[:, None]
     return m
 

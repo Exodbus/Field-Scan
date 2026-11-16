@@ -86,9 +86,9 @@ def main():
             cv2.imwrite(str(CTRL / f"t{int(round(t)):03d}.jpg"), im, [cv2.IMWRITE_JPEG_QUALITY, 90])
         utile = im[138:942]
         g = cv2.cvtColor(utile, cv2.COLOR_BGR2GRAY)
-        if g.mean() < 2 and not (8.7 <= t <= 11.2 or t < 3.2 or 58.0 <= t <= 58.7 or t > 70):
+        if g.mean() < 2 and not (t < 3.2 or 66.9 <= t <= 67.7 or t > 73.0):
             noires.append(round(t, 2))
-        if precedent is not None and np.abs(g.astype(np.int16) - precedent).mean() < 0.02 and 3.2 < t < 8.6:
+        if precedent is not None and np.abs(g.astype(np.int16) - precedent).mean() < 0.02 and 3.2 < t < 6.8:
             figees.append(round(t, 2))
         precedent = g.astype(np.int16)
         k += 1

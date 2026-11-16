@@ -81,7 +81,7 @@ def creer_materiaux():
         couronne=materiau("px_couronne", (0.11, 0.19, 0.055), 0.7, 0.15, 0.7),
         ecorce=materiau("px_ecorce", (0.12, 0.085, 0.06), 0.9),
         sol=materiau("px_sol", (0.20, 0.095, 0.052), 0.95, 0.0, 0.8),
-        piste=materiau("px_piste", (0.38, 0.22, 0.14), 0.95, 0.0, 0.5),
+        piste=materiau("px_piste", (0.27, 0.125, 0.075), 0.95, 0.0, 0.5, 0.1, 1.3),
     )
 
 

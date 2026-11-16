@@ -4,41 +4,39 @@ Tous les temps sont en secondes ; le film dure DUREE s à 24 i/s. Une seule déf
 se décalent.
 """
 FPS = 24
-DUREE = 72.0
+DUREE = 78.0
 
 # plans 3D rendus par scripts/video_trailer_rendu3d.py : durée (s) de chaque plan complet
-DUREE_PLANS = dict(aube=5.5, rangs=4.5, orbite=4.5, fpv=3.2, grue=10.0, final=7.0)
+DUREE_PLANS = dict(aube=5.5, rangs=4.5, orbite=4.5, fpv=3.2, grue=10.0, final=7.0, descente=5.0, oblique=2.9, contre=2.1)
 
+# montée : chaque plan n'est utilisé qu'une fois ou deux, sur des moments différents
 # (début dans le film, plan, début dans le plan, durée)
 MONTEE = [
-    (11.2, "rangs", 0.0, 2.6),
-    (13.8, "orbite", 0.0, 2.0),
-    (15.8, "fpv", 0.0, 1.6),
-    (17.4, "rangs", 2.6, 1.3),
-    (18.7, "orbite", 2.5, 1.0),
-    (19.7, "fpv", 1.6, 0.8),
-    (20.5, "final", 0.0, 0.7),
-    (21.2, "aube", 3.0, 0.6),
-    (21.8, "orbite", 3.9, 0.6),
-    (22.4, "fpv", 2.4, 0.5),
-    (22.9, "rangs", 4.0, 0.5),
-    (23.4, "final", 3.0, 0.6),
+    (12.0, "oblique", 0.0, 1.8),
+    (13.8, "contre", 0.0, 1.5),
+    (15.3, "rangs", 0.6, 1.2),
+    (16.5, "fpv", 0.6, 1.0),
+    (17.5, "aube", 2.5, 0.8),
+    (18.3, "oblique", 2.2, 0.7),
 ]
 
 T = dict(
-    texte1=(0.5, 3.2),          # « Chaque matin, des milliers de bananiers. » sur noir
-    aube=(3.2, 8.7),            # plan d'aube
-    texte2=(5.0, 8.4),          # « Impossible de tous les voir. » sur l'image
-    texte3=(8.7, 11.2),         # « Jusqu'à aujourd'hui. » sur noir
-    montee=(11.2, 24.0),
-    parcelles=(24.0, 32.0),     # « Voir chaque parcelle. »
-    comptage=(32.0, 40.0),      # « Compter les bananiers. »
-    maladie=(40.0, 48.0),       # « Repérer la maladie. »
-    grue=(48.0, 58.0),
-    silence=(58.0, 58.6),
-    titre=(58.6, 65.6),         # plan « final » sous le titre
-    fin=(65.6, 72.0),           # carton de fin
+    texte1=(0.5, 3.0),          # « Chaque matin, des milliers de bananiers. » sur noir
+    reel=(3.0, 7.4),            # photo aérienne réelle, contours RPG, « Impossible de tous les voir. »
+    descente=(7.0, 12.0),       # fondu photo -> 3D, la caméra plonge vers les rangs ; « Jusqu'à aujourd'hui. »
+    texte3=(9.4, 11.9),
+    montee=(12.0, 19.0),
+    parcelles=(19.0, 26.0),     # « Voir chaque parcelle. »
+    reseau=(26.0, 33.0),        # tuile de drone -> réseau de neurones -> carte des centres
+    comptage=(33.0, 40.0),      # « Compter les bananiers. »
+    maladie=(40.0, 47.0),       # « Repérer la maladie. »
+    visite=(47.0, 58.0),        # « Se promener dans son exploitation. » (vraie visite 3D web)
+    grue=(58.0, 67.0),
+    silence=(67.0, 67.6),
+    titre=(67.6, 73.0),         # plan « final » sous le titre
+    fin=(73.0, 78.0),           # carton de fin
 )
-COUPES_FORTES = [11.2, 24.0, 32.0, 40.0, 48.0]
-TITRE_IMPACT = 58.6
-SLOGAN = 62.2
+COUPES_FORTES = [12.0, 19.0, 26.0, 33.0, 40.0, 47.0, 58.0]
+TITRE_IMPACT = 67.6
+SLOGAN = 70.6
+VITESSE_GRUE = 10.0 / 9.0       # la révélation (10 s rendues) est jouée en 9 s
